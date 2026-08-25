@@ -12,6 +12,9 @@ export default async function DashboardPage() {
   const machines = await prisma.machine.findMany({ include: { line: true } });
 
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
   const [
     inspectionTotal,
     inspectionExpired,
@@ -19,6 +22,8 @@ export default async function DashboardPage() {
     calibrationExpired,
     verificationTotal,
     verificationExpired,
+    machineCount,
+    planEntriesThisMonth,
   ] = await Promise.all([
     prisma.periodicInspection.count(),
     prisma.periodicInspection.count({ where: { nextInspectionDate: { lt: now } } }),
@@ -26,7 +31,14 @@ export default async function DashboardPage() {
     prisma.calibration.count({ where: { nextCalibrationDate: { lt: now } } }),
     prisma.verification.count(),
     prisma.verification.count({ where: { nextVerificationDate: { lt: now } } }),
+    prisma.machine.count(),
+    prisma.maintenancePlanEntry.findMany({
+      where: { year: currentYear, month: currentMonth },
+    }),
   ]);
+
+  const planDoneThisMonth = planEntriesThisMonth.filter((e) => e.completed === true).length;
+  const planMissedThisMonth = planEntriesThisMonth.filter((e) => e.completed === false).length;
 
   const arizaCount = records.filter((r) => r.operationType === "ARIZA").length;
   const bakimCount = records.filter((r) => r.operationType === "BAKIM").length;
@@ -94,7 +106,7 @@ export default async function DashboardPage() {
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ComplianceTile
           href="/inspections"
           label="Periyodik Muayene"
@@ -113,6 +125,28 @@ export default async function DashboardPage() {
           total={verificationTotal}
           expired={verificationExpired}
         />
+        <Link
+          href="/annual-plan"
+          className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+        >
+          <p className="text-sm font-medium text-slate-500">Yıllık Bakım Planı (Bu Ay)</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span
+              className="text-2xl font-semibold tabular-nums"
+              style={{
+                color:
+                  planMissedThisMonth === 0
+                    ? "var(--viz-status-good)"
+                    : "var(--viz-status-critical)",
+              }}
+            >
+              {planDoneThisMonth}
+            </span>
+            <span className="text-sm text-slate-400">
+              yapıldı, {planMissedThisMonth} yapılmadı / {machineCount} makine
+            </span>
+          </div>
+        </Link>
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">

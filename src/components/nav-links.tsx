@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Panel" },
   { href: "/machines", label: "Makine / Teçhizat" },
   { href: "/records", label: "Arıza / Bakım Kayıtları" },
+  { href: "/annual-plan", label: "Yıllık Bakım Planı" },
   { href: "/inspections", label: "Periyodik Muayene" },
   { href: "/calibrations", label: "Kalibrasyon Planı" },
   { href: "/verifications", label: "Doğrulama Planı" },

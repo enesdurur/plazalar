@@ -60,11 +60,30 @@ model Machine {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  line    Line?               @relation(fields: [lineId], references: [id])
-  records MaintenanceRecord[]
+  line        Line?                  @relation(fields: [lineId], references: [id])
+  records     MaintenanceRecord[]
+  planEntries MaintenancePlanEntry[]
 
   @@index([lineId])
   @@map("machines")
+}
+
+model MaintenancePlanEntry {
+  id        String   @id @default(cuid())
+  machineId String
+  year      Int
+  month     Int
+  // null = not tracked yet, true = yapıldı, false = yapılmadı
+  completed Boolean?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@unique([machineId, year, month])
+  @@index([year, month])
+  @@map("maintenance_plan_entries")
 }
 
 model IssueType {

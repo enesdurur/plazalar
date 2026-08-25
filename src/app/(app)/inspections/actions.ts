@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 
 const schema = z.object({
   code: z.string().optional(),
@@ -57,9 +58,10 @@ async function requireWriteAccess() {
 
 export async function createInspection(formData: FormData) {
   await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
   const data = parseForm(formData);
 
-  await prisma.periodicInspection.create({ data });
+  await prisma.periodicInspection.create({ data: { ...data, plazaId: plaza.id } });
 
   revalidatePath("/inspections");
   revalidatePath("/");
@@ -68,9 +70,10 @@ export async function createInspection(formData: FormData) {
 
 export async function updateInspection(id: string, formData: FormData) {
   await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
   const data = parseForm(formData);
 
-  await prisma.periodicInspection.update({ where: { id }, data });
+  await prisma.periodicInspection.updateMany({ where: { id, plazaId: plaza.id }, data });
 
   revalidatePath("/inspections");
   revalidatePath("/");
@@ -82,8 +85,9 @@ export async function deleteInspection(id: string) {
   if (!session?.user || !canDelete(session.user.role)) {
     throw new Error("Bu işlem için yetkiniz yok.");
   }
+  const plaza = await getSelectedPlaza();
 
-  await prisma.periodicInspection.delete({ where: { id } });
+  await prisma.periodicInspection.deleteMany({ where: { id, plazaId: plaza.id } });
   revalidatePath("/inspections");
   revalidatePath("/");
 }

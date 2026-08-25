@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../../record-form";
 import { updateRecord } from "../../actions";
 
@@ -9,10 +10,11 @@ export default async function EditRecordPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const plaza = await getSelectedPlaza();
 
   const [record, machines, issueTypes, technicians, spareParts] = await Promise.all([
-    prisma.maintenanceRecord.findUnique({ where: { id } }),
-    prisma.machine.findMany({ orderBy: { name: "asc" } }),
+    prisma.maintenanceRecord.findFirst({ where: { id, machine: { plazaId: plaza.id } } }),
+    prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
     prisma.issueType.findMany({ orderBy: { name: "asc" } }),
     prisma.technician.findMany({ orderBy: { name: "asc" } }),
     prisma.sparePart.findMany({ orderBy: { name: "asc" } }),

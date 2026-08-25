@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { togglePlanEntry } from "./actions";
 
 const MONTHS = [
@@ -35,10 +36,13 @@ export default async function AnnualPlanPage({
 
   const session = await auth();
   const writable = canWrite(session?.user.role);
+  const plaza = await getSelectedPlaza();
 
   const [machines, entries] = await Promise.all([
-    prisma.machine.findMany({ orderBy: { name: "asc" } }),
-    prisma.maintenancePlanEntry.findMany({ where: { year } }),
+    prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
+    prisma.maintenancePlanEntry.findMany({
+      where: { year, machine: { plazaId: plaza.id } },
+    }),
   ]);
 
   const entryMap = new Map(entries.map((e) => [`${e.machineId}-${e.month}`, e.completed]));

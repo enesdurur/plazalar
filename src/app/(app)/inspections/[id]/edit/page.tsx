@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { InspectionForm } from "../../inspection-form";
 import { updateInspection } from "../../actions";
 
@@ -9,7 +10,10 @@ export default async function EditInspectionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const item = await prisma.periodicInspection.findUnique({ where: { id } });
+  const plaza = await getSelectedPlaza();
+  const item = await prisma.periodicInspection.findFirst({
+    where: { id, plazaId: plaza.id },
+  });
 
   if (!item) notFound();
 

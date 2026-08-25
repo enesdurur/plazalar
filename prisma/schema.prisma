@@ -34,6 +34,17 @@ model User {
   @@map("users")
 }
 
+model Plaza {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  machines            Machine[]
+  periodicInspections PeriodicInspection[]
+
+  @@map("plazas")
+}
+
 model Line {
   id   String @id @default(cuid())
   name String @unique
@@ -45,8 +56,9 @@ model Line {
 
 model Machine {
   id                String   @id @default(cuid())
-  code              String?  @unique
-  name              String   @unique
+  plazaId           String
+  code              String?
+  name              String
   lineId            String?
   brand             String?
   model             String?
@@ -60,10 +72,13 @@ model Machine {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  plaza       Plaza                  @relation(fields: [plazaId], references: [id])
   line        Line?                  @relation(fields: [lineId], references: [id])
   records     MaintenanceRecord[]
   planEntries MaintenancePlanEntry[]
 
+  @@unique([plazaId, name])
+  @@unique([plazaId, code])
   @@index([lineId])
   @@map("machines")
 }
@@ -145,6 +160,7 @@ model MaintenanceRecord {
 
 model PeriodicInspection {
   id                 String    @id @default(cuid())
+  plazaId            String
   code               String?
   name               String
   brand              String?
@@ -158,6 +174,9 @@ model PeriodicInspection {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  plaza Plaza @relation(fields: [plazaId], references: [id])
+
+  @@index([plazaId])
   @@index([nextInspectionDate])
   @@map("periodic_inspections")
 }

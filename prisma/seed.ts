@@ -7,6 +7,8 @@ import rawVerifications from "./seed-data/dogrulama.json";
 
 const prisma = new PrismaClient();
 
+const PLAZAS = ["Square Plaza", "Link Plaza", "Olive Plaza", "DLP No.1 Plaza", "Uso Center"];
+
 const LINES = ["PROSES 1", "PROSES 2", "PROSES 3", "PROSES 4", "PROSES 5"];
 
 const ISSUE_TYPES = [
@@ -95,6 +97,21 @@ type RawVerification = {
 };
 
 async function main() {
+  console.log("Seeding plazas...");
+
+  const plazas = new Map<string, string>();
+  for (const name of PLAZAS) {
+    const plaza = await prisma.plaza.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+    plazas.set(name, plaza.id);
+  }
+  // Historical data (from the original Excel workbook) is attributed to the
+  // first plaza. Reassign via the /machines UI if it actually belongs elsewhere.
+  const squarePlazaId = plazas.get("Square Plaza")!;
+
   console.log("Seeding lookups...");
 
   const lines = new Map<string, string>();
@@ -163,9 +180,9 @@ async function main() {
     if (machineIds.has(machineName)) continue;
     const lineId = lines.get(r["Hat Adı"]);
     const machine = await prisma.machine.upsert({
-      where: { name: machineName },
+      where: { plazaId_name: { plazaId: squarePlazaId, name: machineName } },
       update: {},
-      create: { name: machineName, lineId },
+      create: { name: machineName, lineId, plazaId: squarePlazaId },
     });
     machineIds.set(machineName, machine.id);
   }
@@ -205,6 +222,7 @@ async function main() {
   for (const r of periodicInspections) {
     await prisma.periodicInspection.create({
       data: {
+        plazaId: squarePlazaId,
         code: r["MAKİNA/ EKİPMAN KODU"] != null ? String(r["MAKİNA/ EKİPMAN KODU"]) : undefined,
         name: r["MAKİNA EKİPMAN ADI"],
         brand: r["Marka"] ?? undefined,

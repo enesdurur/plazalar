@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { deleteRecord } from "./actions";
 import { DeleteButton } from "@/components/delete-button";
 import { mtta, mttr, formatMinutes } from "@/lib/kpi";
@@ -15,8 +16,10 @@ export default async function RecordsPage() {
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
+  const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
+    where: { machine: { plazaId: plaza.id } },
     include: { machine: true, issueType: true, technician: true },
     orderBy: { reportedAt: "desc" },
     take: 200,

@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../record-form";
 import { createRecord } from "../actions";
 
 export default async function NewRecordPage() {
+  const plaza = await getSelectedPlaza();
   const [machines, issueTypes, technicians, spareParts] = await Promise.all([
-    prisma.machine.findMany({ orderBy: { name: "asc" } }),
+    prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
     prisma.issueType.findMany({ orderBy: { name: "asc" } }),
     prisma.technician.findMany({ orderBy: { name: "asc" } }),
     prisma.sparePart.findMany({ orderBy: { name: "asc" } }),

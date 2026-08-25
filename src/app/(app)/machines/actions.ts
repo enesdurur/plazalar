@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 
 const machineSchema = z.object({
   name: z.string().min(1, "Makine adı zorunludur"),
@@ -54,9 +55,10 @@ async function requireWriteAccess() {
 
 export async function createMachine(formData: FormData) {
   await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
   const data = parseMachineForm(formData);
 
-  await prisma.machine.create({ data });
+  await prisma.machine.create({ data: { ...data, plazaId: plaza.id } });
 
   revalidatePath("/machines");
   redirect("/machines");
@@ -64,9 +66,10 @@ export async function createMachine(formData: FormData) {
 
 export async function updateMachine(id: string, formData: FormData) {
   await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
   const data = parseMachineForm(formData);
 
-  await prisma.machine.update({ where: { id }, data });
+  await prisma.machine.updateMany({ where: { id, plazaId: plaza.id }, data });
 
   revalidatePath("/machines");
   redirect("/machines");
@@ -77,7 +80,8 @@ export async function deleteMachine(id: string) {
   if (!session?.user || !canDelete(session.user.role)) {
     throw new Error("Bu işlem için yetkiniz yok.");
   }
+  const plaza = await getSelectedPlaza();
 
-  await prisma.machine.delete({ where: { id } });
+  await prisma.machine.deleteMany({ where: { id, plazaId: plaza.id } });
   revalidatePath("/machines");
 }

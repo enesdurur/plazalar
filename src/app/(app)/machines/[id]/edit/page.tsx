@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { MachineForm } from "../../machine-form";
 import { updateMachine } from "../../actions";
 
@@ -9,9 +10,10 @@ export default async function EditMachinePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const plaza = await getSelectedPlaza();
 
   const [machine, lines] = await Promise.all([
-    prisma.machine.findUnique({ where: { id } }),
+    prisma.machine.findFirst({ where: { id, plazaId: plaza.id } }),
     prisma.line.findMany({ orderBy: { name: "asc" } }),
   ]);
 

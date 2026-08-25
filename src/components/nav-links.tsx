@@ -9,8 +9,8 @@ const LINKS = [
   { href: "/records", label: "Arıza / Bakım Kayıtları" },
   { href: "/annual-plan", label: "Yıllık Bakım Planı" },
   { href: "/inspections", label: "Periyodik Muayene" },
-  { href: "/calibrations", label: "Kalibrasyon Planı" },
-  { href: "/verifications", label: "Doğrulama Planı" },
+  // Kalibrasyon Planı ve Doğrulama Planı şu anlık menüden gizlendi
+  // (sayfalar hâlâ mevcut: /calibrations, /verifications)
 ];
 
 export function NavLinks() {

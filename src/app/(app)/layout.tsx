@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { auth } from "@/auth";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { NavLinks } from "@/components/nav-links";
 import { LogoutButton } from "@/components/logout-button";
 
@@ -15,6 +17,7 @@ export default async function AppLayout({
 }) {
   const session = await auth();
   const user = session?.user;
+  const plaza = await getSelectedPlaza();
 
   return (
     <div className="flex min-h-screen">
@@ -22,6 +25,16 @@ export default async function AppLayout({
         <div className="mb-6 px-2">
           <p className="text-sm font-semibold text-white">Plazalar Teknik Hizmetler</p>
           <p className="text-xs text-slate-400">Bakım &amp; Arıza Yönetimi</p>
+        </div>
+        <div className="mb-4 rounded-md bg-slate-800 px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-slate-400">Plaza</p>
+          <p className="truncate text-sm font-medium text-white">{plaza.name}</p>
+          <Link
+            href="/select-plaza"
+            className="text-xs text-slate-400 underline hover:text-slate-200"
+          >
+            Değiştir
+          </Link>
         </div>
         <NavLinks />
         <div className="mt-auto border-t border-slate-800 pt-4">

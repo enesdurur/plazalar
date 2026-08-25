@@ -1,41 +1,37 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
 
 export default async function DashboardPage() {
+  const plaza = await getSelectedPlaza();
+
   const records = await prisma.maintenanceRecord.findMany({
+    where: { machine: { plazaId: plaza.id } },
     include: { machine: true },
   });
 
-  const machines = await prisma.machine.findMany({ include: { line: true } });
+  const machines = await prisma.machine.findMany({
+    where: { plazaId: plaza.id },
+    include: { line: true },
+  });
 
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const [
-    inspectionTotal,
-    inspectionExpired,
-    calibrationTotal,
-    calibrationExpired,
-    verificationTotal,
-    verificationExpired,
-    machineCount,
-    planEntriesThisMonth,
-  ] = await Promise.all([
-    prisma.periodicInspection.count(),
-    prisma.periodicInspection.count({ where: { nextInspectionDate: { lt: now } } }),
-    prisma.calibration.count(),
-    prisma.calibration.count({ where: { nextCalibrationDate: { lt: now } } }),
-    prisma.verification.count(),
-    prisma.verification.count({ where: { nextVerificationDate: { lt: now } } }),
-    prisma.machine.count(),
+  const [inspectionTotal, inspectionExpired, planEntriesThisMonth] = await Promise.all([
+    prisma.periodicInspection.count({ where: { plazaId: plaza.id } }),
+    prisma.periodicInspection.count({
+      where: { plazaId: plaza.id, nextInspectionDate: { lt: now } },
+    }),
     prisma.maintenancePlanEntry.findMany({
-      where: { year: currentYear, month: currentMonth },
+      where: { year: currentYear, month: currentMonth, machine: { plazaId: plaza.id } },
     }),
   ]);
+  const machineCount = machines.length;
 
   const planDoneThisMonth = planEntriesThisMonth.filter((e) => e.completed === true).length;
   const planMissedThisMonth = planEntriesThisMonth.filter((e) => e.completed === false).length;
@@ -106,24 +102,12 @@ export default async function DashboardPage() {
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ComplianceTile
           href="/inspections"
           label="Periyodik Muayene"
           total={inspectionTotal}
           expired={inspectionExpired}
-        />
-        <ComplianceTile
-          href="/calibrations"
-          label="Kalibrasyon"
-          total={calibrationTotal}
-          expired={calibrationExpired}
-        />
-        <ComplianceTile
-          href="/verifications"
-          label="Doğrulama"
-          total={verificationTotal}
-          expired={verificationExpired}
         />
         <Link
           href="/annual-plan"

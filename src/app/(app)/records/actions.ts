@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 
 const recordSchema = z.object({
   machineId: z.string().min(1, "Makine seçimi zorunludur"),
@@ -64,9 +65,19 @@ async function requireWriteAccess() {
   return session;
 }
 
+async function assertMachineInPlaza(machineId: string) {
+  const plaza = await getSelectedPlaza();
+  const machine = await prisma.machine.findFirst({
+    where: { id: machineId, plazaId: plaza.id },
+  });
+  if (!machine) throw new Error("Makine bu plazaya ait değil.");
+  return plaza;
+}
+
 export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
   const data = parseRecordForm(formData);
+  await assertMachineInPlaza(data.machineId);
 
   await prisma.maintenanceRecord.create({
     data: { ...data, createdById: session.user.id },
@@ -80,8 +91,12 @@ export async function createRecord(formData: FormData) {
 export async function updateRecord(id: string, formData: FormData) {
   await requireWriteAccess();
   const data = parseRecordForm(formData);
+  const plaza = await assertMachineInPlaza(data.machineId);
 
-  await prisma.maintenanceRecord.update({ where: { id }, data });
+  await prisma.maintenanceRecord.updateMany({
+    where: { id, machine: { plazaId: plaza.id } },
+    data,
+  });
 
   revalidatePath("/records");
   revalidatePath("/");
@@ -93,8 +108,11 @@ export async function deleteRecord(id: string) {
   if (!session?.user || !canDelete(session.user.role)) {
     throw new Error("Bu işlem için yetkiniz yok.");
   }
+  const plaza = await getSelectedPlaza();
 
-  await prisma.maintenanceRecord.delete({ where: { id } });
+  await prisma.maintenanceRecord.deleteMany({
+    where: { id, machine: { plazaId: plaza.id } },
+  });
   revalidatePath("/records");
   revalidatePath("/");
 }

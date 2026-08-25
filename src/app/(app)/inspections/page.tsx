@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { deleteInspection } from "./actions";
 import { DeleteButton } from "@/components/delete-button";
 import { StatusBadge } from "@/components/status-badge";
@@ -10,8 +11,10 @@ export default async function InspectionsPage() {
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
+  const plaza = await getSelectedPlaza();
 
   const items = await prisma.periodicInspection.findMany({
+    where: { plazaId: plaza.id },
     orderBy: { nextInspectionDate: "asc" },
   });
 

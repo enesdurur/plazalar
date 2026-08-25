@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
+import { getSelectedPlaza } from "@/lib/plaza";
 import { deleteMachine } from "./actions";
 import { DeleteButton } from "@/components/delete-button";
 
@@ -9,8 +10,10 @@ export default async function MachinesPage() {
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
+  const plaza = await getSelectedPlaza();
 
   const machines = await prisma.machine.findMany({
+    where: { plazaId: plaza.id },
     include: { line: true, _count: { select: { records: true } } },
     orderBy: { name: "asc" },
   });

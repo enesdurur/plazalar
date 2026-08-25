@@ -7,6 +7,9 @@ const LINKS = [
   { href: "/", label: "Panel" },
   { href: "/machines", label: "Makine / Teçhizat" },
   { href: "/records", label: "Arıza / Bakım Kayıtları" },
+  { href: "/inspections", label: "Periyodik Muayene" },
+  { href: "/calibrations", label: "Kalibrasyon Planı" },
+  { href: "/verifications", label: "Doğrulama Planı" },
 ];
 
 export function NavLinks() {

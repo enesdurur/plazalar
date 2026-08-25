@@ -123,3 +123,63 @@ model MaintenanceRecord {
   @@index([operationType])
   @@map("maintenance_records")
 }
+
+model PeriodicInspection {
+  id                 String    @id @default(cuid())
+  code               String?
+  name               String
+  brand              String?
+  reportNo           Int?
+  period             String?
+  technicalFeature   String?
+  inspectionDate     DateTime?
+  nextInspectionDate DateTime?
+  location           String?
+  responsiblePerson  String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([nextInspectionDate])
+  @@map("periodic_inspections")
+}
+
+model Calibration {
+  id                  String    @id @default(cuid())
+  code                String?
+  deviceName          String
+  brand               String?
+  model               String?
+  serialNo            String?
+  calibrationCompany  String?
+  certificateNo       String?
+  measurementRange    String?
+  precision           String?
+  lastCalibrationDate DateTime?
+  nextCalibrationDate DateTime?
+  location            String?
+  responsiblePerson   String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([nextCalibrationDate])
+  @@map("calibrations")
+}
+
+model Verification {
+  id                     String    @id @default(cuid())
+  deviceName             String
+  deviceSerialNo         String?
+  usageLocation          String?
+  receivedBy             String?
+  verificationPeriod     String?
+  referenceCertificateNo String?
+  measurementRange       String?
+  result                 String?
+  verificationDate       DateTime?
+  nextVerificationDate   DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([nextVerificationDate])
+  @@map("verifications")
+}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
@@ -9,6 +10,23 @@ export default async function DashboardPage() {
   });
 
   const machines = await prisma.machine.findMany({ include: { line: true } });
+
+  const now = new Date();
+  const [
+    inspectionTotal,
+    inspectionExpired,
+    calibrationTotal,
+    calibrationExpired,
+    verificationTotal,
+    verificationExpired,
+  ] = await Promise.all([
+    prisma.periodicInspection.count(),
+    prisma.periodicInspection.count({ where: { nextInspectionDate: { lt: now } } }),
+    prisma.calibration.count(),
+    prisma.calibration.count({ where: { nextCalibrationDate: { lt: now } } }),
+    prisma.verification.count(),
+    prisma.verification.count({ where: { nextVerificationDate: { lt: now } } }),
+  ]);
 
   const arizaCount = records.filter((r) => r.operationType === "ARIZA").length;
   const bakimCount = records.filter((r) => r.operationType === "BAKIM").length;
@@ -75,6 +93,28 @@ export default async function DashboardPage() {
         />
       </div>
 
+      <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <ComplianceTile
+          href="/inspections"
+          label="Periyodik Muayene"
+          total={inspectionTotal}
+          expired={inspectionExpired}
+        />
+        <ComplianceTile
+          href="/calibrations"
+          label="Kalibrasyon"
+          total={calibrationTotal}
+          expired={calibrationExpired}
+        />
+        <ComplianceTile
+          href="/verifications"
+          label="Doğrulama"
+          total={verificationTotal}
+          expired={verificationExpired}
+        />
+      </div>
+
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-semibold text-slate-900">İşlem Türü Dağılımı</h2>
@@ -118,6 +158,37 @@ export default async function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ComplianceTile({
+  href,
+  label,
+  total,
+  expired,
+}: {
+  href: string;
+  label: string;
+  total: number;
+  expired: number;
+}) {
+  const ok = expired === 0;
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+    >
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span
+          className="text-2xl font-semibold tabular-nums"
+          style={{ color: ok ? "var(--viz-status-good)" : "var(--viz-status-critical)" }}
+        >
+          {expired}
+        </span>
+        <span className="text-sm text-slate-400">/ {total} süresi geçmiş</span>
+      </div>
+    </Link>
   );
 }
 

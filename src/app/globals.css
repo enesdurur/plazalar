@@ -16,6 +16,8 @@
   --viz-series-fault: #e34948;
   --viz-series-maint: #2a78d6;
   --viz-sequential: #2a78d6;
+  --viz-status-good: #0ca30c;
+  --viz-status-critical: #d03b3b;
 }
 
 

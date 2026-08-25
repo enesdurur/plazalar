@@ -1,6 +1,9 @@
 import { PrismaClient, OperationType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import rawRecords from "./seed-data/veri-tablosu.json";
+import rawPeriodicInspections from "./seed-data/periyodik-muayene.json";
+import rawCalibrations from "./seed-data/kalibrasyon.json";
+import rawVerifications from "./seed-data/dogrulama.json";
 
 const prisma = new PrismaClient();
 
@@ -47,6 +50,48 @@ type RawRecord = {
   "Arıza Bitiş Zamanı": string | null;
   "YEDEK PARÇA MALİYETİ": number | null;
   "Yedek parça adet": number | null;
+};
+
+type RawPeriodicInspection = {
+  "MAKİNA/ EKİPMAN KODU": string | number | null;
+  "MAKİNA EKİPMAN ADI": string;
+  Marka: string | null;
+  "RAPOR NO": number | null;
+  PERİYOT: string | null;
+  "TEKNİK ÖZELLİK": string | null;
+  "BAKIM TARİHİ": string | null;
+  "BİR SONRAKİ BAKIM TARİHİ": string | null;
+  "Bulunduğu Yer/Bölüm": string | null;
+  "Sorumlu Kişinin Adı-Soyadı ve Unvanı": string | null;
+};
+
+type RawCalibration = {
+  "ÖLÇÜM ALETİ KODU": string | number | null;
+  "Cihaz Adı": string;
+  Marka: string | null;
+  Model: string | null;
+  "Seri No": string | number | null;
+  "Kalibrasyon Firması": string | null;
+  "Sertifika No": string | null;
+  "Ölçüm Aralığı": string | number | null;
+  Hassasiyet: string | number | null;
+  "Son Kalibrasyon Tarihi": string | null;
+  "Bir Sonraki Kalibrasyon Tarihi": string | null;
+  "Bulunduğu Yer/Bölüm": string | null;
+  "Sorumlu Kişinin Adı-Soyadı ve Unvanı": string | null;
+};
+
+type RawVerification = {
+  "Cihaz Adı": string;
+  "Seri No": string | number | null;
+  "Kullanım Yeri": string | null;
+  "Teslim Alan": string | null;
+  "DOĞRULAMA PERİYODU": string | null;
+  "REFERANS SERTİFİKA NO": string | null;
+  "Ölçüm Aralığı ": string | number | null;
+  Sonuç: string | null;
+  "DOĞRULAMA TARİHİ": string | null;
+  "GELECEK DOĞRULAMA TARİHİ": string | null;
 };
 
 async function main() {
@@ -150,6 +195,79 @@ async function main() {
         sparePartCost: r["YEDEK PARÇA MALİYETİ"] ?? undefined,
         sparePartQty: r["Yedek parça adet"] ?? undefined,
         createdById: adminId,
+      },
+    });
+  }
+
+  console.log("Seeding periodic inspections...");
+
+  const periodicInspections = rawPeriodicInspections as RawPeriodicInspection[];
+  for (const r of periodicInspections) {
+    await prisma.periodicInspection.create({
+      data: {
+        code: r["MAKİNA/ EKİPMAN KODU"] != null ? String(r["MAKİNA/ EKİPMAN KODU"]) : undefined,
+        name: r["MAKİNA EKİPMAN ADI"],
+        brand: r["Marka"] ?? undefined,
+        reportNo: r["RAPOR NO"] ?? undefined,
+        period: r["PERİYOT"] ?? undefined,
+        technicalFeature: r["TEKNİK ÖZELLİK"] ?? undefined,
+        inspectionDate: r["BAKIM TARİHİ"] ? new Date(r["BAKIM TARİHİ"]) : undefined,
+        nextInspectionDate: r["BİR SONRAKİ BAKIM TARİHİ"]
+          ? new Date(r["BİR SONRAKİ BAKIM TARİHİ"])
+          : undefined,
+        location: r["Bulunduğu Yer/Bölüm"] ?? undefined,
+        responsiblePerson: r["Sorumlu Kişinin Adı-Soyadı ve Unvanı"] ?? undefined,
+      },
+    });
+  }
+
+  console.log("Seeding calibrations...");
+
+  const calibrations = rawCalibrations as RawCalibration[];
+  for (const r of calibrations) {
+    await prisma.calibration.create({
+      data: {
+        code: r["ÖLÇÜM ALETİ KODU"] != null ? String(r["ÖLÇÜM ALETİ KODU"]) : undefined,
+        deviceName: r["Cihaz Adı"],
+        brand: r["Marka"] ?? undefined,
+        model: r["Model"] ?? undefined,
+        serialNo: r["Seri No"] != null ? String(r["Seri No"]) : undefined,
+        calibrationCompany: r["Kalibrasyon Firması"] ?? undefined,
+        certificateNo: r["Sertifika No"] ?? undefined,
+        measurementRange:
+          r["Ölçüm Aralığı"] != null ? String(r["Ölçüm Aralığı"]) : undefined,
+        precision: r["Hassasiyet"] != null ? String(r["Hassasiyet"]) : undefined,
+        lastCalibrationDate: r["Son Kalibrasyon Tarihi"]
+          ? new Date(r["Son Kalibrasyon Tarihi"])
+          : undefined,
+        nextCalibrationDate: r["Bir Sonraki Kalibrasyon Tarihi"]
+          ? new Date(r["Bir Sonraki Kalibrasyon Tarihi"])
+          : undefined,
+        location: r["Bulunduğu Yer/Bölüm"] ?? undefined,
+        responsiblePerson: r["Sorumlu Kişinin Adı-Soyadı ve Unvanı"] ?? undefined,
+      },
+    });
+  }
+
+  console.log("Seeding verifications...");
+
+  const verifications = rawVerifications as RawVerification[];
+  for (const r of verifications) {
+    await prisma.verification.create({
+      data: {
+        deviceName: r["Cihaz Adı"],
+        deviceSerialNo: r["Seri No"] != null ? String(r["Seri No"]) : undefined,
+        usageLocation: r["Kullanım Yeri"] ?? undefined,
+        receivedBy: r["Teslim Alan"] ?? undefined,
+        verificationPeriod: r["DOĞRULAMA PERİYODU"] ?? undefined,
+        referenceCertificateNo: r["REFERANS SERTİFİKA NO"] ?? undefined,
+        measurementRange:
+          r["Ölçüm Aralığı "] != null ? String(r["Ölçüm Aralığı "]) : undefined,
+        result: r["Sonuç"] ?? undefined,
+        verificationDate: r["DOĞRULAMA TARİHİ"] ? new Date(r["DOĞRULAMA TARİHİ"]) : undefined,
+        nextVerificationDate: r["GELECEK DOĞRULAMA TARİHİ"]
+          ? new Date(r["GELECEK DOĞRULAMA TARİHİ"])
+          : undefined,
       },
     });
   }

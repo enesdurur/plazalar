@@ -19,18 +19,7 @@ const ISSUE_TYPES = [
   "TESİSAT",
 ];
 
-const TECHNICIANS = [
-  "M. ALTIN",
-  "B. YETKİN",
-  "D. SEÇİL",
-  "İ. YERLİ",
-  "K. DOĞRUL",
-  "AZ-SK",
-  "BK-DK-GA",
-  "BK-FÖ-DK",
-  "BK-GA",
-  "MUY-RU",
-];
+const TECHNICIANS = ["Hüseyin Yılmaz", "Mustafa Durmuş"];
 
 const SPARE_PARTS: { name: string; defaultCost: number }[] = [
   { name: "Rezistans", defaultCost: 15000 },

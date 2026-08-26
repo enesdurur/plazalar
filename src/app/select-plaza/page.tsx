@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { selectPlaza } from "./actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Plaza Seç",
+};
 
 export const dynamic = "force-dynamic";
 

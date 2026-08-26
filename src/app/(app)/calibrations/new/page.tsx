@@ -1,5 +1,10 @@
 import { CalibrationForm } from "../calibration-form";
 import { createCalibration } from "../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Yeni Kalibrasyon Kaydı",
+};
 
 export default function NewCalibrationPage() {
   return (

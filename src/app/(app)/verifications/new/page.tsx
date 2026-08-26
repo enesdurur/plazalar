@@ -1,5 +1,10 @@
 import { VerificationForm } from "../verification-form";
 import { createVerification } from "../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Yeni Doğrulama Kaydı",
+};
 
 export default function NewVerificationPage() {
   return (

@@ -1,4 +1,5 @@
 import type { PeriodicInspection } from "@prisma/client";
+import { SubmitButton } from "@/components/submit-button";
 
 function toDateInput(date: Date | null | undefined) {
   if (!date) return "";
@@ -77,12 +78,7 @@ export function InspectionForm({
       </div>
 
       <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          Kaydet
-        </button>
+        <SubmitButton />
       </div>
     </form>
   );

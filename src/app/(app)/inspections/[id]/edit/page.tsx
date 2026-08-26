@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { InspectionForm } from "../../inspection-form";
 import { updateInspection } from "../../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Muayene Kaydını Düzenle",
+};
 
 export default async function EditInspectionPage({
   params,

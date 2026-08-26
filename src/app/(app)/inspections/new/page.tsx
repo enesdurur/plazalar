@@ -1,5 +1,10 @@
 import { InspectionForm } from "../inspection-form";
 import { createInspection } from "../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Yeni Muayene Kaydı",
+};
 
 export default function NewInspectionPage() {
   return (

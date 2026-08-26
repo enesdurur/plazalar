@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { CalibrationForm } from "../../calibration-form";
 import { updateCalibration } from "../../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Kalibrasyon Kaydını Düzenle",
+};
 
 export default async function EditCalibrationPage({
   params,

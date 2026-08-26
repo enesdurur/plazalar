@@ -4,6 +4,11 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Panel",
+};
 
 export default async function DashboardPage() {
   const plaza = await getSelectedPlaza();

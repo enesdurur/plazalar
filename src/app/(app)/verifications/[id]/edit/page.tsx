@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { VerificationForm } from "../../verification-form";
 import { updateVerification } from "../../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Doğrulama Kaydını Düzenle",
+};
 
 export default async function EditVerificationPage({
   params,

@@ -2,6 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../record-form";
 import { createRecord } from "../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Yeni Kayıt",
+};
 
 export default async function NewRecordPage() {
   const plaza = await getSelectedPlaza();

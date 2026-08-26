@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export function DeleteButton({
   action,
   confirmMessage = "Silmek istediğinize emin misiniz?",
@@ -7,19 +9,26 @@ export function DeleteButton({
   action: () => Promise<void>;
   confirmMessage?: string;
 }) {
+  const [deleting, setDeleting] = useState(false);
+
   return (
     <form
       action={async () => {
-        if (confirm(confirmMessage)) {
+        if (!confirm(confirmMessage)) return;
+        setDeleting(true);
+        try {
           await action();
+        } finally {
+          setDeleting(false);
         }
       }}
     >
       <button
         type="submit"
-        className="text-sm font-medium text-red-600 hover:text-red-800"
+        disabled={deleting}
+        className="text-sm font-medium text-red-600 hover:text-red-800 disabled:opacity-60"
       >
-        Sil
+        {deleting ? "Siliniyor..." : "Sil"}
       </button>
     </form>
   );

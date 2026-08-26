@@ -7,7 +7,7 @@ export function Sidebar({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex items-center justify-between bg-slate-900 px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between bg-slate-900 px-4 py-3 md:hidden print:hidden">
         <div>
           <p className="text-sm font-semibold text-white">Plazalar Teknik Hizmetler</p>
           <p className="text-xs text-slate-400">Bakım &amp; Arıza Yönetimi</p>
@@ -39,7 +39,7 @@ export function Sidebar({ children }: { children: React.ReactNode }) {
       <aside
         className={`${
           open ? "flex" : "hidden"
-        } w-full shrink-0 flex-col bg-slate-900 p-4 md:flex md:w-64`}
+        } w-full shrink-0 flex-col bg-slate-900 p-4 print:hidden md:flex md:w-64`}
       >
         <div className="mb-6 hidden px-2 md:block">
           <p className="text-sm font-semibold text-white">Plazalar Teknik Hizmetler</p>

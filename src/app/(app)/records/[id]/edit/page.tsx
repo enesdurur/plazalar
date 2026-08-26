@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../../record-form";
 import { updateRecord } from "../../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Kayıt Düzenle",
+};
 
 export default async function EditRecordPage({
   params,

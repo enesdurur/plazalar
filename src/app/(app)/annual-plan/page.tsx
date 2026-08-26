@@ -4,6 +4,13 @@ import { auth } from "@/auth";
 import { canWrite } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { togglePlanEntry } from "./actions";
+import { ExportLink } from "@/components/export-link";
+import { PrintButton } from "@/components/print-button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Yıllık Bakım Planı",
+};
 
 const MONTHS = [
   "Oca",
@@ -64,29 +71,33 @@ export default async function AnnualPlanPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/annual-plan?year=${year - 1}`}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
-          >
-            ← {year - 1}
-          </Link>
+          <div className="flex items-center gap-2 print:hidden">
+            <PrintButton />
+            <ExportLink href={`/api/export/annual-plan?year=${year}`} />
+            <Link
+              href={`/annual-plan?year=${year - 1}`}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              ← {year - 1}
+            </Link>
+          </div>
           <span className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
             {year}
           </span>
           <Link
             href={`/annual-plan?year=${year + 1}`}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 print:hidden"
           >
             {year + 1} →
           </Link>
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+          <thead className="sticky top-0 z-20 bg-slate-50">
             <tr>
-              <th className="sticky left-0 bg-slate-50 px-4 py-3 text-left font-medium text-slate-600">
+              <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left font-medium text-slate-600">
                 Makine
               </th>
               {MONTHS.map((m) => (

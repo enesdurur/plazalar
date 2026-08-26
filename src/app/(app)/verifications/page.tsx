@@ -5,6 +5,11 @@ import { canWrite, canDelete } from "@/lib/permissions";
 import { deleteVerification } from "./actions";
 import { DeleteButton } from "@/components/delete-button";
 import { StatusBadge } from "@/components/status-badge";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Doğrulama Planı",
+};
 
 export default async function VerificationsPage() {
   const session = await auth();
@@ -32,9 +37,9 @@ export default async function VerificationsPage() {
         )}
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+          <thead className="sticky top-0 z-10 bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Cihaz Adı</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Seri No</th>
@@ -48,7 +53,7 @@ export default async function VerificationsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {items.map((i) => (
-              <tr key={i.id} className="hover:bg-slate-50">
+              <tr key={i.id} className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100">
                 <td className="px-4 py-3 font-medium text-slate-900">{i.deviceName}</td>
                 <td className="px-4 py-3 text-slate-600">{i.deviceSerialNo ?? "-"}</td>
                 <td className="px-4 py-3 text-slate-600">{i.usageLocation ?? "-"}</td>

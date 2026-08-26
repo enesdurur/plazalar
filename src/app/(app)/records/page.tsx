@@ -5,7 +5,14 @@ import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { deleteRecord } from "./actions";
 import { DeleteButton } from "@/components/delete-button";
+import { ExportLink } from "@/components/export-link";
+import { PrintButton } from "@/components/print-button";
 import { mtta, mttr, formatMinutes } from "@/lib/kpi";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Arıza / Bakım Kayıtları",
+};
 
 const OPERATION_LABELS: Record<string, string> = {
   ARIZA: "Arıza",
@@ -36,19 +43,23 @@ export default async function RecordsPage() {
             Son {records.length} kayıt gösteriliyor.
           </p>
         </div>
-        {writable && (
-          <Link
-            href="/records/new"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            + Yeni Kayıt
-          </Link>
-        )}
+        <div className="flex gap-2 print:hidden">
+          <PrintButton />
+          <ExportLink href="/api/export/records" />
+          {writable && (
+            <Link
+              href="/records/new"
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              + Yeni Kayıt
+            </Link>
+          )}
+        </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+          <thead className="sticky top-0 z-10 bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Bildirim Zamanı</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Makine</th>
@@ -58,12 +69,12 @@ export default async function RecordsPage() {
               <th className="px-4 py-3 text-left font-medium text-slate-600">Teknisyen</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">MTTA</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">MTTR</th>
-              <th className="px-4 py-3" />
+              <th className="px-4 py-3 print:hidden" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {records.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50">
+              <tr key={r.id} className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100">
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                   {r.reportedAt.toLocaleString("tr-TR")}
                 </td>
@@ -90,7 +101,7 @@ export default async function RecordsPage() {
                 <td className="px-4 py-3 text-slate-600">
                   {formatMinutes(mttr(r.respondedAt, r.finishedAt))}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right print:hidden">
                   <div className="flex justify-end gap-3">
                     {writable && (
                       <Link

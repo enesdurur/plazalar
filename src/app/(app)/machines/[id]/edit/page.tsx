@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { MachineForm } from "../../machine-form";
 import { updateMachine } from "../../actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Makine Düzenle",
+};
 
 export default async function EditMachinePage({
   params,

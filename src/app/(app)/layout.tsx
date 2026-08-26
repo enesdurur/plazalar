@@ -46,7 +46,9 @@ export default async function AppLayout({
           <LogoutButton />
         </div>
       </Sidebar>
-      <main className="flex-1 overflow-x-hidden bg-slate-50 p-4 md:p-8">{children}</main>
+      <main className="flex-1 overflow-x-hidden bg-slate-50 p-4 md:p-8 print:bg-white print:p-0">
+        {children}
+      </main>
     </div>
   );
 }

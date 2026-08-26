@@ -90,7 +90,7 @@ export default async function DashboardPage() {
         />
         <div className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm font-medium text-slate-500">Toplam Yedek Parça Maliyeti</p>
-          <div className="mt-2 space-y-0.5">
+          <div className="mt-2 space-y-1">
             <p className="text-lg font-semibold tabular-nums text-slate-900">
               {costByCurrency.TRY.toLocaleString("tr-TR", {
                 style: "currency",
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
               })}
             </p>
             {costByCurrency.USD > 0 && (
-              <p className="text-sm tabular-nums text-slate-500">
+              <p className="text-lg font-semibold tabular-nums text-slate-900">
                 {costByCurrency.USD.toLocaleString("en-US", {
                   style: "currency",
                   currency: "USD",
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
               </p>
             )}
             {costByCurrency.EUR > 0 && (
-              <p className="text-sm tabular-nums text-slate-500">
+              <p className="text-lg font-semibold tabular-nums text-slate-900">
                 {costByCurrency.EUR.toLocaleString("de-DE", {
                   style: "currency",
                   currency: "EUR",
@@ -133,21 +133,21 @@ export default async function DashboardPage() {
           className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
         >
           <p className="text-sm font-medium text-slate-500">Yıllık Bakım Planı (Bu Ay)</p>
-          <div className="mt-2 flex items-baseline gap-2">
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
             <span
               className="text-2xl font-semibold tabular-nums"
-              style={{
-                color:
-                  planMissedThisMonth === 0
-                    ? "var(--viz-status-good)"
-                    : "var(--viz-status-critical)",
-              }}
+              style={{ color: "var(--viz-status-good)" }}
             >
               {planDoneThisMonth}
             </span>
-            <span className="text-sm text-slate-400">
-              yapıldı, {planMissedThisMonth} yapılmadı / {machineCount} makine
+            <span className="text-sm text-slate-400">yapıldı,</span>
+            <span
+              className="text-2xl font-semibold tabular-nums"
+              style={{ color: "var(--viz-status-critical)" }}
+            >
+              {planMissedThisMonth}
             </span>
+            <span className="text-sm text-slate-400">yapılmadı / {machineCount} makine</span>
           </div>
         </Link>
       </div>

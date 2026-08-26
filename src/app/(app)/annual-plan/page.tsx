@@ -167,8 +167,10 @@ export default async function AnnualPlanPage({
                 Yapıldı / Yapılmadı
               </td>
               {MONTHS.map((_, i) => (
-                <td key={i} className="px-2 py-2 text-center text-xs text-slate-500">
-                  {monthlyDone[i]} / {monthlyMissed[i]}
+                <td key={i} className="px-2 py-2 text-center text-xs">
+                  <span className="font-medium text-green-600">{monthlyDone[i]}</span>
+                  <span className="text-slate-400"> / </span>
+                  <span className="font-medium text-red-600">{monthlyMissed[i]}</span>
                 </td>
               ))}
             </tr>

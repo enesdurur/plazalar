@@ -69,6 +69,7 @@ export default async function RecordsPage() {
               <th className="px-4 py-3 text-left font-medium text-slate-600">Teknisyen</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">MTTA</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">MTTR</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">Durum</th>
               <th className="px-4 py-3 print:hidden" />
             </tr>
           </thead>
@@ -101,6 +102,17 @@ export default async function RecordsPage() {
                 <td className="px-4 py-3 text-slate-600">
                   {formatMinutes(mttr(r.respondedAt, r.finishedAt))}
                 </td>
+                <td className="px-4 py-3">
+                  {r.finishedAt ? (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                      Tamamlandı
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      Devam Ediyor
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right print:hidden">
                   <div className="flex justify-end gap-3">
                     {writable && (
@@ -120,7 +132,7 @@ export default async function RecordsPage() {
             ))}
             {records.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
                   Henüz kayıt yok.
                 </td>
               </tr>

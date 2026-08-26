@@ -30,9 +30,11 @@ export async function GET() {
     { header: "Bitiş Zamanı", key: "finishedAt", width: 20 },
     { header: "MTTA (dk)", key: "mtta", width: 10 },
     { header: "MTTR (dk)", key: "mttr", width: 10 },
+    { header: "Durum", key: "status", width: 14 },
     { header: "Yedek Parça", key: "sparePart", width: 20 },
     { header: "Adet", key: "sparePartQty", width: 8 },
-    { header: "Maliyet (₺)", key: "sparePartCost", width: 12 },
+    { header: "Maliyet", key: "sparePartCost", width: 12 },
+    { header: "Para Birimi", key: "sparePartCostCurrency", width: 10 },
   ];
   sheet.getRow(1).font = { bold: true };
 
@@ -48,9 +50,11 @@ export async function GET() {
       finishedAt: r.finishedAt ?? "",
       mtta: mtta(r.reportedAt, r.respondedAt) ?? "",
       mttr: mttr(r.respondedAt, r.finishedAt) ?? "",
-      sparePart: r.sparePart?.name ?? "",
+      status: r.finishedAt ? "Tamamlandı" : "Devam Ediyor",
+      sparePart: r.sparePart?.name ?? r.sparePartOther ?? "",
       sparePartQty: r.sparePartQty ?? "",
       sparePartCost: r.sparePartCost ? Number(r.sparePartCost) : "",
+      sparePartCostCurrency: r.sparePartCost ? r.sparePartCostCurrency : "",
     });
   }
 

@@ -8,6 +8,8 @@ import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 
+const OTHER_SPARE_PART = "__other__";
+
 const recordSchema = z.object({
   machineId: z.string().min(1, "Makine seçimi zorunludur"),
   operationType: z.enum(["ARIZA", "BAKIM"]),
@@ -18,8 +20,10 @@ const recordSchema = z.object({
   respondedAt: z.string().optional(),
   finishedAt: z.string().optional(),
   sparePartId: z.string().optional(),
+  sparePartOtherName: z.string().optional(),
   sparePartQty: z.coerce.number().int().optional(),
   sparePartCost: z.coerce.number().optional(),
+  sparePartCostCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -38,9 +42,13 @@ function parseRecordForm(formData: FormData) {
     respondedAt: emptyToUndefined(formData.get("respondedAt")),
     finishedAt: emptyToUndefined(formData.get("finishedAt")),
     sparePartId: emptyToUndefined(formData.get("sparePartId")),
+    sparePartOtherName: emptyToUndefined(formData.get("sparePartOtherName")),
     sparePartQty: emptyToUndefined(formData.get("sparePartQty")),
     sparePartCost: emptyToUndefined(formData.get("sparePartCost")),
+    sparePartCostCurrency: emptyToUndefined(formData.get("sparePartCostCurrency")) ?? "TRY",
   });
+
+  const isOther = parsed.sparePartId === OTHER_SPARE_PART;
 
   return {
     machineId: parsed.machineId,
@@ -51,9 +59,11 @@ function parseRecordForm(formData: FormData) {
     reportedAt: new Date(parsed.reportedAt),
     respondedAt: parsed.respondedAt ? new Date(parsed.respondedAt) : undefined,
     finishedAt: parsed.finishedAt ? new Date(parsed.finishedAt) : undefined,
-    sparePartId: parsed.sparePartId,
+    sparePartId: isOther ? undefined : parsed.sparePartId,
+    sparePartOther: isOther ? parsed.sparePartOtherName : undefined,
     sparePartQty: parsed.sparePartQty,
     sparePartCost: parsed.sparePartCost,
+    sparePartCostCurrency: parsed.sparePartCostCurrency,
   };
 }
 

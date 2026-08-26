@@ -50,10 +50,12 @@ export default async function DashboardPage() {
     .map((r) => mttr(r.respondedAt, r.finishedAt))
     .filter((v): v is number => v !== null);
 
-  const totalSparePartCost = records.reduce(
-    (sum, r) => sum + (r.sparePartCost ? Number(r.sparePartCost) : 0),
-    0
-  );
+  const costByCurrency = { TRY: 0, USD: 0, EUR: 0 };
+  for (const r of records) {
+    if (r.sparePartCost) {
+      costByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
+    }
+  }
 
   const downtimeByMachine = new Map<string, number>();
   for (const r of records) {
@@ -86,14 +88,36 @@ export default async function DashboardPage() {
           value={formatMinutes(average(mttrValues))}
           hint="Müdahale → Bitiş"
         />
-        <StatTile
-          label="Toplam Yedek Parça Maliyeti"
-          value={totalSparePartCost.toLocaleString("tr-TR", {
-            style: "currency",
-            currency: "TRY",
-            maximumFractionDigits: 0,
-          })}
-        />
+        <div className="rounded-lg border border-slate-200 bg-white p-5">
+          <p className="text-sm font-medium text-slate-500">Toplam Yedek Parça Maliyeti</p>
+          <div className="mt-2 space-y-0.5">
+            <p className="text-lg font-semibold tabular-nums text-slate-900">
+              {costByCurrency.TRY.toLocaleString("tr-TR", {
+                style: "currency",
+                currency: "TRY",
+                maximumFractionDigits: 0,
+              })}
+            </p>
+            {costByCurrency.USD > 0 && (
+              <p className="text-sm tabular-nums text-slate-500">
+                {costByCurrency.USD.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            )}
+            {costByCurrency.EUR > 0 && (
+              <p className="text-sm tabular-nums text-slate-500">
+                {costByCurrency.EUR.toLocaleString("de-DE", {
+                  style: "currency",
+                  currency: "EUR",
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>

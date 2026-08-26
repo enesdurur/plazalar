@@ -6,6 +6,7 @@ import type {
   MaintenanceRecord,
 } from "@prisma/client";
 import { SubmitButton } from "@/components/submit-button";
+import { SparePartField } from "./spare-part-field";
 
 function toDatetimeLocal(date: Date | null | undefined) {
   if (!date) return "";
@@ -115,16 +116,11 @@ export function RecordForm({
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="Kullanılan Yedek Parça">
-          <select name="sparePartId" defaultValue={record?.sparePartId ?? ""} className="input">
-            <option value="">Seçiniz</option>
-            {spareParts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <SparePartField
+          spareParts={spareParts}
+          defaultSparePartId={record?.sparePartId}
+          defaultSparePartOther={record?.sparePartOther}
+        />
         <Field label="Adet">
           <input
             name="sparePartQty"
@@ -134,14 +130,25 @@ export function RecordForm({
             className="input"
           />
         </Field>
-        <Field label="Yedek Parça Maliyeti (₺)">
-          <input
-            name="sparePartCost"
-            type="number"
-            step="0.01"
-            defaultValue={record?.sparePartCost?.toString() ?? ""}
-            className="input"
-          />
+        <Field label="Yedek Parça Maliyeti">
+          <div className="flex gap-2">
+            <input
+              name="sparePartCost"
+              type="number"
+              step="0.01"
+              defaultValue={record?.sparePartCost?.toString() ?? ""}
+              className="input"
+            />
+            <select
+              name="sparePartCostCurrency"
+              defaultValue={record?.sparePartCostCurrency ?? "TRY"}
+              className="input w-24"
+            >
+              <option value="TRY">TL</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
         </Field>
       </div>
 

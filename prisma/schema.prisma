@@ -20,6 +20,12 @@ enum OperationType {
   BAKIM
 }
 
+enum Currency {
+  TRY
+  USD
+  EUR
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -116,21 +122,23 @@ model SparePart {
 }
 
 model MaintenanceRecord {
-  id            String        @id @default(cuid())
-  machineId     String
-  operationType OperationType
-  issueTypeId   String?
-  description   String
-  technicianId  String?
-  reportedAt    DateTime
-  respondedAt   DateTime?
-  finishedAt    DateTime?
-  sparePartId   String?
-  sparePartQty  Int?
-  sparePartCost Decimal?      @db.Decimal(12, 2)
-  createdById   String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                    String        @id @default(cuid())
+  machineId             String
+  operationType         OperationType
+  issueTypeId           String?
+  description           String
+  technicianId          String?
+  reportedAt            DateTime
+  respondedAt           DateTime?
+  finishedAt            DateTime?
+  sparePartId           String?
+  sparePartOther        String?
+  sparePartQty          Int?
+  sparePartCost         Decimal?      @db.Decimal(12, 2)
+  sparePartCostCurrency Currency      @default(TRY)
+  createdById           String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   machine    Machine     @relation(fields: [machineId], references: [id])
   issueType  IssueType?  @relation(fields: [issueTypeId], references: [id])

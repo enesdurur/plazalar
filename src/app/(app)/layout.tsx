@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { NavLinks } from "@/components/nav-links";
 import { LogoutButton } from "@/components/logout-button";
+import { Sidebar } from "@/components/sidebar";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Yönetici",
@@ -20,12 +21,8 @@ export default async function AppLayout({
   const plaza = await getSelectedPlaza();
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-64 shrink-0 flex-col bg-slate-900 p-4">
-        <div className="mb-6 px-2">
-          <p className="text-sm font-semibold text-white">Plazalar Teknik Hizmetler</p>
-          <p className="text-xs text-slate-400">Bakım &amp; Arıza Yönetimi</p>
-        </div>
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <Sidebar>
         <div className="mb-4 rounded-md bg-slate-800 px-3 py-2">
           <p className="text-[11px] uppercase tracking-wide text-slate-400">Plaza</p>
           <p className="truncate text-sm font-medium text-white">{plaza.name}</p>
@@ -37,7 +34,7 @@ export default async function AppLayout({
           </Link>
         </div>
         <NavLinks />
-        <div className="mt-auto border-t border-slate-800 pt-4">
+        <div className="mt-auto border-t border-slate-800 pt-4 md:mt-auto">
           {user && (
             <div className="px-2 pb-2">
               <p className="truncate text-sm font-medium text-white">{user.name}</p>
@@ -48,8 +45,8 @@ export default async function AppLayout({
           )}
           <LogoutButton />
         </div>
-      </aside>
-      <main className="flex-1 bg-slate-50 p-8">{children}</main>
+      </Sidebar>
+      <main className="flex-1 overflow-x-hidden bg-slate-50 p-4 md:p-8">{children}</main>
     </div>
   );
 }

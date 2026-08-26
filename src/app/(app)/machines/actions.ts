@@ -10,8 +10,6 @@ import { getSelectedPlaza } from "@/lib/plaza";
 
 const machineSchema = z.object({
   name: z.string().min(1, "Makine adı zorunludur"),
-  code: z.string().optional(),
-  lineId: z.string().optional(),
   brand: z.string().optional(),
   model: z.string().optional(),
   serialNo: z.string().optional(),
@@ -31,8 +29,6 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 function parseMachineForm(formData: FormData) {
   return machineSchema.parse({
     name: formData.get("name"),
-    code: emptyToUndefined(formData.get("code")),
-    lineId: emptyToUndefined(formData.get("lineId")),
     brand: emptyToUndefined(formData.get("brand")),
     model: emptyToUndefined(formData.get("model")),
     serialNo: emptyToUndefined(formData.get("serialNo")),

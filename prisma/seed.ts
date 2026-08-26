@@ -9,8 +9,6 @@ const prisma = new PrismaClient();
 
 const PLAZAS = ["Square Plaza", "Link Plaza", "Olive Plaza", "DLP No.1 Plaza", "Uso Center"];
 
-const LINES = ["PROSES 1", "PROSES 2", "PROSES 3", "PROSES 4", "PROSES 5"];
-
 const ISSUE_TYPES = [
   "ELEKTRİK ARIZASI",
   "MEKANİK ARIZASI",
@@ -114,16 +112,6 @@ async function main() {
 
   console.log("Seeding lookups...");
 
-  const lines = new Map<string, string>();
-  for (const name of LINES) {
-    const line = await prisma.line.upsert({
-      where: { name },
-      update: {},
-      create: { name },
-    });
-    lines.set(name, line.id);
-  }
-
   const issueTypes = new Map<string, string>();
   for (const name of ISSUE_TYPES) {
     const issueType = await prisma.issueType.upsert({
@@ -178,11 +166,10 @@ async function main() {
   for (const r of records) {
     const machineName = r["Makine Adı"];
     if (machineIds.has(machineName)) continue;
-    const lineId = lines.get(r["Hat Adı"]);
     const machine = await prisma.machine.upsert({
       where: { plazaId_name: { plazaId: squarePlazaId, name: machineName } },
       update: {},
-      create: { name: machineName, lineId, plazaId: squarePlazaId },
+      create: { name: machineName, plazaId: squarePlazaId },
     });
     machineIds.set(machineName, machine.id);
   }

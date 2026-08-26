@@ -1,13 +1,11 @@
-import type { Line, Machine } from "@prisma/client";
+import type { Machine } from "@prisma/client";
 import { SubmitButton } from "@/components/submit-button";
 
 export function MachineForm({
   action,
-  lines,
   machine,
 }: {
   action: (formData: FormData) => Promise<void>;
-  lines: Line[];
   machine?: Machine;
 }) {
   return (
@@ -20,19 +18,6 @@ export function MachineForm({
             defaultValue={machine?.name}
             className="input"
           />
-        </Field>
-        <Field label="Makine Kodu">
-          <input name="code" defaultValue={machine?.code ?? ""} className="input" />
-        </Field>
-        <Field label="Hat">
-          <select name="lineId" defaultValue={machine?.lineId ?? ""} className="input">
-            <option value="">Seçiniz</option>
-            {lines.map((line) => (
-              <option key={line.id} value={line.id}>
-                {line.name}
-              </option>
-            ))}
-          </select>
         </Field>
         <Field label="Adet">
           <input

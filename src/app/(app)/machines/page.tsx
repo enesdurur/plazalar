@@ -21,7 +21,7 @@ export default async function MachinesPage() {
 
   const machines = await prisma.machine.findMany({
     where: { plazaId: plaza.id },
-    include: { line: true, _count: { select: { records: true } } },
+    include: { _count: { select: { records: true } } },
     orderBy: { name: "asc" },
   });
 
@@ -55,8 +55,6 @@ export default async function MachinesPage() {
           <thead className="sticky top-0 z-10 bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Makine Adı</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Kod</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Hat</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Marka / Model</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Bölüm</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Kayıt Sayısı</th>
@@ -67,8 +65,6 @@ export default async function MachinesPage() {
             {machines.map((m) => (
               <tr key={m.id} className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100">
                 <td className="px-4 py-3 font-medium text-slate-900">{m.name}</td>
-                <td className="px-4 py-3 text-slate-600">{m.code ?? "-"}</td>
-                <td className="px-4 py-3 text-slate-600">{m.line?.name ?? "-"}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {[m.brand, m.model].filter(Boolean).join(" / ") || "-"}
                 </td>
@@ -93,7 +89,7 @@ export default async function MachinesPage() {
             ))}
             {machines.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                   Henüz makine kaydı yok.
                 </td>
               </tr>

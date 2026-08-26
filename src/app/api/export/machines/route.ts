@@ -7,7 +7,6 @@ export async function GET() {
 
   const machines = await prisma.machine.findMany({
     where: { plazaId: plaza.id },
-    include: { line: true },
     orderBy: { name: "asc" },
   });
 
@@ -15,8 +14,6 @@ export async function GET() {
   const sheet = workbook.addWorksheet("Makineler");
   sheet.columns = [
     { header: "Makine Adı", key: "name", width: 24 },
-    { header: "Kod", key: "code", width: 14 },
-    { header: "Hat", key: "line", width: 16 },
     { header: "Marka", key: "brand", width: 16 },
     { header: "Model", key: "model", width: 16 },
     { header: "Seri No", key: "serialNo", width: 16 },
@@ -32,8 +29,6 @@ export async function GET() {
   for (const m of machines) {
     sheet.addRow({
       name: m.name,
-      code: m.code ?? "",
-      line: m.line?.name ?? "",
       brand: m.brand ?? "",
       model: m.model ?? "",
       serialNo: m.serialNo ?? "",

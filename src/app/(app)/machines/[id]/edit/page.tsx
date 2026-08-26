@@ -17,10 +17,7 @@ export default async function EditMachinePage({
   const { id } = await params;
   const plaza = await getSelectedPlaza();
 
-  const [machine, lines] = await Promise.all([
-    prisma.machine.findFirst({ where: { id, plazaId: plaza.id } }),
-    prisma.line.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  const machine = await prisma.machine.findFirst({ where: { id, plazaId: plaza.id } });
 
   if (!machine) notFound();
 
@@ -30,7 +27,7 @@ export default async function EditMachinePage({
     <div>
       <h1 className="text-xl font-semibold text-slate-900">Makine Düzenle</h1>
       <div className="mt-6">
-        <MachineForm action={updateWithId} lines={lines} machine={machine} />
+        <MachineForm action={updateWithId} machine={machine} />
       </div>
     </div>
   );

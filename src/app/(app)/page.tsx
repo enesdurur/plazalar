@@ -20,7 +20,6 @@ export default async function DashboardPage() {
 
   const machines = await prisma.machine.findMany({
     where: { plazaId: plaza.id },
-    include: { line: true },
   });
 
   const now = new Date();
@@ -56,8 +55,6 @@ export default async function DashboardPage() {
     0
   );
 
-  const machineLine = new Map(machines.map((m) => [m.id, m.line?.name ?? "Belirsiz"]));
-
   const downtimeByMachine = new Map<string, number>();
   for (const r of records) {
     const downtime = mttr(r.respondedAt, r.finishedAt) ?? 0;
@@ -69,13 +66,6 @@ export default async function DashboardPage() {
   const topMachines = [...downtimeByMachine.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
-
-  const recordsByLine = new Map<string, number>();
-  for (const r of records) {
-    const line = machineLine.get(r.machineId) ?? "Belirsiz";
-    recordsByLine.set(line, (recordsByLine.get(line) ?? 0) + 1);
-  }
-  const lineBreakdown = [...recordsByLine.entries()].sort((a, b) => b[1] - a[1]);
 
   return (
     <div>
@@ -138,7 +128,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mt-8 grid grid-cols-1 gap-6">
         <div className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-semibold text-slate-900">İşlem Türü Dağılımı</h2>
           <div className="mt-4 space-y-3">
@@ -158,13 +148,6 @@ export default async function DashboardPage() {
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Hat Bazında Kayıt Sayısı</h2>
-          <BarBreakdown
-            items={lineBreakdown.map(([label, value]) => ({ label, value }))}
-          />
-        </div>
-
-        <div className="rounded-lg border border-slate-200 bg-white p-5 lg:col-span-2">
           <h2 className="text-sm font-semibold text-slate-900">
             Toplam Arıza Süresine Göre En Çok Duran Makineler (MTTR)
           </h2>

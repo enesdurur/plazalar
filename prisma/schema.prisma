@@ -45,21 +45,10 @@ model Plaza {
   @@map("plazas")
 }
 
-model Line {
-  id   String @id @default(cuid())
-  name String @unique
-
-  machines Machine[]
-
-  @@map("lines")
-}
-
 model Machine {
   id                String   @id @default(cuid())
   plazaId           String
-  code              String?
   name              String
-  lineId            String?
   brand             String?
   model             String?
   serialNo          String?
@@ -73,13 +62,10 @@ model Machine {
   updatedAt         DateTime @updatedAt
 
   plaza       Plaza                  @relation(fields: [plazaId], references: [id])
-  line        Line?                  @relation(fields: [lineId], references: [id])
   records     MaintenanceRecord[]
   planEntries MaintenancePlanEntry[]
 
   @@unique([plazaId, name])
-  @@unique([plazaId, code])
-  @@index([lineId])
   @@map("machines")
 }
 

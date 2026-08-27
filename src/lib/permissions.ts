@@ -9,3 +9,19 @@ export function canWrite(role: Role | undefined) {
 export function canDelete(role: Role | undefined) {
   return role === "ADMIN";
 }
+
+export function canManageUsers(role: Role | undefined) {
+  return role === "ADMIN";
+}
+
+export const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: "Yönetici",
+  TECHNICIAN: "Teknisyen",
+  VIEWER: "İzleyici",
+};
+
+export const ROLE_OPTIONS: { value: Role; label: string }[] = [
+  { value: "ADMIN", label: "Yönetici" },
+  { value: "TECHNICIAN", label: "Teknisyen" },
+  { value: "VIEWER", label: "İzleyici" },
+];

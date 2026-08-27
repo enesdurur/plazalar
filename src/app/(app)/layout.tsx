@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { getSelectedPlaza } from "@/lib/plaza";
+import { ROLE_LABELS, canManageUsers } from "@/lib/permissions";
 import { NavLinks } from "@/components/nav-links";
 import { LogoutButton } from "@/components/logout-button";
 import { Sidebar } from "@/components/sidebar";
-
-const ROLE_LABELS: Record<string, string> = {
-  ADMIN: "Yönetici",
-  TECHNICIAN: "Teknisyen",
-  VIEWER: "İzleyici",
-};
 
 export default async function AppLayout({
   children,
@@ -33,7 +28,7 @@ export default async function AppLayout({
             Değiştir
           </Link>
         </div>
-        <NavLinks />
+        <NavLinks showUsers={canManageUsers(user?.role)} />
         <div className="mt-auto border-t border-slate-800 pt-4 md:mt-auto">
           {user && (
             <div className="px-2 pb-2">

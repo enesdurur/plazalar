@@ -1,0 +1,103 @@
+"use server";
+
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { canManageUsers } from "@/lib/permissions";
+
+const roleSchema = z.enum(["ADMIN", "TECHNICIAN", "VIEWER"]);
+
+const createSchema = z.object({
+  name: z.string().min(1, "Ad Soyad zorunludur"),
+  email: z.string().email("Geçerli bir e-posta girin"),
+  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  role: roleSchema,
+});
+
+const updateSchema = z.object({
+  name: z.string().min(1, "Ad Soyad zorunludur"),
+  email: z.string().email("Geçerli bir e-posta girin"),
+  password: z.union([z.string().min(6, "Şifre en az 6 karakter olmalıdır"), z.literal("")]),
+  role: roleSchema,
+});
+
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user || !canManageUsers(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  return session;
+}
+
+export async function createUser(formData: FormData) {
+  await requireAdmin();
+
+  const data = createSchema.parse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+    role: formData.get("role"),
+  });
+
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing) throw new Error("Bu e-posta adresi zaten kullanılıyor.");
+
+  const passwordHash = await bcrypt.hash(data.password, 10);
+  await prisma.user.create({
+    data: { name: data.name, email: data.email, passwordHash, role: data.role },
+  });
+
+  revalidatePath("/users");
+  redirect("/users");
+}
+
+export async function updateUser(id: string, formData: FormData) {
+  const session = await requireAdmin();
+
+  const data = updateSchema.parse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    password: formData.get("password") || "",
+    role: formData.get("role"),
+  });
+
+  if (id === session.user.id && data.role !== "ADMIN") {
+    throw new Error("Kendi yöneticilik rolünüzü kaldıramazsınız.");
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing && existing.id !== id) throw new Error("Bu e-posta adresi zaten kullanılıyor.");
+
+  await prisma.user.update({
+    where: { id },
+    data: {
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      ...(data.password ? { passwordHash: await bcrypt.hash(data.password, 10) } : {}),
+    },
+  });
+
+  revalidatePath("/users");
+  redirect("/users");
+}
+
+export async function deleteUser(id: string) {
+  const session = await requireAdmin();
+
+  if (id === session.user.id) {
+    throw new Error("Kendi hesabınızı silemezsiniz.");
+  }
+
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (target?.role === "ADMIN") {
+    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (adminCount <= 1) throw new Error("Son yönetici hesabı silinemez.");
+  }
+
+  await prisma.user.delete({ where: { id } });
+  revalidatePath("/users");
+}

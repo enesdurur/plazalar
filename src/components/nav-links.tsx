@@ -15,12 +15,15 @@ const LINKS = [
   // (sayfalar hâlâ mevcut: /calibrations, /verifications)
 ];
 
-export function NavLinks() {
+const ADMIN_LINKS = [{ href: "/users", label: "Kullanıcılar" }];
+
+export function NavLinks({ showUsers = false }: { showUsers?: boolean }) {
   const pathname = usePathname();
+  const links = showUsers ? [...LINKS, ...ADMIN_LINKS] : LINKS;
 
   return (
     <nav className="flex flex-col gap-1">
-      {LINKS.map((link) => {
+      {links.map((link) => {
         const active =
           link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
         return (

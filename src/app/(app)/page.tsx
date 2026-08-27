@@ -4,6 +4,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
+import { SparePartCostTile, type SparePartCostEntry } from "@/components/spare-part-cost-tile";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -56,6 +57,17 @@ export default async function DashboardPage() {
       costByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
     }
   }
+  const costEntries: SparePartCostEntry[] = records
+    .filter((r) => r.sparePartCost)
+    .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime())
+    .map((r) => ({
+      id: r.id,
+      machine: r.machine.name,
+      description: r.description,
+      reportedAt: r.reportedAt.toLocaleDateString("tr-TR"),
+      cost: Number(r.sparePartCost),
+      currency: r.sparePartCostCurrency,
+    }));
 
   const downtimeByMachine = new Map<string, number>();
   for (const r of records) {
@@ -88,36 +100,7 @@ export default async function DashboardPage() {
           value={formatMinutes(average(mttrValues))}
           hint="Müdahale → Bitiş"
         />
-        <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <p className="text-sm font-medium text-slate-500">Toplam Yedek Parça Maliyeti</p>
-          <div className="mt-2 space-y-1">
-            <p className="text-lg font-semibold tabular-nums text-slate-900">
-              {costByCurrency.TRY.toLocaleString("tr-TR", {
-                style: "currency",
-                currency: "TRY",
-                maximumFractionDigits: 0,
-              })}
-            </p>
-            {costByCurrency.USD > 0 && (
-              <p className="text-lg font-semibold tabular-nums text-slate-900">
-                {costByCurrency.USD.toLocaleString("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-            )}
-            {costByCurrency.EUR > 0 && (
-              <p className="text-lg font-semibold tabular-nums text-slate-900">
-                {costByCurrency.EUR.toLocaleString("de-DE", {
-                  style: "currency",
-                  currency: "EUR",
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-            )}
-          </div>
-        </div>
+        <SparePartCostTile totals={costByCurrency} entries={costEntries} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>

@@ -9,6 +9,8 @@ const LINKS = [
   { href: "/records", label: "Arıza / Bakım Kayıtları" },
   { href: "/annual-plan", label: "Yıllık Bakım Planı" },
   { href: "/inspections", label: "Periyodik Muayene" },
+  { href: "/tenants", label: "Kiracılar" },
+  { href: "/tenant-maintenance", label: "Kiracı Bakımları" },
   // Kalibrasyon Planı ve Doğrulama Planı şu anlık menüden gizlendi
   // (sayfalar hâlâ mevcut: /calibrations, /verifications)
 ];

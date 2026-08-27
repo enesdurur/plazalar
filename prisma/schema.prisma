@@ -47,8 +47,45 @@ model Plaza {
 
   machines            Machine[]
   periodicInspections PeriodicInspection[]
+  tenants             Tenant[]
 
   @@map("plazas")
+}
+
+model Tenant {
+  id          String   @id @default(cuid())
+  plazaId     String
+  floor       String
+  companyName String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plaza        Plaza               @relation(fields: [plazaId], references: [id])
+  maintenances TenantMaintenance[]
+
+  @@unique([plazaId, floor])
+  @@index([plazaId])
+  @@map("tenants")
+}
+
+model TenantMaintenance {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  maintenanceType     String
+  period              String?
+  lastMaintenanceDate DateTime?
+  nextMaintenanceDate DateTime?
+  responsiblePerson   String?
+  note                String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([nextMaintenanceDate])
+  @@map("tenant_maintenances")
 }
 
 model Machine {

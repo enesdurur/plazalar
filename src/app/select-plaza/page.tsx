@@ -24,7 +24,7 @@ export default async function SelectPlazaPage() {
             <form key={plaza.id} action={selectPlaza.bind(null, plaza.id)}>
               <button
                 type="submit"
-                className="w-full rounded-md border border-slate-200 px-4 py-3 text-left text-sm font-medium uppercase text-slate-900 hover:border-slate-400 hover:bg-slate-50"
+                className="w-full rounded-md border border-slate-200 px-4 py-3 text-left text-sm font-bold uppercase text-slate-900 hover:border-slate-400 hover:bg-slate-50"
               >
                 {plaza.name}
               </button>

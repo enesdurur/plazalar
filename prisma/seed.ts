@@ -13,7 +13,7 @@ const PLAZAS = [
   "Olive Plaza",
   "DLP No.1 Plaza",
   "Uso Center",
-  "Maslak No.23 Plaza",
+  "No.23 Plaza",
 ];
 
 const ISSUE_TYPES = [

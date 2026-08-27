@@ -222,7 +222,9 @@ function FilterDropdown({
       if (panelRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
       setOpen(false);
     }
-    function handleScroll() {
+    function handleScroll(e: Event) {
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
       setOpen(false);
     }
     function handleKey(e: KeyboardEvent) {
@@ -254,7 +256,7 @@ function FilterDropdown({
   const filteredOptions = options.filter((o) =>
     o.toLowerCase().includes(search.toLowerCase())
   );
-  const allChecked = selected.size === 0;
+  const allChecked = options.length > 0 && selected.size === options.length;
 
   return (
     <>
@@ -289,22 +291,22 @@ function FilterDropdown({
               <input
                 type="checkbox"
                 checked={allChecked}
-                onChange={() => onChange(new Set())}
+                onChange={() => onChange(allChecked ? new Set() : new Set(options))}
               />
               (Tümü)
             </label>
             {filteredOptions.map((opt) => {
-              const checked = allChecked || selected.has(opt);
+              const checked = selected.has(opt);
               return (
                 <label key={opt} className="flex items-center gap-2 px-1 py-1 hover:bg-slate-50">
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => {
-                      const base = allChecked ? new Set(options) : new Set(selected);
-                      if (checked) base.delete(opt);
-                      else base.add(opt);
-                      onChange(base.size === options.length ? new Set() : base);
+                      const next = new Set(selected);
+                      if (checked) next.delete(opt);
+                      else next.add(opt);
+                      onChange(next);
                     }}
                   />
                   <span className="truncate">{opt || "(boş)"}</span>

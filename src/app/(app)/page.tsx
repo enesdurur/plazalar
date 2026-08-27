@@ -4,7 +4,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
-import { SparePartCostTile, type SparePartCostEntry } from "@/components/spare-part-cost-tile";
+import { SparePartCostTile } from "@/components/spare-part-cost-tile";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -57,17 +57,6 @@ export default async function DashboardPage() {
       costByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
     }
   }
-  const costEntries: SparePartCostEntry[] = records
-    .filter((r) => r.sparePartCost)
-    .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime())
-    .map((r) => ({
-      id: r.id,
-      machine: r.machine.name,
-      description: r.description,
-      reportedAt: r.reportedAt.toLocaleDateString("tr-TR"),
-      cost: Number(r.sparePartCost),
-      currency: r.sparePartCostCurrency,
-    }));
 
   const downtimeByMachine = new Map<string, number>();
   for (const r of records) {
@@ -88,19 +77,9 @@ export default async function DashboardPage() {
         Teknik hizmetler arıza ve bakım performans özeti.
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatTile label="Toplam Kayıt" value={records.length.toString()} />
-        <StatTile
-          label="Ortalama MTTA"
-          value={formatMinutes(average(mttaValues))}
-          hint="Bildirim → Müdahale"
-        />
-        <StatTile
-          label="Ortalama MTTR"
-          value={formatMinutes(average(mttrValues))}
-          hint="Müdahale → Bitiş"
-        />
-        <SparePartCostTile totals={costByCurrency} entries={costEntries} />
+        <SparePartCostTile totals={costByCurrency} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
@@ -169,6 +148,19 @@ export default async function DashboardPage() {
             <p className="mt-4 text-sm text-slate-500">Henüz veri yok.</p>
           )}
         </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatTile
+          label="Ortalama MTTA"
+          value={formatMinutes(average(mttaValues))}
+          hint="Bildirim → Müdahale"
+        />
+        <StatTile
+          label="Ortalama MTTR"
+          value={formatMinutes(average(mttrValues))}
+          hint="Müdahale → Bitiş"
+        />
       </div>
     </div>
   );

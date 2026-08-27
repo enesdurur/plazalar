@@ -62,6 +62,9 @@ export default async function DashboardPage() {
   const arizaCount = records.filter((r) => r.operationType === "ARIZA").length;
   const bakimCount = records.filter((r) => r.operationType === "BAKIM").length;
 
+  const completedRecordCount = records.filter((r) => r.finishedAt).length;
+  const ongoingRecordCount = records.length - completedRecordCount;
+
   const mttaValues = records
     .map((r) => mtta(r.reportedAt, r.respondedAt))
     .filter((v): v is number => v !== null);
@@ -109,7 +112,24 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatTile label="Toplam Kayıt" value={records.length.toString()} />
+        <Link
+          href="/records"
+          className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+        >
+          <p className="text-sm font-medium text-slate-500">Toplam Kayıt</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">
+            {records.length}
+          </p>
+          <div className="mt-2 flex gap-3 text-xs text-slate-500">
+            <span>
+              <span className="font-medium text-green-600">{completedRecordCount}</span>{" "}
+              tamamlanan
+            </span>
+            <span>
+              <span className="font-medium text-amber-600">{ongoingRecordCount}</span> devam eden
+            </span>
+          </div>
+        </Link>
         <MaintenanceCostTile totals={maintenanceCostByCurrency} />
         <SparePartCostTile totals={sparePartCostByCurrency} />
       </div>

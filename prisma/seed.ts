@@ -7,7 +7,14 @@ import rawVerifications from "./seed-data/dogrulama.json";
 
 const prisma = new PrismaClient();
 
-const PLAZAS = ["Square Plaza", "Link Plaza", "Olive Plaza", "DLP No.1 Plaza", "Uso Center"];
+const PLAZAS = [
+  "Square Plaza",
+  "Link Plaza",
+  "Olive Plaza",
+  "DLP No.1 Plaza",
+  "Uso Center",
+  "Maslak No.23 Plaza",
+];
 
 const ISSUE_TYPES = [
   "ELEKTRİK ARIZASI",

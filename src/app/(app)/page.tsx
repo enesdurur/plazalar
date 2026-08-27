@@ -4,7 +4,8 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
-import { SparePartCostTile } from "@/components/spare-part-cost-tile";
+import { SparePartCostTile, MaintenanceCostTile } from "@/components/spare-part-cost-tile";
+import { getTcmbRates } from "@/lib/tcmb";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export default async function DashboardPage() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const [inspectionTotal, inspectionExpired, planEntriesThisMonth] = await Promise.all([
+  const [inspectionTotal, inspectionExpired, planEntriesThisMonth, tcmbRates] = await Promise.all([
     prisma.periodicInspection.count({ where: { plazaId: plaza.id } }),
     prisma.periodicInspection.count({
       where: { plazaId: plaza.id, nextInspectionDate: { lt: now } },
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
     prisma.maintenancePlanEntry.findMany({
       where: { year: currentYear, month: currentMonth, machine: { plazaId: plaza.id } },
     }),
+    getTcmbRates(),
   ]);
   const machineCount = machines.length;
 
@@ -72,14 +74,41 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-slate-900">Panel</h1>
+      <div className="flex flex-wrap items-baseline gap-3">
+        <h1 className="text-xl font-semibold text-slate-900">Panel</h1>
+        {(tcmbRates.usd !== null || tcmbRates.eur !== null) && (
+          <span className="flex gap-3 text-xs text-slate-500">
+            {tcmbRates.usd !== null && (
+              <span>
+                USD:{" "}
+                {tcmbRates.usd.toLocaleString("tr-TR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                TL
+              </span>
+            )}
+            {tcmbRates.eur !== null && (
+              <span>
+                EUR:{" "}
+                {tcmbRates.eur.toLocaleString("tr-TR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                TL
+              </span>
+            )}
+          </span>
+        )}
+      </div>
       <p className="mt-1 text-sm text-slate-500">
         Teknik hizmetler arıza ve bakım performans özeti.
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatTile label="Toplam Kayıt" value={records.length.toString()} />
         <SparePartCostTile totals={costByCurrency} />
+        <MaintenanceCostTile totals={costByCurrency} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>

@@ -3,10 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { deleteTenant } from "./actions";
-import { DeleteButton } from "@/components/delete-button";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
+import { TenantsTable } from "./tenants-table";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -50,46 +49,8 @@ export default async function TenantsPage() {
         </div>
       </div>
 
-      <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Kat</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Kiracı</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Bakım Kaydı</th>
-              <th className="px-4 py-3 print:hidden" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {tenants.map((t) => (
-              <tr key={t.id} className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100">
-                <td className="px-4 py-3 font-medium text-slate-900">{t.floor}</td>
-                <td className="px-4 py-3 text-slate-600">{t.companyName}</td>
-                <td className="px-4 py-3 text-slate-600">{t._count.maintenances}</td>
-                <td className="px-4 py-3 text-right print:hidden">
-                  <div className="flex justify-end gap-3">
-                    {writable && (
-                      <Link
-                        href={`/tenants/${t.id}/edit`}
-                        className="text-sm font-medium text-slate-600 hover:text-slate-900"
-                      >
-                        Düzenle
-                      </Link>
-                    )}
-                    {deletable && <DeleteButton action={deleteTenant.bind(null, t.id)} />}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {tenants.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
-                  Henüz kiracı kaydı yok.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="mt-6">
+        <TenantsTable tenants={tenants} writable={writable} deletable={deletable} />
       </div>
     </div>
   );

@@ -28,7 +28,14 @@ export default async function DashboardPage() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const [inspectionTotal, inspectionExpired, planEntriesThisMonth, tcmbRates] = await Promise.all([
+  const [
+    inspectionTotal,
+    inspectionExpired,
+    planEntriesThisMonth,
+    tcmbRates,
+    costedInspections,
+    costedPlanEntries,
+  ] = await Promise.all([
     prisma.periodicInspection.count({ where: { plazaId: plaza.id } }),
     prisma.periodicInspection.count({
       where: { plazaId: plaza.id, nextInspectionDate: { lt: now } },
@@ -37,6 +44,14 @@ export default async function DashboardPage() {
       where: { year: currentYear, month: currentMonth, machine: { plazaId: plaza.id } },
     }),
     getTcmbRates(),
+    prisma.periodicInspection.findMany({
+      where: { plazaId: plaza.id, cost: { not: null } },
+      select: { cost: true, costCurrency: true },
+    }),
+    prisma.maintenancePlanEntry.findMany({
+      where: { cost: { not: null }, machine: { plazaId: plaza.id } },
+      select: { cost: true, costCurrency: true },
+    }),
   ]);
   const machineCount = machines.length;
 
@@ -53,11 +68,19 @@ export default async function DashboardPage() {
     .map((r) => mttr(r.respondedAt, r.finishedAt))
     .filter((v): v is number => v !== null);
 
-  const costByCurrency = { TRY: 0, USD: 0, EUR: 0 };
+  const sparePartCostByCurrency = { TRY: 0, USD: 0, EUR: 0 };
   for (const r of records) {
     if (r.sparePartCost) {
-      costByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
+      sparePartCostByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
     }
+  }
+
+  const maintenanceCostByCurrency = { TRY: 0, USD: 0, EUR: 0 };
+  for (const i of costedInspections) {
+    if (i.cost) maintenanceCostByCurrency[i.costCurrency] += Number(i.cost);
+  }
+  for (const e of costedPlanEntries) {
+    if (e.cost) maintenanceCostByCurrency[e.costCurrency] += Number(e.cost);
   }
 
   const downtimeByMachine = new Map<string, number>();
@@ -115,8 +138,8 @@ export default async function DashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatTile label="Toplam Kayıt" value={records.length.toString()} />
-        <SparePartCostTile totals={costByCurrency} />
-        <MaintenanceCostTile totals={costByCurrency} />
+        <MaintenanceCostTile totals={maintenanceCostByCurrency} />
+        <SparePartCostTile totals={sparePartCostByCurrency} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>

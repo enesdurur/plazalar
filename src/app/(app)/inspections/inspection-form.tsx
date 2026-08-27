@@ -75,6 +75,26 @@ export function InspectionForm({
             className="input"
           />
         </Field>
+        <Field label="Maliyet">
+          <div className="flex gap-2">
+            <input
+              name="cost"
+              type="number"
+              step="0.01"
+              defaultValue={item?.cost?.toString() ?? ""}
+              className="input"
+            />
+            <select
+              name="costCurrency"
+              defaultValue={item?.costCurrency ?? "TRY"}
+              className="input w-24"
+            >
+              <option value="TRY">TL</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+        </Field>
       </div>
 
       <div className="flex gap-3 pt-2">

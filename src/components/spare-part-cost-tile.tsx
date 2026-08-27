@@ -26,17 +26,32 @@ function CostLines({ totals }: { totals: { TRY: number; USD: number; EUR: number
   );
 }
 
+function CostTile({
+  href,
+  label,
+  totals,
+}: {
+  href: string;
+  label: string;
+  totals: { TRY: number; USD: number; EUR: number };
+}) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+    >
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <CostLines totals={totals} />
+    </Link>
+  );
+}
+
 export function SparePartCostTile({
   totals,
 }: {
   totals: { TRY: number; USD: number; EUR: number };
 }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <p className="text-sm font-medium text-slate-500">Toplam Yedek Parça Maliyeti</p>
-      <CostLines totals={totals} />
-    </div>
-  );
+  return <CostTile href="/records/costs" label="Toplam Yedek Parça Maliyeti" totals={totals} />;
 }
 
 export function MaintenanceCostTile({
@@ -44,13 +59,5 @@ export function MaintenanceCostTile({
 }: {
   totals: { TRY: number; USD: number; EUR: number };
 }) {
-  return (
-    <Link
-      href="/records/costs"
-      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
-    >
-      <p className="text-sm font-medium text-slate-500">Toplam Bakım Maliyeti</p>
-      <CostLines totals={totals} />
-    </Link>
-  );
+  return <CostTile href="/maintenance-costs" label="Toplam Bakım Maliyeti" totals={totals} />;
 }

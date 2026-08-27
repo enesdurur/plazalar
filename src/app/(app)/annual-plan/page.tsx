@@ -6,6 +6,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { togglePlanEntry } from "./actions";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
+import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -52,7 +53,7 @@ export default async function AnnualPlanPage({
     }),
   ]);
 
-  const entryMap = new Map(entries.map((e) => [`${e.machineId}-${e.month}`, e.completed]));
+  const entryMap = new Map(entries.map((e) => [`${e.machineId}-${e.month}`, e]));
 
   const monthlyDone = Array(12).fill(0);
   const monthlyMissed = Array(12).fill(0);
@@ -115,7 +116,8 @@ export default async function AnnualPlanPage({
                 </td>
                 {MONTHS.map((_, i) => {
                   const month = i + 1;
-                  const completed = entryMap.get(`${machine.id}-${month}`);
+                  const entry = entryMap.get(`${machine.id}-${month}`);
+                  const completed = entry?.completed;
                   const style =
                     completed === true
                       ? CELL_STYLES.DONE
@@ -123,6 +125,9 @@ export default async function AnnualPlanPage({
                         ? CELL_STYLES.MISSED
                         : CELL_STYLES.EMPTY;
                   const label = completed === true ? "✓" : completed === false ? "✕" : "";
+                  const costLabel = entry?.cost
+                    ? formatCostAmount(Number(entry.cost), entry.costCurrency)
+                    : null;
 
                   if (!writable) {
                     return (
@@ -132,6 +137,11 @@ export default async function AnnualPlanPage({
                         >
                           {label}
                         </span>
+                        {costLabel && (
+                          <p className="mt-0.5 whitespace-nowrap text-[10px] text-slate-400">
+                            {costLabel}
+                          </p>
+                        )}
                       </td>
                     );
                   }
@@ -148,6 +158,14 @@ export default async function AnnualPlanPage({
                           {label}
                         </button>
                       </form>
+                      {entry && (
+                        <Link
+                          href={`/annual-plan/entries/${entry.id}/edit`}
+                          className="mt-0.5 block whitespace-nowrap text-[10px] text-slate-400 hover:text-slate-600 print:hidden"
+                        >
+                          {costLabel ?? "+ maliyet"}
+                        </Link>
+                      )}
                     </td>
                   );
                 })}

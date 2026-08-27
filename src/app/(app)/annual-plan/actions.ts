@@ -1,6 +1,8 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite } from "@/lib/permissions";
@@ -31,4 +33,38 @@ export async function togglePlanEntry(machineId: string, year: number, month: nu
   });
 
   revalidatePath("/annual-plan");
+}
+
+const costSchema = z.object({
+  cost: z.coerce.number().optional(),
+  costCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  note: z.string().optional(),
+});
+
+function emptyToUndefined(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  return value;
+}
+
+export async function updatePlanEntryCost(id: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user || !canWrite(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+
+  const data = costSchema.parse({
+    cost: emptyToUndefined(formData.get("cost")),
+    costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
+    note: emptyToUndefined(formData.get("note")),
+  });
+
+  await prisma.maintenancePlanEntry.updateMany({
+    where: { id, machine: { plazaId: plaza.id } },
+    data,
+  });
+
+  revalidatePath("/annual-plan");
+  revalidatePath("/");
+  redirect("/annual-plan");
 }

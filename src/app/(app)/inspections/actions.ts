@@ -19,6 +19,8 @@ const schema = z.object({
   nextInspectionDate: z.string().optional(),
   location: z.string().optional(),
   responsiblePerson: z.string().optional(),
+  cost: z.coerce.number().optional(),
+  costCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -38,6 +40,8 @@ function parseForm(formData: FormData) {
     nextInspectionDate: emptyToUndefined(formData.get("nextInspectionDate")),
     location: emptyToUndefined(formData.get("location")),
     responsiblePerson: emptyToUndefined(formData.get("responsiblePerson")),
+    cost: emptyToUndefined(formData.get("cost")),
+    costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
   });
 
   return {

@@ -113,15 +113,17 @@ model Machine {
 }
 
 model MaintenancePlanEntry {
-  id        String   @id @default(cuid())
-  machineId String
-  year      Int
-  month     Int
+  id           String   @id @default(cuid())
+  machineId    String
+  year         Int
+  month        Int
   // null = not tracked yet, true = yapıldı, false = yapılmadı
-  completed Boolean?
-  note      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  completed    Boolean?
+  note         String?
+  cost         Decimal? @db.Decimal(12, 2)
+  costCurrency Currency @default(TRY)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   machine Machine @relation(fields: [machineId], references: [id])
 
@@ -202,6 +204,8 @@ model PeriodicInspection {
   nextInspectionDate DateTime?
   location           String?
   responsiblePerson  String?
+  cost               Decimal?  @db.Decimal(12, 2)
+  costCurrency       Currency  @default(TRY)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

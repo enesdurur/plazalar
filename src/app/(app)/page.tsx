@@ -5,6 +5,7 @@ import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
 import { SparePartCostTile, MaintenanceCostTile } from "@/components/spare-part-cost-tile";
+import { TcmbRatesCard } from "@/components/tcmb-rates-card";
 import { getTcmbRates } from "@/lib/tcmb";
 import type { Metadata } from "next";
 
@@ -97,44 +98,15 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">Panel</h1>
-        {(tcmbRates.usd !== null || tcmbRates.eur !== null) && (
-          <span className="flex gap-3 text-xs text-slate-500">
-            {tcmbRates.usd !== null && (
-              <span>
-                USD:{" "}
-                {tcmbRates.usd.toLocaleString("tr-TR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                TL
-              </span>
-            )}
-            {tcmbRates.eur !== null && (
-              <span>
-                EUR:{" "}
-                {tcmbRates.eur.toLocaleString("tr-TR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                TL
-              </span>
-            )}
-          </span>
-        )}
-        <a
-          href="https://www.tcmb.gov.tr/wps/wcm/connect/tr/tcmb+tr/main+menu/istatistikler/doviz+kurlari/gosterge+niteligindeki+merkez+bankasi+kurlari"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-        >
-          Arşiv ↗
-        </a>
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Panel</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Teknik hizmetler arıza ve bakım performans özeti.
+          </p>
+        </div>
+        <TcmbRatesCard rates={tcmbRates} />
       </div>
-      <p className="mt-1 text-sm text-slate-500">
-        Teknik hizmetler arıza ve bakım performans özeti.
-      </p>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatTile label="Toplam Kayıt" value={records.length.toString()} />

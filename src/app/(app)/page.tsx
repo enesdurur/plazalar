@@ -36,6 +36,8 @@ export default async function DashboardPage() {
     tcmbRates,
     costedInspections,
     costedPlanEntries,
+    tenantMaintenanceTotal,
+    tenantMaintenanceExpired,
   ] = await Promise.all([
     prisma.periodicInspection.count({ where: { plazaId: plaza.id } }),
     prisma.periodicInspection.count({
@@ -52,6 +54,10 @@ export default async function DashboardPage() {
     prisma.maintenancePlanEntry.findMany({
       where: { cost: { not: null }, machine: { plazaId: plaza.id } },
       select: { cost: true, costCurrency: true },
+    }),
+    prisma.tenantMaintenance.count({ where: { tenant: { plazaId: plaza.id } } }),
+    prisma.tenantMaintenance.count({
+      where: { tenant: { plazaId: plaza.id }, nextMaintenanceDate: { lt: now } },
     }),
   ]);
   const machineCount = machines.length;
@@ -135,7 +141,7 @@ export default async function DashboardPage() {
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ComplianceTile
           href="/inspections"
           label="Periyodik Muayene"
@@ -164,9 +170,15 @@ export default async function DashboardPage() {
             <span className="text-sm text-slate-400">yapılmadı / {machineCount} makine</span>
           </div>
         </Link>
+        <ComplianceTile
+          href="/tenant-maintenance"
+          label="Kiracı Bakımları"
+          total={tenantMaintenanceTotal}
+          expired={tenantMaintenanceExpired}
+        />
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6">
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-semibold text-slate-900">İşlem Türü Dağılımı</h2>
           <div className="mt-4 space-y-3">

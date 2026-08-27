@@ -100,6 +100,14 @@ export default async function DashboardPage() {
             )}
           </span>
         )}
+        <a
+          href="https://www.tcmb.gov.tr/wps/wcm/connect/tr/tcmb+tr/main+menu/istatistikler/doviz+kurlari/gosterge+niteligindeki+merkez+bankasi+kurlari"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+        >
+          Arşiv ↗
+        </a>
       </div>
       <p className="mt-1 text-sm text-slate-500">
         Teknik hizmetler arıza ve bakım performans özeti.

@@ -4,6 +4,14 @@ export interface RawMonthEntry {
   manualAmount: number | null;
 }
 
+export interface RawAdjustment {
+  id: string;
+  month: number;
+  type: "OVERTIME" | "ABSENCE";
+  label: string | null;
+  amount: number;
+}
+
 export interface RawLineItem {
   id: string;
   category: string | null;
@@ -13,6 +21,7 @@ export interface RawLineItem {
   fixedAmount: number | null;
   fill: string | null;
   entries: RawMonthEntry[];
+  adjustments: RawAdjustment[];
 }
 
 export interface RawSection {
@@ -39,6 +48,10 @@ export interface ComputedRow {
   budgetYearly: number;
   /** Sapma: pozitif = bütçe altında, negatif = bütçe üstünde */
   deviation: number;
+  /** Ocak-Aralık: bu kalemin altındaki "Fazla Mesai" kırılımı (varsa) */
+  overtimeByMonth?: number[];
+  /** Ocak-Aralık: bu kalemin altındaki "Eksik Çalışma" kırılımı (varsa) */
+  absenceByMonth?: number[];
 }
 
 /** Bugünün tarihine göre verilen yılda kaç ayın geçtiğini hesaplar (gelecek yıl -> 0, geçmiş yıl -> 12). */
@@ -54,16 +67,26 @@ export function isLockedMonth(year: number, month: number): boolean {
   return year === 2026 && month <= 6;
 }
 
-function realizedForMonth(item: RawLineItem, month: number): number {
+function monthBreakdown(
+  item: RawLineItem,
+  month: number
+): { base: number; overtime: number; absence: number } {
   const entry = item.entries.find((e) => e.month === month);
   // Elle girilmiş bir tutar varsa (kalem sonradan sabit sözleşmeli olarak işaretlenmiş olsa
   // bile) o tutar korunur — sabit işaretlemek geçmiş ayların verisini sıfırlamaz. Onay kutusu
   // yalnızca henüz elle tutar girilmemiş aylarda geçerli olur.
-  if (entry?.manualAmount != null) return Number(entry.manualAmount);
-  if (item.isFixedContract) {
-    return entry?.confirmed ? Number(item.fixedAmount ?? 0) : 0;
+  let base = 0;
+  if (entry?.manualAmount != null) base = Number(entry.manualAmount);
+  else if (item.isFixedContract) base = entry?.confirmed ? Number(item.fixedAmount ?? 0) : 0;
+
+  let overtime = 0;
+  let absence = 0;
+  for (const a of item.adjustments) {
+    if (a.month !== month) continue;
+    if (a.type === "OVERTIME") overtime += a.amount;
+    else absence += a.amount;
   }
-  return 0;
+  return { base, overtime, absence };
 }
 
 function computeRow(
@@ -112,8 +135,16 @@ function mapLineItems(
   forcedCategory?: string
 ): ComputedRow[] {
   return items.map((item) => {
-    const actuals = Array.from({ length: 12 }, (_, i) => realizedForMonth(item, i + 1));
-    return computeRow(
+    const actuals: number[] = [];
+    const overtimeByMonth: number[] = [];
+    const absenceByMonth: number[] = [];
+    for (let m = 1; m <= 12; m++) {
+      const { base, overtime, absence } = monthBreakdown(item, m);
+      actuals.push(base + overtime - absence);
+      overtimeByMonth.push(overtime);
+      absenceByMonth.push(absence);
+    }
+    const row = computeRow(
       item.id,
       forcedCategory ?? item.category,
       item.label,
@@ -122,6 +153,9 @@ function mapLineItems(
       actuals,
       monthsElapsed
     );
+    if (overtimeByMonth.some((v) => v !== 0)) row.overtimeByMonth = overtimeByMonth;
+    if (absenceByMonth.some((v) => v !== 0)) row.absenceByMonth = absenceByMonth;
+    return row;
   });
 }
 

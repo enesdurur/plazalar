@@ -291,7 +291,8 @@ model BudgetLineItem {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  entries BudgetMonthEntry[]
+  entries     BudgetMonthEntry[]
+  adjustments BudgetAdjustment[]
 
   @@unique([sectionId, label])
   @@map("budget_line_items")
@@ -310,4 +311,25 @@ model BudgetMonthEntry {
 
   @@unique([lineItemId, month])
   @@map("budget_month_entries")
+}
+
+enum BudgetAdjustmentType {
+  OVERTIME
+  ABSENCE
+}
+
+/** Sözleşmesi sabit bir kalemde bile o ay için ek kırılım (fazla mesai / eksik çalışma)
+ * gerekebilir. OVERTIME kalemin ay tutarına eklenir, ABSENCE düşülür. */
+model BudgetAdjustment {
+  id         String               @id @default(cuid())
+  lineItemId String
+  lineItem   BudgetLineItem       @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  month      Int
+  type       BudgetAdjustmentType
+  label      String?
+  amount     Decimal              @db.Decimal(12, 2)
+  createdAt  DateTime             @default(now())
+
+  @@index([lineItemId, month])
+  @@map("budget_adjustments")
 }

@@ -187,3 +187,51 @@ export async function setManualAmount(lineItemId: string, month: number, formDat
   revalidatePath("/budget");
   revalidatePath("/budget/entry");
 }
+
+const adjustmentSchema = z.object({
+  type: z.enum(["OVERTIME", "ABSENCE"]),
+  amount: z.coerce.number().positive("Tutar sıfırdan büyük olmalıdır"),
+  label: z.string().optional(),
+});
+
+export async function addAdjustment(lineItemId: string, month: number, formData: FormData) {
+  await requireWriteAccess();
+  const item = await assertLineItemInPlaza(lineItemId);
+  if (isLockedMonth(item.section.year, month)) {
+    throw new Error("Bu ay için veri kilitli, düzenlenemez.");
+  }
+
+  const data = adjustmentSchema.parse({
+    type: formData.get("type"),
+    amount: formData.get("amount"),
+    label: emptyToUndefined(formData.get("label")),
+  });
+
+  await prisma.budgetAdjustment.create({
+    data: { lineItemId, month, type: data.type, amount: data.amount, label: data.label },
+  });
+
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath(`/budget/entry/adjustments/${lineItemId}/${month}`);
+}
+
+export async function deleteAdjustment(adjustmentId: string) {
+  await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
+
+  const adjustment = await prisma.budgetAdjustment.findFirst({
+    where: { id: adjustmentId, lineItem: { section: { plazaId: plaza.id } } },
+    include: { lineItem: { include: { section: true } } },
+  });
+  if (!adjustment) notFound();
+  if (isLockedMonth(adjustment.lineItem.section.year, adjustment.month)) {
+    throw new Error("Bu ay için veri kilitli, düzenlenemez.");
+  }
+
+  await prisma.budgetAdjustment.delete({ where: { id: adjustmentId } });
+
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath(`/budget/entry/adjustments/${adjustment.lineItemId}/${adjustment.month}`);
+}

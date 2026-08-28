@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { ComputedLinkPlazaBudget, ComputedRow } from "@/lib/budget/calc";
 
 const MONTH_NAMES = [
@@ -23,17 +24,25 @@ function formatPercent(n: number) {
   return `${(n * 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
+function subRowCount(row: ComputedRow): number {
+  return (row.overtimeByMonth ? 1 : 0) + (row.absenceByMonth ? 1 : 0);
+}
+
 /** Ardışık satırlarda aynı (boş olmayan) kategori tekrar ederse rowSpan ile birleştirilecek
- * şekilde 0 döndürür — Excel'deki sütun birleştirmelerinin karşılığı. */
+ * şekilde 0 döndürür — Excel'deki sütun birleştirmelerinin karşılığı. Bir kalemin altında
+ * Fazla Mesai/Eksik Çalışma alt satırları varsa, bunlar da rowSpan'a dahil edilir. */
 function computeRowSpans(rows: ComputedRow[]): number[] {
-  const spans = new Array(rows.length).fill(1);
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i].category && rows[i].category === rows[i - 1].category) {
-      let start = i - 1;
-      while (start > 0 && rows[start - 1].category === rows[i].category) start--;
-      spans[start]++;
-      spans[i] = 0;
-    }
+  const spans = new Array(rows.length).fill(0);
+  let i = 0;
+  while (i < rows.length) {
+    let j = i;
+    let totalTrs = 0;
+    do {
+      totalTrs += 1 + subRowCount(rows[j]);
+      j++;
+    } while (j < rows.length && rows[j].category && rows[j].category === rows[i].category);
+    spans[i] = totalTrs;
+    i = j;
   }
   return spans;
 }
@@ -161,24 +170,75 @@ function GroupedRows({
   return (
     <>
       {rows.map((r, i) => (
-        <tr
-          key={r.id ?? i}
-          style={r.fill ? { backgroundColor: r.fill } : undefined}
-          className={!r.fill ? "odd:bg-white even:bg-slate-50/60" : undefined}
-        >
-          {spans[i] > 0 && (
-            <td
-              rowSpan={spans[i]}
-              className="whitespace-pre-wrap px-3 py-2 text-center align-middle text-slate-700"
-            >
-              {r.category}
-            </td>
+        <Fragment key={r.id ?? i}>
+          <tr
+            style={r.fill ? { backgroundColor: r.fill } : undefined}
+            className={!r.fill ? "odd:bg-white even:bg-slate-50/60" : undefined}
+          >
+            {spans[i] > 0 && (
+              <td
+                rowSpan={spans[i]}
+                className="whitespace-pre-wrap px-3 py-2 text-center align-middle text-slate-700"
+              >
+                {r.category}
+              </td>
+            )}
+            <td className="whitespace-nowrap px-3 py-2 text-left text-slate-700">{r.label}</td>
+            <DataCells row={r} currentMonthIndex={currentMonthIndex} />
+          </tr>
+          {r.overtimeByMonth && (
+            <SubRow
+              label="↳ Fazla Mesai"
+              values={r.overtimeByMonth}
+              positive
+              currentMonthIndex={currentMonthIndex}
+            />
           )}
-          <td className="whitespace-nowrap px-3 py-2 text-left text-slate-700">{r.label}</td>
-          <DataCells row={r} currentMonthIndex={currentMonthIndex} />
-        </tr>
+          {r.absenceByMonth && (
+            <SubRow
+              label="↳ Eksik Çalışma"
+              values={r.absenceByMonth}
+              positive={false}
+              currentMonthIndex={currentMonthIndex}
+            />
+          )}
+        </Fragment>
       ))}
     </>
+  );
+}
+
+function SubRow({
+  label,
+  values,
+  positive,
+  currentMonthIndex,
+}: {
+  label: string;
+  values: number[];
+  positive: boolean;
+  currentMonthIndex: number;
+}) {
+  return (
+    <tr className="bg-slate-50/40">
+      <td colSpan={2} className="px-3 py-1 pl-8 text-left text-xs text-slate-500">
+        {label}
+      </td>
+      {values.map((v, i) => {
+        const future = i > currentMonthIndex;
+        return (
+          <td
+            key={i}
+            className={`whitespace-nowrap px-3 py-1 text-right text-xs tabular-nums ${
+              future ? "text-slate-300" : positive ? "text-blue-600" : "text-red-600"
+            }`}
+          >
+            {future && v === 0 ? "-" : v === 0 ? "-" : `${positive ? "+" : "-"}${formatTL(v)}`}
+          </td>
+        );
+      })}
+      <td colSpan={6} />
+    </tr>
   );
 }
 

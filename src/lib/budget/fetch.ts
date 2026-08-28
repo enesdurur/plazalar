@@ -8,7 +8,7 @@ export async function fetchBudgetSections(plazaId: string, year: number): Promis
     include: {
       items: {
         orderBy: { sortOrder: "asc" },
-        include: { entries: true },
+        include: { entries: true, adjustments: true },
       },
     },
   });
@@ -27,6 +27,13 @@ export async function fetchBudgetSections(plazaId: string, year: number): Promis
         month: e.month,
         confirmed: e.confirmed,
         manualAmount: e.manualAmount != null ? Number(e.manualAmount) : null,
+      })),
+      adjustments: item.adjustments.map((a) => ({
+        id: a.id,
+        month: a.month,
+        type: a.type,
+        label: a.label,
+        amount: Number(a.amount),
       })),
     })),
   }));

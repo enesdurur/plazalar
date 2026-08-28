@@ -135,6 +135,7 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
       {MONTHS.map((_, i) => {
         const month = i + 1;
         const entry = entryByMonth.get(month);
+        const monthAdjustments = item.adjustments.filter((a) => a.month === month);
 
         if (isLockedMonth(year, month)) {
           return (
@@ -160,10 +161,48 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
                 amount={entry?.manualAmount ?? null}
               />
             )}
+            <AdjustmentLink itemId={item.id} month={month} adjustments={monthAdjustments} />
           </td>
         );
       })}
     </tr>
+  );
+}
+
+function AdjustmentLink({
+  itemId,
+  month,
+  adjustments,
+}: {
+  itemId: string;
+  month: number;
+  adjustments: RawLineItem["adjustments"];
+}) {
+  if (adjustments.length === 0) {
+    return (
+      <Link
+        href={`/budget/entry/adjustments/${itemId}/${month}`}
+        className="mt-0.5 block text-[10px] text-slate-300 hover:text-slate-600"
+      >
+        + kırılım
+      </Link>
+    );
+  }
+
+  const net = adjustments.reduce(
+    (sum, a) => sum + (a.type === "OVERTIME" ? a.amount : -a.amount),
+    0
+  );
+  return (
+    <Link
+      href={`/budget/entry/adjustments/${itemId}/${month}`}
+      className={`mt-0.5 block text-[10px] font-medium hover:underline ${
+        net >= 0 ? "text-blue-600" : "text-red-600"
+      }`}
+    >
+      {net >= 0 ? "+" : ""}
+      {net.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ({adjustments.length})
+    </Link>
   );
 }
 

@@ -76,6 +76,15 @@ export function isLockedMonth(year: number, month: number): boolean {
   return year === 2026 && month <= 6;
 }
 
+/** Fazla Mesai / Eksik Çalışma kırılımları yalnızca vardiyalı personel kadrolarında
+ * (Güvenlik, Teknik, Temizlik, Bahçıvan) anlamlıdır — diğer kalemlerde gösterilmez. */
+const ADJUSTMENT_CATEGORIES = new Set(["GÜVENLİK", "TEKNİK", "TEMİZLİK", "BAHÇE"]);
+
+export function allowsAdjustments(category: string | null | undefined): boolean {
+  if (!category) return false;
+  return ADJUSTMENT_CATEGORIES.has(category.trim().toLocaleUpperCase("tr-TR"));
+}
+
 function monthBreakdown(
   item: RawLineItem,
   month: number

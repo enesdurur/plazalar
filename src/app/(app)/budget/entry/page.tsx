@@ -5,7 +5,7 @@ import { canWrite } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { fetchBudgetSections } from "@/lib/budget/fetch";
 import { toggleConfirmed, setManualAmount } from "../actions";
-import { isLockedMonth, type RawLineItem, type RawSection } from "@/lib/budget/calc";
+import { allowsAdjustments, isLockedMonth, type RawLineItem, type RawSection } from "@/lib/budget/calc";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -161,7 +161,9 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
                 amount={entry?.manualAmount ?? null}
               />
             )}
-            <AdjustmentLink itemId={item.id} month={month} adjustments={monthAdjustments} />
+            {allowsAdjustments(item.category) && (
+              <AdjustmentLink itemId={item.id} month={month} adjustments={monthAdjustments} />
+            )}
           </td>
         );
       })}

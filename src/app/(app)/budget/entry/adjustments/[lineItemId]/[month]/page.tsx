@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { isLockedMonth } from "@/lib/budget/calc";
+import { allowsAdjustments, isLockedMonth } from "@/lib/budget/calc";
 import { addAdjustment, deleteAdjustment } from "../../../../actions";
 import { DeleteButton } from "@/components/delete-button";
 import { SubmitButton } from "@/components/submit-button";
@@ -58,6 +58,7 @@ export default async function AdjustmentsPage({
   if (!item) notFound();
 
   const locked = isLockedMonth(item.section.year, month);
+  const allowed = allowsAdjustments(item.category);
   const addAction = addAdjustment.bind(null, lineItemId, month);
 
   return (
@@ -127,6 +128,11 @@ export default async function AdjustmentsPage({
       {locked ? (
         <p className="mt-4 text-sm text-slate-500">
           Bu ay için veri kilitli, yeni kırılım eklenemez.
+        </p>
+      ) : !allowed ? (
+        <p className="mt-4 text-sm text-slate-500">
+          Bu kalem için fazla mesai/eksik çalışma kırılımı kullanılamıyor. Bu özellik yalnızca
+          Güvenlik, Teknik, Temizlik ve Bahçıvan kadrolarında geçerlidir.
         </p>
       ) : (
         <form action={addAction} className="mt-6 max-w-lg space-y-4">

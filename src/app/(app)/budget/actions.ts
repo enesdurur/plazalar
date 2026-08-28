@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { isLockedMonth } from "@/lib/budget/calc";
+import { allowsAdjustments, isLockedMonth } from "@/lib/budget/calc";
 
 const SECTION_NAMES = [
   "A- PERSONEL GİDERLERİ",
@@ -199,6 +199,9 @@ export async function addAdjustment(lineItemId: string, month: number, formData:
   const item = await assertLineItemInPlaza(lineItemId);
   if (isLockedMonth(item.section.year, month)) {
     throw new Error("Bu ay için veri kilitli, düzenlenemez.");
+  }
+  if (!allowsAdjustments(item.category)) {
+    throw new Error("Bu kalem için fazla mesai/eksik çalışma kırılımı girilemez.");
   }
 
   const data = adjustmentSchema.parse({

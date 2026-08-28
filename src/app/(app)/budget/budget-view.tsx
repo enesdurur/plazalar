@@ -1,7 +1,4 @@
-"use client";
-
-import { useState } from "react";
-import type { ComputedBudgetQuarter, ComputedRow } from "@/lib/budget/calc";
+import type { ComputedLinkPlazaBudget, ComputedRow } from "@/lib/budget/calc";
 
 function formatTL(n: number) {
   return `${n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`;
@@ -19,77 +16,78 @@ function formatRate(n: number) {
   return n.toLocaleString("tr-TR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 
-export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) {
-  const [activeKey, setActiveKey] = useState(quarters[0]?.key);
-  const active = quarters.find((q) => q.key === activeKey) ?? quarters[0];
+/** Aynı grubun ilk satırında kategori adını, sonraki satırlarda (category: null) rowSpan
+ * ile birleştirilecek şekilde 0 döndürür — Excel'deki sütun birleştirmelerinin karşılığı. */
+function computeRowSpans(rows: ComputedRow[]): number[] {
+  const spans = new Array(rows.length).fill(0);
+  let start = -1;
+  rows.forEach((r, i) => {
+    if (r.category !== null && r.category !== undefined) {
+      start = i;
+      spans[i] = 1;
+    } else if (start >= 0) {
+      spans[start]++;
+    } else {
+      spans[i] = 1;
+    }
+  });
+  return spans;
+}
 
-  if (!active) return null;
+export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
+  const monthCount = budget.monthNames.length;
 
   return (
     <div>
-      <div className="flex gap-2 print:hidden">
-        {quarters.map((q) => (
-          <button
-            key={q.key}
-            type="button"
-            onClick={() => setActiveKey(q.key)}
-            className={`rounded-md px-4 py-2 text-sm font-medium ${
-              q.key === active.key
-                ? "bg-slate-900 text-white"
-                : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-            }`}
-          >
-            {q.title}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-[1400px] w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="w-full divide-y divide-slate-200 text-sm" style={{ minWidth: 900 + monthCount * 130 }}>
+          <thead className="bg-slate-100">
             <tr>
               <Th>HİZMET TÜRÜ</Th>
               <Th>HİZMET KADROSU</Th>
-              <Th align="right">{active.monthNames[0]}</Th>
-              <Th align="right">{active.monthNames[1]}</Th>
-              <Th align="right">{active.monthNames[2]}</Th>
-              <Th align="right">3 AYLIK GERÇEKLEŞEN MALİYET</Th>
-              <Th align="right">AYLIK ORTALAMA GERÇEKLEŞEN MALİYET</Th>
-              <Th align="right">TASLAK BÜTÇE 2026 (AYLIK)</Th>
-              <Th align="right">TASLAK BÜTÇE 2026 (3 AYLIK)</Th>
-              <Th align="right">TOPLAM MALİYET 2026 (YILLIK)</Th>
-              <Th align="right">3 AYLIK SAPMA</Th>
+              {budget.monthNames.map((m, i) => (
+                <Th key={i} highlight={i === monthCount - 1}>
+                  {m}
+                  {i === monthCount - 1 && (
+                    <span className="ml-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      son ay
+                    </span>
+                  )}
+                </Th>
+              ))}
+              <Th>GERÇEKLEŞEN TOPLAM</Th>
+              <Th>AYLIK ORTALAMA GERÇEKLEŞEN</Th>
+              <Th>TASLAK BÜTÇE (AYLIK)</Th>
+              <Th>TASLAK BÜTÇE ({monthCount} AYLIK)</Th>
+              <Th>TOPLAM MALİYET 2026 (YILLIK)</Th>
+              <Th>SAPMA</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
-            <GroupedRows rows={active.personnelRows} />
-            <TotalRow row={active.personnelTotal} highlight="subtotal" />
+          <tbody className="divide-y divide-slate-200">
+            <GroupedRows rows={budget.personnelRows} />
+            <TotalRow row={budget.personnelTotal} />
 
-            <SectionLabel label="YÖNETİM GİDERLERİ" rowSpan={active.managementRows.length} rows={active.managementRows} />
-            <TotalRow row={active.managementTotal} highlight="subtotal" />
-            <TotalRow row={active.managementProfit} highlight="subtotal" />
-            <TotalRow row={active.managementGrandTotal} highlight="subtotal" />
-            <TotalRow row={active.personnelAndManagementTotal} highlight="total" />
+            <GroupedRows rows={budget.managementRows} />
+            <TotalRow row={budget.managementTotal} />
+            <TotalRow row={budget.managementProfit} />
+            <TotalRow row={budget.managementGrandTotal} />
+            <TotalRow row={budget.personnelAndManagementTotal} />
 
-            <SectionLabel
-              label="DİĞER GİDERLER (Aylık Ortalama KDV Hariç)"
-              rowSpan={active.otherRows.length}
-              rows={active.otherRows}
-            />
-            <TotalRow row={active.otherTotal} highlight="subtotal" />
-            <TotalRow row={active.grandTotal} highlight="grand" />
+            <GroupedRows rows={budget.otherRows} />
+            <TotalRow row={budget.otherTotal} />
+            <TotalRow row={budget.grandTotal} />
           </tbody>
         </table>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-semibold text-slate-900">Dolar Bazında Gerçekleşen</h2>
           <table className="mt-3 w-full text-sm">
             <thead>
               <tr className="text-left text-slate-500">
                 <th className="py-1 font-medium"> </th>
-                {active.fxLabels.map((l) => (
+                {budget.fxLabels.map((l) => (
                   <th key={l} className="py-1 text-right font-medium">
                     {l}
                   </th>
@@ -99,7 +97,7 @@ export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) 
             <tbody className="divide-y divide-slate-100">
               <tr>
                 <td className="py-1.5 text-slate-600">Aybaşı Kur</td>
-                {active.fxRates.map((r, i) => (
+                {budget.fxRates.map((r, i) => (
                   <td key={i} className="py-1.5 text-right tabular-nums text-slate-900">
                     {formatRate(r)}
                   </td>
@@ -107,7 +105,7 @@ export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) 
               </tr>
               <tr>
                 <td className="py-1.5 text-slate-600">USD Cinsinden Gerçekleşen</td>
-                {active.usdRealized.map((u, i) => (
+                {budget.usdRealized.map((u, i) => (
                   <td key={i} className="py-1.5 text-right tabular-nums text-slate-900">
                     {formatUSD(u)}
                   </td>
@@ -115,7 +113,7 @@ export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) 
               </tr>
               <tr>
                 <td className="py-1.5 text-slate-600">16.000 Hisse Oranına Göre Aidat (USD)</td>
-                {active.usdPerShare.map((u, i) => (
+                {budget.usdPerShare.map((u, i) => (
                   <td key={i} className="py-1.5 text-right tabular-nums text-slate-900">
                     {formatUSD(u)}
                   </td>
@@ -129,17 +127,19 @@ export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) 
           <h2 className="text-sm font-semibold text-slate-900">Bütçe Fazlası</h2>
           <div className="mt-3 space-y-3">
             <div>
-              <p className="text-sm font-medium text-slate-500">3 Aylık Bütçe Fazlası</p>
+              <p className="text-sm font-medium text-slate-500">
+                Dönem Bütçe Fazlası ({monthCount} ay)
+              </p>
               <p
                 className="mt-1 text-xl font-semibold tabular-nums"
                 style={{
                   color:
-                    active.quarterlySurplus >= 0
+                    budget.periodSurplus >= 0
                       ? "var(--viz-status-good)"
                       : "var(--viz-status-critical)",
                 }}
               >
-                {formatTL(active.quarterlySurplus)}
+                {formatTL(budget.periodSurplus)}
               </p>
             </div>
             <div>
@@ -148,12 +148,12 @@ export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) 
                 className="mt-1 text-xl font-semibold tabular-nums"
                 style={{
                   color:
-                    active.monthlyAvgSurplus >= 0
+                    budget.monthlyAvgSurplus >= 0
                       ? "var(--viz-status-good)"
                       : "var(--viz-status-critical)",
                 }}
               >
-                {formatTL(active.monthlyAvgSurplus)}
+                {formatTL(budget.monthlyAvgSurplus)}
               </p>
             </div>
           </div>
@@ -163,11 +163,11 @@ export function BudgetView({ quarters }: { quarters: ComputedBudgetQuarter[] }) 
   );
 }
 
-function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
+function Th({ children, highlight = false }: { children: React.ReactNode; highlight?: boolean }) {
   return (
     <th
-      className={`whitespace-nowrap px-3 py-2.5 text-xs font-semibold text-slate-600 ${
-        align === "right" ? "text-right" : "text-left"
+      className={`whitespace-nowrap px-3 py-2.5 text-center text-xs font-bold text-slate-700 ${
+        highlight ? "bg-slate-200" : ""
       }`}
     >
       {children}
@@ -176,36 +176,20 @@ function Th({ children, align = "left" }: { children: React.ReactNode; align?: "
 }
 
 function GroupedRows({ rows }: { rows: ComputedRow[] }) {
+  const spans = computeRowSpans(rows);
   return (
     <>
       {rows.map((r, i) => (
-        <tr key={i} className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100">
-          <td className="whitespace-nowrap px-3 py-2 text-slate-500">{r.category ?? ""}</td>
-          <DataCells row={r} />
-        </tr>
-      ))}
-    </>
-  );
-}
-
-function SectionLabel({
-  label,
-  rowSpan,
-  rows,
-}: {
-  label: string;
-  rowSpan: number;
-  rows: ComputedRow[];
-}) {
-  return (
-    <>
-      {rows.map((r, i) => (
-        <tr key={i} className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100">
-          {i === 0 && (
-            <td rowSpan={rowSpan} className="whitespace-pre-wrap px-3 py-2 align-top text-slate-500">
-              {label}
+        <tr key={i} style={r.fill ? { backgroundColor: r.fill } : undefined} className={!r.fill ? "odd:bg-white even:bg-slate-50/60" : undefined}>
+          {spans[i] > 0 && (
+            <td
+              rowSpan={spans[i]}
+              className="whitespace-pre-wrap px-3 py-2 text-center align-middle text-slate-700"
+            >
+              {r.category}
             </td>
           )}
+          <td className="whitespace-nowrap px-3 py-2 text-left text-slate-700">{r.label}</td>
           <DataCells row={r} />
         </tr>
       ))}
@@ -213,22 +197,10 @@ function SectionLabel({
   );
 }
 
-function TotalRow({
-  row,
-  highlight,
-}: {
-  row: ComputedRow;
-  highlight: "subtotal" | "total" | "grand";
-}) {
-  const bg =
-    highlight === "grand"
-      ? "bg-amber-100"
-      : highlight === "total"
-        ? "bg-amber-50"
-        : "bg-slate-50";
+function TotalRow({ row }: { row: ComputedRow }) {
   return (
-    <tr className={bg}>
-      <td colSpan={2} className="px-3 py-2 font-semibold text-slate-900">
+    <tr style={row.fill ? { backgroundColor: row.fill } : undefined}>
+      <td colSpan={2} className="whitespace-pre-wrap px-3 py-2 text-left font-bold text-slate-900">
         {row.label}
       </td>
       <DataCells row={row} bold />
@@ -238,17 +210,19 @@ function TotalRow({
 
 function DataCells({ row, bold = false }: { row: ComputedRow; bold?: boolean }) {
   const numCls = `whitespace-nowrap px-3 py-2 text-right tabular-nums ${
-    bold ? "font-semibold text-slate-900" : "text-slate-700"
+    bold ? "font-bold text-slate-900" : "text-slate-700"
   }`;
   return (
     <>
-      <td className={numCls}>{formatTL(row.months[0])}</td>
-      <td className={numCls}>{formatTL(row.months[1])}</td>
-      <td className={numCls}>{formatTL(row.months[2])}</td>
+      {row.actuals.map((m, i) => (
+        <td key={i} className={numCls}>
+          {formatTL(m)}
+        </td>
+      ))}
       <td className={numCls}>{formatTL(row.realizedTotal)}</td>
       <td className={numCls}>{formatTL(row.realizedAvg)}</td>
       <td className={numCls}>{formatTL(row.monthlyBudget)}</td>
-      <td className={numCls}>{formatTL(row.budgetTotal)}</td>
+      <td className={numCls}>{formatTL(row.budgetForPeriod)}</td>
       <td className={numCls}>{formatTL(row.budgetYearly)}</td>
       <td
         className={numCls}

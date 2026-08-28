@@ -3,53 +3,80 @@ import type { BudgetLineItem, BudgetQuarterData } from "./link-plaza-2026";
 export interface ComputedRow {
   category?: string | null;
   label: string;
-  months: [number, number, number];
-  /** H: 3 aylık gerçekleşen toplam maliyet */
+  fill: string | null;
+  /** Girilen her ay için gerçekleşen tutar (tabloya yeni ay eklendikçe uzar) */
+  actuals: number[];
+  /** Girilen aylardaki gerçekleşen toplam maliyet */
   realizedTotal: number;
-  /** I: aylık ortalama gerçekleşen maliyet */
+  /** Aylık ortalama gerçekleşen maliyet */
   realizedAvg: number;
-  /** K: aylık taslak bütçe */
+  /** Aylık taslak bütçe */
   monthlyBudget: number;
-  /** L: taslak bütçe (3 aylık) */
-  budgetTotal: number;
-  /** M: taslak bütçe (yıllık) */
+  /** Girilen ay sayısına göre taslak bütçe toplamı */
+  budgetForPeriod: number;
+  /** Taslak bütçe (yıllık) */
   budgetYearly: number;
-  /** N: 3 aylık sapma (pozitif = bütçe altında, negatif = bütçe üstünde) */
+  /** Sapma: pozitif = bütçe altında, negatif = bütçe üstünde */
   deviation: number;
 }
 
-export function computeRow(row: BudgetLineItem): ComputedRow {
-  const realizedTotal = row.months[0] + row.months[1] + row.months[2];
-  const budgetTotal = row.monthlyBudget * 3;
+function computeRow(
+  category: string | null | undefined,
+  label: string,
+  fill: string | null,
+  monthlyBudget: number,
+  actuals: number[]
+): ComputedRow {
+  const realizedTotal = actuals.reduce((a, b) => a + b, 0);
+  const budgetForPeriod = monthlyBudget * actuals.length;
   return {
-    category: row.category,
-    label: row.label,
-    months: row.months,
+    category,
+    label,
+    fill,
+    actuals,
     realizedTotal,
-    realizedAvg: realizedTotal / 3,
-    monthlyBudget: row.monthlyBudget,
-    budgetTotal,
-    budgetYearly: row.monthlyBudget * 12,
-    deviation: realizedTotal > 0 ? 1 - realizedTotal / budgetTotal : 0,
+    realizedAvg: actuals.length > 0 ? realizedTotal / actuals.length : 0,
+    monthlyBudget,
+    budgetForPeriod,
+    budgetYearly: monthlyBudget * 12,
+    deviation: realizedTotal > 0 ? 1 - realizedTotal / budgetForPeriod : 0,
   };
 }
 
-function sumLineItems(rows: ComputedRow[], label: string): BudgetLineItem {
-  const months: [number, number, number] = [0, 0, 0];
-  let monthlyBudget = 0;
-  for (const r of rows) {
-    months[0] += r.months[0];
-    months[1] += r.months[1];
-    months[2] += r.months[2];
-    monthlyBudget += r.monthlyBudget;
-  }
-  return { label, months, monthlyBudget };
+function sumRows(rows: ComputedRow[], label: string, fill: string | null): ComputedRow {
+  const monthCount = rows[0]?.actuals.length ?? 0;
+  const actuals = Array.from({ length: monthCount }, (_, i) =>
+    rows.reduce((sum, r) => sum + r.actuals[i], 0)
+  );
+  const monthlyBudget = rows.reduce((sum, r) => sum + r.monthlyBudget, 0);
+  return computeRow(undefined, label, fill, monthlyBudget, actuals);
 }
 
-export interface ComputedBudgetQuarter {
-  key: "q1" | "q2";
-  title: string;
-  monthNames: [string, string, string];
+/** Excel'deki ayrı ayrı çeyrek sekmelerini (Ocak-Şubat-Mart, Nisan-Mayıs-Haziran, ...)
+ * tek, sürekli büyüyebilen bir yıl görünümünde birleştirir. Yeni bir çeyrek/ay verisi
+ * geldiğinde LINK_PLAZA_BUDGET_2026 dizisine eklemek yeterli; tablo otomatik uzar. */
+function mergeLineItems(
+  quarters: BudgetQuarterData[],
+  pick: (q: BudgetQuarterData) => BudgetLineItem[],
+  sectionCategory?: string
+): ComputedRow[] {
+  const rowSets = quarters.map(pick);
+  const count = rowSets[0]?.length ?? 0;
+  const rows: ComputedRow[] = [];
+  for (let i = 0; i < count; i++) {
+    const first = rowSets[0][i];
+    const actuals = rowSets.flatMap((set) => set[i].months);
+    const category = sectionCategory ? (i === 0 ? sectionCategory : null) : first.category;
+    rows.push(computeRow(category, first.label, first.fill, first.monthlyBudget, actuals));
+  }
+  return rows;
+}
+
+const SHARE_COUNT = 16000;
+const MANAGEMENT_PROFIT_RATE = 0.07;
+
+export interface ComputedLinkPlazaBudget {
+  monthNames: string[];
   personnelRows: ComputedRow[];
   personnelTotal: ComputedRow;
   managementRows: ComputedRow[];
@@ -60,69 +87,72 @@ export interface ComputedBudgetQuarter {
   otherRows: ComputedRow[];
   otherTotal: ComputedRow;
   grandTotal: ComputedRow;
-  fxLabels: [string, string, string];
-  fxRates: [number, number, number];
-  usdRealized: [number, number, number];
-  usdPerShare: [number, number, number];
-  quarterlySurplus: number;
+  fxLabels: string[];
+  fxRates: number[];
+  usdRealized: number[];
+  usdPerShare: number[];
+  periodSurplus: number;
   monthlyAvgSurplus: number;
 }
 
-const SHARE_COUNT = 16000;
-const MANAGEMENT_PROFIT_RATE = 0.07;
+export function computeLinkPlazaBudget(quarters: BudgetQuarterData[]): ComputedLinkPlazaBudget {
+  const monthNames = quarters.flatMap((q) => q.monthNames);
+  const fxLabels = quarters.flatMap((q) => q.fxLabels);
+  const fxRates = quarters.flatMap((q) => q.fxRates);
+  const monthCount = monthNames.length;
 
-export function computeBudgetQuarter(data: BudgetQuarterData): ComputedBudgetQuarter {
-  const personnelRows = data.personnelRows.map(computeRow);
-  const personnelTotal = computeRow(
-    sumLineItems(personnelRows, "A- PERSONEL GİDERLERİ TOPLAM MALİYETİ")
+  const personnelRows = mergeLineItems(quarters, (q) => q.personnelRows);
+  const personnelTotal = sumRows(personnelRows, "A- PERSONEL GİDERLERİ TOPLAM MALİYETİ", "#F8CBAD");
+
+  const managementRows = mergeLineItems(quarters, (q) => q.managementRows, "YÖNETİM GİDERLERİ");
+  const managementTotal = sumRows(managementRows, "YÖNETİM GİDERLERİ TOPLAM MALİYETİ", null);
+
+  const profitBudget =
+    Math.round(personnelTotal.monthlyBudget * MANAGEMENT_PROFIT_RATE * 100) / 100;
+  const managementProfit = computeRow(
+    undefined,
+    "YÖNETİM KARI",
+    null,
+    profitBudget,
+    Array.from({ length: monthCount }, () => profitBudget)
   );
 
-  const managementRows = data.managementRows.map(computeRow);
-  const managementTotal = computeRow(
-    sumLineItems(managementRows, "YÖNETİM GİDERLERİ TOPLAM MALİYETİ")
+  const managementGrandTotal = sumRows(
+    [managementTotal, managementProfit],
+    "B- YÖNETİM FİRMASI HİZMET BEDELİ + GENEL GİDER + YÖNETİM KARI",
+    "#D9D9D9"
   );
 
-  const profitBudget = Math.round(personnelTotal.monthlyBudget * MANAGEMENT_PROFIT_RATE * 100) / 100;
-  const managementProfit = computeRow({
-    label: "YÖNETİM KARI",
-    months: [profitBudget, profitBudget, profitBudget],
-    monthlyBudget: profitBudget,
-  });
-
-  const managementGrandTotal = computeRow(
-    sumLineItems(
-      [managementTotal, managementProfit],
-      "B- YÖNETİM FİRMASI HİZMET BEDELİ + GENEL GİDER + YÖNETİM KARI"
-    )
+  const personnelAndManagementTotal = sumRows(
+    [personnelTotal, managementGrandTotal],
+    "A+B TOPLAM",
+    "#FFC000"
   );
 
-  const personnelAndManagementTotal = computeRow(
-    sumLineItems([personnelTotal, managementGrandTotal], "A+B TOPLAM")
+  const otherRows = mergeLineItems(
+    quarters,
+    (q) => q.otherRows,
+    "DİĞER GİDERLER\n(Aylık Ortalama KDV Hariç Tutar)"
+  );
+  const otherTotal = sumRows(
+    otherRows,
+    "C- BİNA DİĞER GİDERLER TOPLAM MALİYETİ (KDV HARİÇ)",
+    "#BFBFBF"
   );
 
-  const otherRows = data.otherRows.map(computeRow);
-  const otherTotal = computeRow(
-    sumLineItems(otherRows, "C- BİNA DİĞER GİDERLER TOPLAM MALİYETİ (KDV HARİÇ)")
+  const grandTotal = sumRows(
+    [personnelAndManagementTotal, otherTotal],
+    "A+B+C AİDATA ESAS ORTALAMA TOPLAM TUTAR (KDV HARİÇ)",
+    "#FFC000"
   );
 
-  const grandTotal = computeRow(
-    sumLineItems(
-      [personnelAndManagementTotal, otherTotal],
-      "A+B+C AİDATA ESAS ORTALAMA TOPLAM TUTAR (KDV HARİÇ)"
-    )
-  );
+  const usdRealized = grandTotal.actuals.map((m, i) => m / fxRates[i]);
+  const usdPerShare = usdRealized.map((u) => u / SHARE_COUNT);
 
-  const usdRealized = grandTotal.months.map(
-    (m, i) => m / data.fxRates[i]
-  ) as [number, number, number];
-  const usdPerShare = usdRealized.map((u) => u / SHARE_COUNT) as [number, number, number];
-
-  const quarterlySurplus = grandTotal.budgetTotal - grandTotal.realizedTotal;
+  const periodSurplus = grandTotal.budgetForPeriod - grandTotal.realizedTotal;
 
   return {
-    key: data.key,
-    title: data.title,
-    monthNames: data.monthNames,
+    monthNames,
     personnelRows,
     personnelTotal,
     managementRows,
@@ -133,11 +163,11 @@ export function computeBudgetQuarter(data: BudgetQuarterData): ComputedBudgetQua
     otherRows,
     otherTotal,
     grandTotal,
-    fxLabels: data.fxLabels,
-    fxRates: data.fxRates,
+    fxLabels,
+    fxRates,
     usdRealized,
     usdPerShare,
-    quarterlySurplus,
-    monthlyAvgSurplus: quarterlySurplus / 3,
+    periodSurplus,
+    monthlyAvgSurplus: periodSurplus / monthCount,
   };
 }

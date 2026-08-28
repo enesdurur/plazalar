@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { ComputedLinkPlazaBudget, ComputedRow } from "@/lib/budget/calc";
+import type { AdjustmentDetail, ComputedLinkPlazaBudget, ComputedRow } from "@/lib/budget/calc";
 
 const MONTH_NAMES = [
   "Ocak",
@@ -190,6 +190,7 @@ function GroupedRows({
             <SubRow
               label="↳ Fazla Mesai"
               values={r.overtimeByMonth}
+              details={r.overtimeDetails}
               positive
               currentMonthIndex={currentMonthIndex}
             />
@@ -198,6 +199,7 @@ function GroupedRows({
             <SubRow
               label="↳ Eksik Çalışma"
               values={r.absenceByMonth}
+              details={r.absenceDetails}
               positive={false}
               currentMonthIndex={currentMonthIndex}
             />
@@ -211,11 +213,13 @@ function GroupedRows({
 function SubRow({
   label,
   values,
+  details,
   positive,
   currentMonthIndex,
 }: {
   label: string;
   values: number[];
+  details?: AdjustmentDetail[][];
   positive: boolean;
   currentMonthIndex: number;
 }) {
@@ -228,14 +232,45 @@ function SubRow({
       </td>
       {values.map((v, i) => {
         const future = i > currentMonthIndex;
+        const text = future && v === 0 ? "-" : v === 0 ? "-" : `${positive ? "+" : "-"}${formatTL(v)}`;
+        const monthDetails = details?.[i];
+        const colorClass = future ? "text-slate-300" : positive ? "text-blue-600" : "text-red-600";
+
+        if (v === 0 || !monthDetails || monthDetails.length === 0) {
+          return (
+            <td
+              key={i}
+              className={`whitespace-nowrap px-3 py-1 text-right text-xs tabular-nums ${colorClass}`}
+            >
+              {text}
+            </td>
+          );
+        }
+
         return (
-          <td
-            key={i}
-            className={`whitespace-nowrap px-3 py-1 text-right text-xs tabular-nums ${
-              future ? "text-slate-300" : positive ? "text-blue-600" : "text-red-600"
-            }`}
-          >
-            {future && v === 0 ? "-" : v === 0 ? "-" : `${positive ? "+" : "-"}${formatTL(v)}`}
+          <td key={i} className="whitespace-nowrap px-1 py-1 text-right text-xs tabular-nums">
+            {/* <details>/<summary> tıklama ve dokunma (mobil) ile aynı şekilde açılır/kapanır —
+                ekstra JS state yönetimine gerek kalmadan hem masaüstü hem telefonda çalışır. */}
+            <details className="group relative inline-block text-left">
+              <summary
+                className={`cursor-pointer list-none px-2 py-0.5 tabular-nums underline decoration-dotted [&::-webkit-details-marker]:hidden ${colorClass}`}
+              >
+                {text}
+              </summary>
+              <div className="absolute right-0 z-30 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-left shadow-lg">
+                <ul className="space-y-1">
+                  {monthDetails.map((d, di) => (
+                    <li key={di} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate text-slate-500">{d.label || "Not yok"}</span>
+                      <span className={`whitespace-nowrap font-medium tabular-nums ${colorClass}`}>
+                        {positive ? "+" : "-"}
+                        {formatTL(d.amount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
           </td>
         );
       })}

@@ -29,6 +29,11 @@ export interface RawSection {
   items: RawLineItem[];
 }
 
+export interface AdjustmentDetail {
+  label: string | null;
+  amount: number;
+}
+
 export interface ComputedRow {
   id?: string;
   category?: string | null;
@@ -50,8 +55,12 @@ export interface ComputedRow {
   deviation: number;
   /** Ocak-Aralık: bu kalemin altındaki "Fazla Mesai" kırılımı (varsa) */
   overtimeByMonth?: number[];
+  /** Ocak-Aralık: her ay için fazla mesai kırılımlarının tek tek (not + tutar) listesi */
+  overtimeDetails?: AdjustmentDetail[][];
   /** Ocak-Aralık: bu kalemin altındaki "Eksik Çalışma" kırılımı (varsa) */
   absenceByMonth?: number[];
+  /** Ocak-Aralık: her ay için eksik çalışma kırılımlarının tek tek (not + tutar) listesi */
+  absenceDetails?: AdjustmentDetail[][];
 }
 
 /** Bugünün tarihine göre verilen yılda kaç ayın geçtiğini hesaplar (gelecek yıl -> 0, geçmiş yıl -> 12). */
@@ -138,11 +147,24 @@ function mapLineItems(
     const actuals: number[] = [];
     const overtimeByMonth: number[] = [];
     const absenceByMonth: number[] = [];
+    const overtimeDetails: AdjustmentDetail[][] = [];
+    const absenceDetails: AdjustmentDetail[][] = [];
     for (let m = 1; m <= 12; m++) {
       const { base, overtime, absence } = monthBreakdown(item, m);
       actuals.push(base + overtime - absence);
       overtimeByMonth.push(overtime);
       absenceByMonth.push(absence);
+      const monthAdjustments = item.adjustments.filter((a) => a.month === m);
+      overtimeDetails.push(
+        monthAdjustments
+          .filter((a) => a.type === "OVERTIME")
+          .map((a) => ({ label: a.label, amount: a.amount }))
+      );
+      absenceDetails.push(
+        monthAdjustments
+          .filter((a) => a.type === "ABSENCE")
+          .map((a) => ({ label: a.label, amount: a.amount }))
+      );
     }
     const row = computeRow(
       item.id,
@@ -153,8 +175,14 @@ function mapLineItems(
       actuals,
       monthsElapsed
     );
-    if (overtimeByMonth.some((v) => v !== 0)) row.overtimeByMonth = overtimeByMonth;
-    if (absenceByMonth.some((v) => v !== 0)) row.absenceByMonth = absenceByMonth;
+    if (overtimeByMonth.some((v) => v !== 0)) {
+      row.overtimeByMonth = overtimeByMonth;
+      row.overtimeDetails = overtimeDetails;
+    }
+    if (absenceByMonth.some((v) => v !== 0)) {
+      row.absenceByMonth = absenceByMonth;
+      row.absenceDetails = absenceDetails;
+    }
     return row;
   });
 }

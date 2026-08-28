@@ -13,14 +13,25 @@ function sqlNum(v) {
   if (v === null || v === undefined) return "NULL";
   return String(v);
 }
+function sqlIntArray(arr) {
+  return `ARRAY[${arr.join(",")}]::INTEGER[]`;
+}
 
 const lines = [];
 lines.push(
   "-- Link Plaza 2026 Yıllık Bakım Planı + Periyodik (Fenni) Muayene kalemleri (seed.ts ile aynı veriden üretildi)"
 );
 lines.push(
-  "-- Neon SQL Editor'de çalıştırın. İdempotenttir — aynı kalem (plazaId+label) zaten varsa tekrar eklenmez."
+  "-- Neon SQL Editor'de çalıştırın. ON CONFLICT ile upsert yapar: kalem (plazaId+label) zaten"
 );
+lines.push(
+  "-- varsa company/yearlyCount/scheduledWeeks/machineId günceller — daha önce eski (scheduledWeeks'siz)"
+);
+lines.push("-- seed'i çalıştırmış olsanız bile bunu tekrar çalıştırmak güvenlidir.");
+lines.push(
+  "-- ÖN KOŞUL: bu script'ten önce scheduledWeeks migration'ı (maintenance_plan_items/inspection_plan_items"
+);
+lines.push('-- tablolarına "scheduledWeeks" sütunu ve (plazaId,label) unique index\'i) uygulanmış olmalı.');
 lines.push("");
 lines.push("DO $$");
 lines.push("DECLARE");
@@ -41,9 +52,9 @@ lines.push("  -- Yıllık Bakım Planı");
 MAINTENANCE_PLAN_ITEMS_2026.forEach((row, i) => {
   const itemId = randomUUID();
   lines.push(
-    `  INSERT INTO maintenance_plan_items (id, "plazaId", "machineId", label, company, "yearlyCount", "sortOrder", "createdAt", "updatedAt") ` +
-      `SELECT ${sqlStr(itemId)}, v_plaza_id, ${machineIdExpr(row.machineName)}, ${sqlStr(row.label)}, ${sqlStr(row.company)}, ${sqlNum(row.yearlyCount)}, ${i}, now(), now() ` +
-      `WHERE NOT EXISTS (SELECT 1 FROM maintenance_plan_items WHERE "plazaId" = v_plaza_id AND label = ${sqlStr(row.label)});`
+    `  INSERT INTO maintenance_plan_items (id, "plazaId", "machineId", label, company, "yearlyCount", "scheduledWeeks", "sortOrder", "createdAt", "updatedAt") ` +
+      `VALUES (${sqlStr(itemId)}, v_plaza_id, ${machineIdExpr(row.machineName)}, ${sqlStr(row.label)}, ${sqlStr(row.company)}, ${sqlNum(row.yearlyCount)}, ${sqlIntArray(row.scheduledWeeks)}, ${i}, now(), now()) ` +
+      `ON CONFLICT ("plazaId", label) DO UPDATE SET "machineId" = EXCLUDED."machineId", company = EXCLUDED.company, "yearlyCount" = EXCLUDED."yearlyCount", "scheduledWeeks" = EXCLUDED."scheduledWeeks", "sortOrder" = EXCLUDED."sortOrder", "updatedAt" = now();`
   );
 });
 lines.push("");
@@ -52,9 +63,9 @@ lines.push("  -- Periyodik (Fenni) Muayene");
 INSPECTION_PLAN_ITEMS_2026.forEach((row, i) => {
   const itemId = randomUUID();
   lines.push(
-    `  INSERT INTO inspection_plan_items (id, "plazaId", "machineId", label, company, "yearlyCount", "sortOrder", "createdAt", "updatedAt") ` +
-      `SELECT ${sqlStr(itemId)}, v_plaza_id, ${machineIdExpr(row.machineName)}, ${sqlStr(row.label)}, ${sqlStr(row.company)}, ${sqlNum(row.yearlyCount)}, ${i}, now(), now() ` +
-      `WHERE NOT EXISTS (SELECT 1 FROM inspection_plan_items WHERE "plazaId" = v_plaza_id AND label = ${sqlStr(row.label)});`
+    `  INSERT INTO inspection_plan_items (id, "plazaId", "machineId", label, company, "yearlyCount", "scheduledWeeks", "sortOrder", "createdAt", "updatedAt") ` +
+      `VALUES (${sqlStr(itemId)}, v_plaza_id, ${machineIdExpr(row.machineName)}, ${sqlStr(row.label)}, ${sqlStr(row.company)}, ${sqlNum(row.yearlyCount)}, ${sqlIntArray(row.scheduledWeeks)}, ${i}, now(), now()) ` +
+      `ON CONFLICT ("plazaId", label) DO UPDATE SET "machineId" = EXCLUDED."machineId", company = EXCLUDED.company, "yearlyCount" = EXCLUDED."yearlyCount", "scheduledWeeks" = EXCLUDED."scheduledWeeks", "sortOrder" = EXCLUDED."sortOrder", "updatedAt" = now();`
   );
 });
 lines.push("");

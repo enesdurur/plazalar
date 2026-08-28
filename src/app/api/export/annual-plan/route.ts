@@ -25,29 +25,36 @@ export async function GET(request: NextRequest) {
   const workbook = newWorkbook();
   const sheet = workbook.addWorksheet(`${year} Bakım Planı`);
   sheet.columns = [
-    { header: "Bakım Kalemi", key: "label", width: 32 },
-    { header: "Firma", key: "company", width: 20 },
-    { header: "Yıllık Sayı", key: "yearlyCount", width: 12 },
+    { header: "Sıra No", key: "siraNo", width: 8 },
+    { header: "Bakım", key: "label", width: 40 },
+    { header: "Bakımı Yapacak Firma", key: "company", width: 22 },
+    { header: "Bakım Sayısı", key: "yearlyCount", width: 12 },
     ...Array.from({ length: TOTAL_WEEKS }, (_, i) => ({
       header: `H${i + 1}`,
       key: `w${i + 1}`,
-      width: 6,
+      width: 5,
     })),
   ];
   sheet.getRow(1).font = { bold: true };
 
-  for (const item of items) {
+  items.forEach((item, idx) => {
+    const scheduled = new Set(item.scheduledWeeks);
     const row: Record<string, string | number> = {
+      siraNo: idx + 1,
       label: item.label,
       company: item.company ?? "",
       yearlyCount: item.yearlyCount ?? "",
     };
     for (let week = 1; week <= TOTAL_WEEKS; week++) {
+      if (!scheduled.has(week)) {
+        row[`w${week}`] = "";
+        continue;
+      }
       const completed = entryMap.get(`${item.id}-${week}`) ?? (isPastWeek(year, week, now) ? true : null);
-      row[`w${week}`] = completed === true ? "Yapıldı" : completed === false ? "Yapılmadı" : "";
+      row[`w${week}`] = completed === true ? "Yapıldı" : completed === false ? "Yapılmadı" : "Bekliyor";
     }
     sheet.addRow(row);
-  }
+  });
 
   return workbookResponse(workbook, `${plaza.name} - ${year} Yillik Bakim Plani.xlsx`);
 }

@@ -17,8 +17,14 @@ export const metadata: Metadata = {
 const CELL_STYLES = {
   DONE: "bg-green-100 text-green-700 hover:bg-green-200",
   MISSED: "bg-red-100 text-red-700 hover:bg-red-200",
-  EMPTY: "bg-slate-50 text-slate-300 hover:bg-slate-100",
+  EMPTY: "bg-amber-50 text-amber-300 hover:bg-amber-100",
 };
+
+const SIRA_W = 48;
+const LABEL_W = 300;
+const FIRMA_W = 130;
+const SAYI_W = 90;
+const WEEK_W = 32;
 
 export default async function InspectionsPage({
   searchParams,
@@ -62,8 +68,8 @@ export default async function InspectionsPage({
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Periyodik (Fenni) Muayene</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Her hücreye tıklayarak durumu değiştirin: boş → yapıldı → yapılmadı → boş. Geçmiş
-            aylardaki boş hücreler otomatik olarak yapıldı kabul edilir.
+            Excel&apos;de işaretli haftalarda tıklayarak durumu değiştirin: bekliyor → yapıldı →
+            yapılmadı → bekliyor. Geçmiş aylardaki işaretli haftalar otomatik yapıldı kabul edilir.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -90,14 +96,48 @@ export default async function InspectionsPage({
       </div>
 
       <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <table
+          className="divide-y divide-slate-200 text-sm"
+          style={{ tableLayout: "fixed", width: SIRA_W + LABEL_W + FIRMA_W + SAYI_W + TOTAL_WEEKS * WEEK_W }}
+        >
+          <colgroup>
+            <col style={{ width: SIRA_W }} />
+            <col style={{ width: LABEL_W }} />
+            <col style={{ width: FIRMA_W }} />
+            <col style={{ width: SAYI_W }} />
+            {Array.from({ length: TOTAL_WEEKS }, (_, i) => (
+              <col key={i} style={{ width: WEEK_W }} />
+            ))}
+          </colgroup>
           <thead className="sticky top-0 z-20 bg-slate-50">
             <tr>
               <th
                 rowSpan={2}
-                className="sticky left-0 z-10 min-w-[240px] bg-slate-50 px-4 py-2 text-left align-bottom font-medium text-slate-600"
+                style={{ left: 0, width: SIRA_W }}
+                className="sticky z-10 bg-slate-50 px-2 py-2 text-center align-bottom font-medium text-slate-600"
               >
-                Fenni Muayene Kalemi
+                Sıra No
+              </th>
+              <th
+                rowSpan={2}
+                style={{ left: SIRA_W, width: LABEL_W }}
+                className="sticky z-10 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+              >
+                Fenni Muayene
+              </th>
+              <th
+                rowSpan={2}
+                style={{ left: SIRA_W + LABEL_W, width: FIRMA_W }}
+                className="sticky z-10 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+              >
+                Bakımı Yapacak Firma
+              </th>
+              <th
+                rowSpan={2}
+                style={{ left: SIRA_W + LABEL_W + FIRMA_W, width: SAYI_W }}
+                className="sticky z-10 border-r border-slate-200 bg-slate-50 px-2 py-2 text-center align-bottom font-medium text-slate-600"
+              >
+                Bakım Sayısı
               </th>
               {MONTH_NAMES.map((name, i) => {
                 const range = MONTH_WEEK_RANGES[i];
@@ -124,68 +164,96 @@ export default async function InspectionsPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {items.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50">
-                <td className="sticky left-0 z-10 bg-white px-4 py-2">
-                  <p className="font-medium text-slate-900">{item.label}</p>
-                  <p className="text-xs text-slate-400">
+            {items.map((item, idx) => {
+              const scheduled = new Set(item.scheduledWeeks);
+              return (
+                <tr key={item.id} className="hover:bg-slate-50">
+                  <td
+                    style={{ left: 0, width: SIRA_W }}
+                    className="sticky z-10 bg-white px-2 py-2 text-center text-slate-500"
+                  >
+                    {idx + 1}
+                  </td>
+                  <td
+                    style={{ left: SIRA_W, width: LABEL_W }}
+                    className="sticky z-10 bg-white px-3 py-2 font-medium text-slate-900"
+                  >
+                    {item.label}
+                  </td>
+                  <td
+                    style={{ left: SIRA_W + LABEL_W, width: FIRMA_W }}
+                    className="sticky z-10 bg-white px-3 py-2 text-slate-600"
+                  >
                     {item.company}
-                    {item.yearlyCount != null && ` · Yılda ${item.yearlyCount} kez`}
-                  </p>
-                </td>
-                {Array.from({ length: TOTAL_WEEKS }, (_, i) => i + 1).map((week) => {
-                  const entry = entryMap.get(`${item.id}-${week}`);
-                  const completed = entry?.completed ?? (isPastWeek(year, week, now) ? true : null);
-                  const style =
-                    completed === true
-                      ? CELL_STYLES.DONE
-                      : completed === false
-                        ? CELL_STYLES.MISSED
-                        : CELL_STYLES.EMPTY;
-                  const label = completed === true ? "✓" : completed === false ? "✕" : "";
-                  const costLabel = entry?.cost
-                    ? formatCostAmount(Number(entry.cost), entry.costCurrency)
-                    : null;
+                  </td>
+                  <td
+                    style={{ left: SIRA_W + LABEL_W + FIRMA_W, width: SAYI_W }}
+                    className="sticky z-10 border-r border-slate-200 bg-white px-2 py-2 text-center text-slate-600"
+                  >
+                    {item.yearlyCount ?? ""}
+                  </td>
+                  {Array.from({ length: TOTAL_WEEKS }, (_, i) => i + 1).map((week) => {
+                    if (!scheduled.has(week)) {
+                      return <td key={week} className="border-l border-slate-100 px-0.5 py-1" />;
+                    }
 
-                  if (!writable) {
+                    const entry = entryMap.get(`${item.id}-${week}`);
+                    const completed =
+                      entry?.completed ?? (isPastWeek(year, week, now) ? true : null);
+                    const style =
+                      completed === true
+                        ? CELL_STYLES.DONE
+                        : completed === false
+                          ? CELL_STYLES.MISSED
+                          : CELL_STYLES.EMPTY;
+                    const label = completed === true ? "✓" : completed === false ? "✕" : "●";
+                    const costLabel = entry?.cost
+                      ? formatCostAmount(Number(entry.cost), entry.costCurrency)
+                      : null;
+
+                    if (!writable) {
+                      return (
+                        <td
+                          key={week}
+                          className="border-l border-slate-100 px-0.5 py-1 text-center"
+                        >
+                          <span
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs ${style}`}
+                          >
+                            {label}
+                          </span>
+                        </td>
+                      );
+                    }
+
                     return (
                       <td key={week} className="border-l border-slate-100 px-0.5 py-1 text-center">
-                        <span
-                          className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs ${style}`}
-                        >
-                          {label}
-                        </span>
+                        <form action={toggleInspectionWeekEntry.bind(null, item.id, year, week)}>
+                          <button
+                            type="submit"
+                            title={costLabel ?? undefined}
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs font-medium transition-colors ${style}`}
+                          >
+                            {label}
+                          </button>
+                        </form>
+                        {entry && (
+                          <Link
+                            href={`/inspections/entries/${entry.id}/edit`}
+                            className="mt-0.5 block whitespace-nowrap text-[9px] text-slate-400 hover:text-slate-600 print:hidden"
+                          >
+                            {costLabel ?? "+"}
+                          </Link>
+                        )}
                       </td>
                     );
-                  }
-
-                  return (
-                    <td key={week} className="border-l border-slate-100 px-0.5 py-1 text-center">
-                      <form action={toggleInspectionWeekEntry.bind(null, item.id, year, week)}>
-                        <button
-                          type="submit"
-                          title={costLabel ?? undefined}
-                          className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs font-medium transition-colors ${style}`}
-                        >
-                          {label}
-                        </button>
-                      </form>
-                      {entry && (
-                        <Link
-                          href={`/inspections/entries/${entry.id}/edit`}
-                          className="mt-0.5 block whitespace-nowrap text-[9px] text-slate-400 hover:text-slate-600 print:hidden"
-                        >
-                          {costLabel ?? "+"}
-                        </Link>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                  })}
+                </tr>
+              );
+            })}
             {items.length === 0 && (
               <tr>
-                <td colSpan={TOTAL_WEEKS + 1} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={TOTAL_WEEKS + 4} className="px-4 py-8 text-center text-slate-500">
                   Henüz fenni muayene kalemi yok.
                 </td>
               </tr>
@@ -193,7 +261,11 @@ export default async function InspectionsPage({
           </tbody>
           <tfoot className="bg-slate-50">
             <tr>
-              <td className="sticky left-0 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500">
+              <td
+                colSpan={4}
+                style={{ left: 0 }}
+                className="sticky bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500"
+              >
                 Yapıldı / Yapılmadı
               </td>
               {MONTH_NAMES.map((name, i) => {

@@ -18,6 +18,9 @@ export async function togglePlanWeekEntry(itemId: string, year: number, week: nu
     where: { id: itemId, plazaId: plaza.id },
   });
   if (!item) throw new Error("Bakım kalemi bu plazaya ait değil.");
+  if (!item.scheduledWeeks.includes(week)) {
+    throw new Error("Bu hafta bu kalem için planlanmamış.");
+  }
 
   const existing = await prisma.maintenancePlanWeekEntry.findUnique({
     where: { itemId_year_week: { itemId, year, week } },

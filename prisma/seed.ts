@@ -341,37 +341,33 @@ async function main() {
 
     for (let i = 0; i < MAINTENANCE_PLAN_ITEMS_2026.length; i++) {
       const row = MAINTENANCE_PLAN_ITEMS_2026[i];
-      const existing = await prisma.maintenancePlanItem.findFirst({
-        where: { plazaId: linkPlazaId, label: row.label },
-      });
-      if (existing) continue;
-      await prisma.maintenancePlanItem.create({
-        data: {
-          plazaId: linkPlazaId,
-          label: row.label,
-          company: row.company,
-          yearlyCount: row.yearlyCount,
-          machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
-          sortOrder: i,
-        },
+      const data = {
+        company: row.company,
+        yearlyCount: row.yearlyCount,
+        scheduledWeeks: row.scheduledWeeks,
+        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
+        sortOrder: i,
+      };
+      await prisma.maintenancePlanItem.upsert({
+        where: { plazaId_label: { plazaId: linkPlazaId, label: row.label } },
+        update: data,
+        create: { plazaId: linkPlazaId, label: row.label, ...data },
       });
     }
 
     for (let i = 0; i < INSPECTION_PLAN_ITEMS_2026.length; i++) {
       const row = INSPECTION_PLAN_ITEMS_2026[i];
-      const existing = await prisma.inspectionPlanItem.findFirst({
-        where: { plazaId: linkPlazaId, label: row.label },
-      });
-      if (existing) continue;
-      await prisma.inspectionPlanItem.create({
-        data: {
-          plazaId: linkPlazaId,
-          label: row.label,
-          company: row.company,
-          yearlyCount: row.yearlyCount,
-          machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
-          sortOrder: i,
-        },
+      const data = {
+        company: row.company,
+        yearlyCount: row.yearlyCount,
+        scheduledWeeks: row.scheduledWeeks,
+        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
+        sortOrder: i,
+      };
+      await prisma.inspectionPlanItem.upsert({
+        where: { plazaId_label: { plazaId: linkPlazaId, label: row.label } },
+        update: data,
+        create: { plazaId: linkPlazaId, label: row.label, ...data },
       });
     }
   }

@@ -225,20 +225,26 @@ model PeriodicInspection {
 // Sorumluluğu, Jeneratör Bakımı) bir bakım firmasına ve yıllık tekrar sayısına sahip, isteğe
 // bağlı olarak mevcut bir Machine kaydına bağlanabilir. Haftalık (1-53) matris ile takip edilir.
 model MaintenancePlanItem {
-  id          String   @id @default(cuid())
-  plazaId     String
-  machineId   String?
-  label       String
-  company     String?
-  yearlyCount Int?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  plazaId        String
+  machineId      String?
+  label          String
+  company        String?
+  yearlyCount    Int?
+  /**
+   * Excel'de renkli/işaretli hücrelerin karşılık geldiği hafta numaraları (1-53) — bu kalemin
+   * o yıl için planlanmış gerçekleşme haftaları. Yalnızca bu haftalarda onay kutusu gösterilir.
+   */
+  scheduledWeeks Int[]    @default([])
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   plaza       Plaza                      @relation(fields: [plazaId], references: [id], onDelete: Cascade)
   machine     Machine?                   @relation(fields: [machineId], references: [id])
   weekEntries MaintenancePlanWeekEntry[]
 
+  @@unique([plazaId, label])
   @@index([plazaId])
   @@map("maintenance_plan_items")
 }
@@ -268,20 +274,25 @@ model MaintenancePlanWeekEntry {
 // Periyodik (Fenni) Muayene: Excel'deki "FENNİ MUAYENE" listesiyle birebir — aynı haftalık
 // (1-53) matris deseni, MaintenancePlanItem ile paralel ama ayrı bir model (farklı sekme/anlam).
 model InspectionPlanItem {
-  id          String   @id @default(cuid())
-  plazaId     String
-  machineId   String?
-  label       String
-  company     String?
-  yearlyCount Int?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  plazaId        String
+  machineId      String?
+  label          String
+  company        String?
+  yearlyCount    Int?
+  /**
+   * Excel'de renkli/işaretli hücrelerin karşılık geldiği hafta numaraları (1-53).
+   */
+  scheduledWeeks Int[]    @default([])
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   plaza       Plaza                     @relation(fields: [plazaId], references: [id], onDelete: Cascade)
   machine     Machine?                  @relation(fields: [machineId], references: [id])
   weekEntries InspectionPlanWeekEntry[]
 
+  @@unique([plazaId, label])
   @@index([plazaId])
   @@map("inspection_plan_items")
 }

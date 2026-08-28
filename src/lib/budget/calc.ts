@@ -48,12 +48,22 @@ export function elapsedMonths(year: number, now: Date = new Date()): number {
   return now.getMonth() + 1;
 }
 
+/** Ocak-Haziran 2026: Excel'den aktarılan, artık düzenlenemeyen geçmiş veri.
+ * Temmuz 2026'dan itibaren veri girişi (onay kutusu / elle tutar) bu sistemden yapılıyor. */
+export function isLockedMonth(year: number, month: number): boolean {
+  return year === 2026 && month <= 6;
+}
+
 function realizedForMonth(item: RawLineItem, month: number): number {
   const entry = item.entries.find((e) => e.month === month);
+  // Elle girilmiş bir tutar varsa (kalem sonradan sabit sözleşmeli olarak işaretlenmiş olsa
+  // bile) o tutar korunur — sabit işaretlemek geçmiş ayların verisini sıfırlamaz. Onay kutusu
+  // yalnızca henüz elle tutar girilmemiş aylarda geçerli olur.
+  if (entry?.manualAmount != null) return Number(entry.manualAmount);
   if (item.isFixedContract) {
     return entry?.confirmed ? Number(item.fixedAmount ?? 0) : 0;
   }
-  return entry?.manualAmount != null ? Number(entry.manualAmount) : 0;
+  return 0;
 }
 
 function computeRow(

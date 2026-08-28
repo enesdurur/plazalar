@@ -5,7 +5,7 @@ import { canWrite } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { fetchBudgetSections } from "@/lib/budget/fetch";
 import { toggleConfirmed, setManualAmount } from "../actions";
-import type { RawLineItem, RawSection } from "@/lib/budget/calc";
+import { isLockedMonth, type RawLineItem, type RawSection } from "@/lib/budget/calc";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -52,7 +52,8 @@ export default async function BudgetEntryPage({
           <h1 className="mt-1 text-xl font-semibold text-slate-900">Bütçe Veri Girişi ({year})</h1>
           <p className="mt-1 text-sm text-slate-500">
             Sabit sözleşmeli kalemlerde ayı işaretleyin, tutar otomatik gelir. Diğer kalemlerde
-            tutarı elle girin.
+            tutarı elle girin. Ocak-Haziran 2026 Excel&apos;den aktarılan geçmiş veridir, artık
+            düzenlenemez.
           </p>
         </div>
         <Link
@@ -76,13 +77,13 @@ export default async function BudgetEntryPage({
       )}
 
       {sections.map((section) => (
-        <SectionMatrix key={section.name} section={section} />
+        <SectionMatrix key={section.name} section={section} year={year} />
       ))}
     </div>
   );
 }
 
-function SectionMatrix({ section }: { section: RawSection }) {
+function SectionMatrix({ section, year }: { section: RawSection; year: number }) {
   return (
     <div className="mt-6">
       <h2 className="text-sm font-semibold text-slate-900">{section.name}</h2>
@@ -102,7 +103,7 @@ function SectionMatrix({ section }: { section: RawSection }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {section.items.map((item) => (
-              <ItemRow key={item.id} item={item} />
+              <ItemRow key={item.id} item={item} year={year} />
             ))}
             {section.items.length === 0 && (
               <tr>
@@ -118,7 +119,7 @@ function SectionMatrix({ section }: { section: RawSection }) {
   );
 }
 
-function ItemRow({ item }: { item: RawLineItem }) {
+function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
   const entryByMonth = new Map(item.entries.map((e) => [e.month, e]));
 
   return (
@@ -134,9 +135,23 @@ function ItemRow({ item }: { item: RawLineItem }) {
       {MONTHS.map((_, i) => {
         const month = i + 1;
         const entry = entryByMonth.get(month);
+
+        if (isLockedMonth(year, month)) {
+          return (
+            <td key={month} className="px-2 py-2 text-center">
+              <LockedCell amount={entry?.manualAmount ?? null} />
+            </td>
+          );
+        }
+
+        // Bu ay için zaten elle girilmiş bir tutar varsa (kalem sonradan sabit sözleşmeli
+        // yapılmış olsa bile) o tutarı elle-giriş hücresi olarak göstermeye devam ederiz —
+        // sabit işaretlemek geçmiş ayların verisini gizlemez/sıfırlamaz. Onay kutusu sadece
+        // henüz tutar girilmemiş aylarda görünür.
+        const hasManualValue = entry?.manualAmount != null;
         return (
           <td key={month} className="px-2 py-2 text-center">
-            {item.isFixedContract ? (
+            {item.isFixedContract && !hasManualValue ? (
               <FixedCell itemId={item.id} month={month} confirmed={entry?.confirmed ?? false} />
             ) : (
               <ManualCell
@@ -149,6 +164,16 @@ function ItemRow({ item }: { item: RawLineItem }) {
         );
       })}
     </tr>
+  );
+}
+
+function LockedCell({ amount }: { amount: number | null }) {
+  return (
+    <span className="inline-block w-20 text-right text-xs text-slate-400" title="Geçmiş veri, düzenlenemez">
+      {amount != null
+        ? amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : "-"}
+    </span>
   );
 }
 

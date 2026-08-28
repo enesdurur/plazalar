@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
+import { isLockedMonth } from "@/lib/budget/calc";
 
 const SECTION_NAMES = [
   "A- PERSONEL GİDERLERİ",
@@ -131,6 +132,7 @@ async function assertLineItemInPlaza(lineItemId: string) {
   const plaza = await getSelectedPlaza();
   const item = await prisma.budgetLineItem.findFirst({
     where: { id: lineItemId, section: { plazaId: plaza.id } },
+    include: { section: true },
   });
   if (!item) notFound();
   return item;
@@ -139,6 +141,9 @@ async function assertLineItemInPlaza(lineItemId: string) {
 export async function toggleConfirmed(lineItemId: string, month: number) {
   await requireWriteAccess();
   const item = await assertLineItemInPlaza(lineItemId);
+  if (isLockedMonth(item.section.year, month)) {
+    throw new Error("Bu ay için veri kilitli, düzenlenemez.");
+  }
   if (!item.isFixedContract) {
     throw new Error("Bu kalem sabit sözleşmeli değil.");
   }
@@ -160,9 +165,11 @@ export async function toggleConfirmed(lineItemId: string, month: number) {
 export async function setManualAmount(lineItemId: string, month: number, formData: FormData) {
   await requireWriteAccess();
   const item = await assertLineItemInPlaza(lineItemId);
-  if (item.isFixedContract) {
-    throw new Error("Bu kalem sabit sözleşmeli, tutar otomatik geliyor.");
+  if (isLockedMonth(item.section.year, month)) {
+    throw new Error("Bu ay için veri kilitli, düzenlenemez.");
   }
+  // Kalem sabit sözleşmeli olarak işaretlense bile, o ay için zaten elle girilmiş bir tutar
+  // varsa düzenlenebilir/temizlenebilir kalır — sabitleme geçmiş veriyi kilitlemez.
 
   const raw = formData.get("amount");
   const amount =

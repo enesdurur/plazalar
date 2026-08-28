@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Panel" },
+  { href: "/budget", label: "Gerçekleşen Bütçe" },
   { href: "/machines", label: "Makine / Teçhizat" },
   { href: "/records", label: "Arıza / Bakım Kayıtları" },
   { href: "/annual-plan", label: "Yıllık Bakım Planı" },

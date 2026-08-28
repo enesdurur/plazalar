@@ -1,18 +1,39 @@
-import type { BudgetLineItem, BudgetQuarterData } from "./link-plaza-2026";
+export interface RawMonthEntry {
+  month: number;
+  confirmed: boolean;
+  manualAmount: number | null;
+}
+
+export interface RawLineItem {
+  id: string;
+  category: string | null;
+  label: string;
+  monthlyBudget: number;
+  isFixedContract: boolean;
+  fixedAmount: number | null;
+  fill: string | null;
+  entries: RawMonthEntry[];
+}
+
+export interface RawSection {
+  name: string;
+  items: RawLineItem[];
+}
 
 export interface ComputedRow {
+  id?: string;
   category?: string | null;
   label: string;
   fill: string | null;
-  /** Girilen her ay için gerçekleşen tutar (tabloya yeni ay eklendikçe uzar) */
+  /** Ocak (0) - Aralık (11) sırasıyla gerçekleşen tutar */
   actuals: number[];
-  /** Girilen aylardaki gerçekleşen toplam maliyet */
+  /** Geçen ay sayısına göre gerçekleşen toplam maliyet */
   realizedTotal: number;
   /** Aylık ortalama gerçekleşen maliyet */
   realizedAvg: number;
   /** Aylık taslak bütçe */
   monthlyBudget: number;
-  /** Girilen ay sayısına göre taslak bütçe toplamı */
+  /** Geçen ay sayısına göre taslak bütçe toplamı */
   budgetForPeriod: number;
   /** Taslak bütçe (yıllık) */
   budgetYearly: number;
@@ -20,63 +41,86 @@ export interface ComputedRow {
   deviation: number;
 }
 
+/** Bugünün tarihine göre verilen yılda kaç ayın geçtiğini hesaplar (gelecek yıl -> 0, geçmiş yıl -> 12). */
+export function elapsedMonths(year: number, now: Date = new Date()): number {
+  if (year < now.getFullYear()) return 12;
+  if (year > now.getFullYear()) return 0;
+  return now.getMonth() + 1;
+}
+
+function realizedForMonth(item: RawLineItem, month: number): number {
+  const entry = item.entries.find((e) => e.month === month);
+  if (item.isFixedContract) {
+    return entry?.confirmed ? Number(item.fixedAmount ?? 0) : 0;
+  }
+  return entry?.manualAmount != null ? Number(entry.manualAmount) : 0;
+}
+
 function computeRow(
+  id: string | undefined,
   category: string | null | undefined,
   label: string,
   fill: string | null,
   monthlyBudget: number,
-  actuals: number[]
+  actuals: number[],
+  monthsElapsed: number
 ): ComputedRow {
-  const realizedTotal = actuals.reduce((a, b) => a + b, 0);
-  const budgetForPeriod = monthlyBudget * actuals.length;
+  const counted = actuals.slice(0, monthsElapsed);
+  const realizedTotal = counted.reduce((a, b) => a + b, 0);
+  const budgetForPeriod = monthlyBudget * monthsElapsed;
   return {
+    id,
     category,
     label,
     fill,
     actuals,
     realizedTotal,
-    realizedAvg: actuals.length > 0 ? realizedTotal / actuals.length : 0,
+    realizedAvg: monthsElapsed > 0 ? realizedTotal / monthsElapsed : 0,
     monthlyBudget,
     budgetForPeriod,
     budgetYearly: monthlyBudget * 12,
-    deviation: realizedTotal > 0 ? 1 - realizedTotal / budgetForPeriod : 0,
+    deviation: realizedTotal > 0 && budgetForPeriod > 0 ? 1 - realizedTotal / budgetForPeriod : 0,
   };
 }
 
-function sumRows(rows: ComputedRow[], label: string, fill: string | null): ComputedRow {
-  const monthCount = rows[0]?.actuals.length ?? 0;
-  const actuals = Array.from({ length: monthCount }, (_, i) =>
+function sumRows(
+  rows: ComputedRow[],
+  label: string,
+  fill: string | null,
+  monthsElapsed: number
+): ComputedRow {
+  const actuals = Array.from({ length: 12 }, (_, i) =>
     rows.reduce((sum, r) => sum + r.actuals[i], 0)
   );
   const monthlyBudget = rows.reduce((sum, r) => sum + r.monthlyBudget, 0);
-  return computeRow(undefined, label, fill, monthlyBudget, actuals);
+  return computeRow(undefined, undefined, label, fill, monthlyBudget, actuals, monthsElapsed);
 }
 
-/** Excel'deki ayrı ayrı çeyrek sekmelerini (Ocak-Şubat-Mart, Nisan-Mayıs-Haziran, ...)
- * tek, sürekli büyüyebilen bir yıl görünümünde birleştirir. Yeni bir çeyrek/ay verisi
- * geldiğinde LINK_PLAZA_BUDGET_2026 dizisine eklemek yeterli; tablo otomatik uzar. */
-function mergeLineItems(
-  quarters: BudgetQuarterData[],
-  pick: (q: BudgetQuarterData) => BudgetLineItem[],
-  sectionCategory?: string
+function mapLineItems(
+  items: RawLineItem[],
+  monthsElapsed: number,
+  forcedCategory?: string
 ): ComputedRow[] {
-  const rowSets = quarters.map(pick);
-  const count = rowSets[0]?.length ?? 0;
-  const rows: ComputedRow[] = [];
-  for (let i = 0; i < count; i++) {
-    const first = rowSets[0][i];
-    const actuals = rowSets.flatMap((set) => set[i].months);
-    const category = sectionCategory ? (i === 0 ? sectionCategory : null) : first.category;
-    rows.push(computeRow(category, first.label, first.fill, first.monthlyBudget, actuals));
-  }
-  return rows;
+  return items.map((item) => {
+    const actuals = Array.from({ length: 12 }, (_, i) => realizedForMonth(item, i + 1));
+    return computeRow(
+      item.id,
+      forcedCategory ?? item.category,
+      item.label,
+      item.fill,
+      item.monthlyBudget,
+      actuals,
+      monthsElapsed
+    );
+  });
 }
 
 const SHARE_COUNT = 16000;
 const MANAGEMENT_PROFIT_RATE = 0.07;
 
 export interface ComputedLinkPlazaBudget {
-  monthNames: string[];
+  year: number;
+  monthsElapsed: number;
   personnelRows: ComputedRow[];
   personnelTotal: ComputedRow;
   managementRows: ComputedRow[];
@@ -87,72 +131,97 @@ export interface ComputedLinkPlazaBudget {
   otherRows: ComputedRow[];
   otherTotal: ComputedRow;
   grandTotal: ComputedRow;
-  fxLabels: string[];
-  fxRates: number[];
-  usdRealized: number[];
-  usdPerShare: number[];
   periodSurplus: number;
   monthlyAvgSurplus: number;
 }
 
-export function computeLinkPlazaBudget(quarters: BudgetQuarterData[]): ComputedLinkPlazaBudget {
-  const monthNames = quarters.flatMap((q) => q.monthNames);
-  const fxLabels = quarters.flatMap((q) => q.fxLabels);
-  const fxRates = quarters.flatMap((q) => q.fxRates);
-  const monthCount = monthNames.length;
+const SECTION_NAMES = {
+  personnel: "A- PERSONEL GİDERLERİ",
+  management: "YÖNETİM GİDERLERİ",
+  other: "DİĞER GİDERLER",
+};
 
-  const personnelRows = mergeLineItems(quarters, (q) => q.personnelRows);
-  const personnelTotal = sumRows(personnelRows, "A- PERSONEL GİDERLERİ TOPLAM MALİYETİ", "#F8CBAD");
+export function computeLinkPlazaBudget(
+  sections: RawSection[],
+  year: number,
+  now: Date = new Date()
+): ComputedLinkPlazaBudget {
+  const monthsElapsed = elapsedMonths(year, now);
+  const byName = new Map(sections.map((s) => [s.name, s]));
 
-  const managementRows = mergeLineItems(quarters, (q) => q.managementRows, "YÖNETİM GİDERLERİ");
-  const managementTotal = sumRows(managementRows, "YÖNETİM GİDERLERİ TOPLAM MALİYETİ", null);
+  const personnelRows = mapLineItems(
+    byName.get(SECTION_NAMES.personnel)?.items ?? [],
+    monthsElapsed
+  );
+  const personnelTotal = sumRows(
+    personnelRows,
+    "A- PERSONEL GİDERLERİ TOPLAM MALİYETİ",
+    "#F8CBAD",
+    monthsElapsed
+  );
+
+  const managementRows = mapLineItems(
+    byName.get(SECTION_NAMES.management)?.items ?? [],
+    monthsElapsed,
+    "YÖNETİM GİDERLERİ"
+  );
+  const managementTotal = sumRows(
+    managementRows,
+    "YÖNETİM GİDERLERİ TOPLAM MALİYETİ",
+    null,
+    monthsElapsed
+  );
 
   const profitBudget =
     Math.round(personnelTotal.monthlyBudget * MANAGEMENT_PROFIT_RATE * 100) / 100;
   const managementProfit = computeRow(
     undefined,
+    undefined,
     "YÖNETİM KARI",
     null,
     profitBudget,
-    Array.from({ length: monthCount }, () => profitBudget)
+    Array.from({ length: 12 }, (_, i) => (i < monthsElapsed ? profitBudget : 0)),
+    monthsElapsed
   );
 
   const managementGrandTotal = sumRows(
     [managementTotal, managementProfit],
     "B- YÖNETİM FİRMASI HİZMET BEDELİ + GENEL GİDER + YÖNETİM KARI",
-    "#D9D9D9"
+    "#D9D9D9",
+    monthsElapsed
   );
 
   const personnelAndManagementTotal = sumRows(
     [personnelTotal, managementGrandTotal],
     "A+B TOPLAM",
-    "#FFC000"
+    "#FFC000",
+    monthsElapsed
   );
 
-  const otherRows = mergeLineItems(
-    quarters,
-    (q) => q.otherRows,
-    "DİĞER GİDERLER\n(Aylık Ortalama KDV Hariç Tutar)"
+  const otherRows = mapLineItems(
+    byName.get(SECTION_NAMES.other)?.items ?? [],
+    monthsElapsed,
+    "DİĞER GİDERLER (Aylık Ortalama KDV Hariç Tutar)"
   );
   const otherTotal = sumRows(
     otherRows,
     "C- BİNA DİĞER GİDERLER TOPLAM MALİYETİ (KDV HARİÇ)",
-    "#BFBFBF"
+    "#BFBFBF",
+    monthsElapsed
   );
 
   const grandTotal = sumRows(
     [personnelAndManagementTotal, otherTotal],
     "A+B+C AİDATA ESAS ORTALAMA TOPLAM TUTAR (KDV HARİÇ)",
-    "#FFC000"
+    "#FFC000",
+    monthsElapsed
   );
-
-  const usdRealized = grandTotal.actuals.map((m, i) => m / fxRates[i]);
-  const usdPerShare = usdRealized.map((u) => u / SHARE_COUNT);
 
   const periodSurplus = grandTotal.budgetForPeriod - grandTotal.realizedTotal;
 
   return {
-    monthNames,
+    year,
+    monthsElapsed,
     personnelRows,
     personnelTotal,
     managementRows,
@@ -163,11 +232,9 @@ export function computeLinkPlazaBudget(quarters: BudgetQuarterData[]): ComputedL
     otherRows,
     otherTotal,
     grandTotal,
-    fxLabels,
-    fxRates,
-    usdRealized,
-    usdPerShare,
     periodSurplus,
-    monthlyAvgSurplus: periodSurplus / monthCount,
+    monthlyAvgSurplus: monthsElapsed > 0 ? periodSurplus / monthsElapsed : 0,
   };
 }
+
+export { SHARE_COUNT };

@@ -48,6 +48,7 @@ model Plaza {
   machines            Machine[]
   periodicInspections PeriodicInspection[]
   tenants             Tenant[]
+  budgetSections      BudgetSection[]
 
   @@map("plazas")
 }
@@ -255,4 +256,58 @@ model Verification {
 
   @@index([nextVerificationDate])
   @@map("verifications")
+}
+
+// Gerçekleşen Bütçe: bölüm (A- Personel Giderleri, Yönetim Giderleri, Diğer Giderler gibi)
+// bazında gider kalemleri. Her kalem ya "sözleşme bedeli belirli" (isFixedContract) olur —
+// yıl başında fixedAmount girilir, sonraki aylarda sadece onay kutusu işaretlenir — ya da
+// tutar her ay elle girilir (manualAmount).
+model BudgetSection {
+  id        String   @id @default(cuid())
+  plazaId   String
+  plaza     Plaza    @relation(fields: [plazaId], references: [id], onDelete: Cascade)
+  year      Int
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  items BudgetLineItem[]
+
+  @@unique([plazaId, year, name])
+  @@map("budget_sections")
+}
+
+model BudgetLineItem {
+  id              String        @id @default(cuid())
+  sectionId       String
+  section         BudgetSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  category        String?
+  label           String
+  monthlyBudget   Decimal       @db.Decimal(12, 2)
+  isFixedContract Boolean       @default(false)
+  fixedAmount     Decimal?      @db.Decimal(12, 2)
+  fill            String?
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  entries BudgetMonthEntry[]
+
+  @@unique([sectionId, label])
+  @@map("budget_line_items")
+}
+
+model BudgetMonthEntry {
+  id           String         @id @default(cuid())
+  lineItemId   String
+  lineItem     BudgetLineItem @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  month        Int
+  /** Sözleşme bedeli sabit kalemlerde: bu ay gerçekleşti mi (onay kutusu) */
+  confirmed    Boolean        @default(false)
+  /** Sabit olmayan kalemlerde elle girilen tutar */
+  manualAmount Decimal?       @db.Decimal(12, 2)
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([lineItemId, month])
+  @@map("budget_month_entries")
 }

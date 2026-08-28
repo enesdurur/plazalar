@@ -4,6 +4,8 @@ import rawRecords from "./seed-data/veri-tablosu.json";
 import rawPeriodicInspections from "./seed-data/periyodik-muayene.json";
 import rawCalibrations from "./seed-data/kalibrasyon.json";
 import rawVerifications from "./seed-data/dogrulama.json";
+import { LINK_PLAZA_BUDGET_2026 } from "../src/lib/budget/link-plaza-2026";
+import type { BudgetLineItem } from "../src/lib/budget/link-plaza-2026";
 
 const prisma = new PrismaClient();
 
@@ -271,6 +273,57 @@ async function main() {
           : undefined,
       },
     });
+  }
+
+  console.log("Seeding Link Plaza gerçekleşen bütçe (2026)...");
+
+  const linkPlazaId = plazas.get("Link Plaza");
+  if (linkPlazaId) {
+    const SECTIONS: {
+      name: string;
+      key: "personnelRows" | "managementRows" | "otherRows";
+      sortOrder: number;
+    }[] = [
+      { name: "A- PERSONEL GİDERLERİ", key: "personnelRows", sortOrder: 0 },
+      { name: "YÖNETİM GİDERLERİ", key: "managementRows", sortOrder: 1 },
+      { name: "DİĞER GİDERLER", key: "otherRows", sortOrder: 2 },
+    ];
+
+    for (const s of SECTIONS) {
+      const section = await prisma.budgetSection.upsert({
+        where: { plazaId_year_name: { plazaId: linkPlazaId, year: 2026, name: s.name } },
+        update: {},
+        create: { plazaId: linkPlazaId, year: 2026, name: s.name, sortOrder: s.sortOrder },
+      });
+
+      const q1Rows: BudgetLineItem[] = LINK_PLAZA_BUDGET_2026[0][s.key];
+      const q2Rows: BudgetLineItem[] = LINK_PLAZA_BUDGET_2026[1][s.key];
+
+      for (let i = 0; i < q1Rows.length; i++) {
+        const row = q1Rows[i];
+        const lineItem = await prisma.budgetLineItem.upsert({
+          where: { sectionId_label: { sectionId: section.id, label: row.label } },
+          update: {},
+          create: {
+            sectionId: section.id,
+            category: row.category ?? undefined,
+            label: row.label,
+            monthlyBudget: row.monthlyBudget,
+            fill: row.fill ?? undefined,
+            sortOrder: i,
+          },
+        });
+
+        const monthlyActuals = [...q1Rows[i].months, ...q2Rows[i].months];
+        for (let m = 0; m < monthlyActuals.length; m++) {
+          await prisma.budgetMonthEntry.upsert({
+            where: { lineItemId_month: { lineItemId: lineItem.id, month: m + 1 } },
+            update: {},
+            create: { lineItemId: lineItem.id, month: m + 1, manualAmount: monthlyActuals[m] },
+          });
+        }
+      }
+    }
   }
 
   console.log("Seed complete.");

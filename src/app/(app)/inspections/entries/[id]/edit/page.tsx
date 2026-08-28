@@ -1,16 +1,16 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { updatePlanWeekEntryCost } from "../../../actions";
+import { updateInspectionWeekEntryCost } from "../../../actions";
 import { SubmitButton } from "@/components/submit-button";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bakım Maliyeti",
+  title: "Fenni Muayene Maliyeti",
 };
 
-export default async function EditPlanWeekEntryPage({
+export default async function EditInspectionWeekEntryPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -18,21 +18,21 @@ export default async function EditPlanWeekEntryPage({
   const { id } = await params;
   const plaza = await getSelectedPlaza();
 
-  const entry = await prisma.maintenancePlanWeekEntry.findFirst({
+  const entry = await prisma.inspectionPlanWeekEntry.findFirst({
     where: { id, item: { plazaId: plaza.id } },
     include: { item: true },
   });
 
   if (!entry) notFound();
 
-  const updateWithId = updatePlanWeekEntryCost.bind(null, id);
+  const updateWithId = updateInspectionWeekEntryCost.bind(null, id);
   const statusLabel =
     entry.completed === true ? "Yapıldı" : entry.completed === false ? "Yapılmadı" : "Boş";
   const monthName = MONTH_NAMES[monthOfWeek(entry.week) - 1];
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-slate-900">Bakım Maliyeti</h1>
+      <h1 className="text-xl font-semibold text-slate-900">Fenni Muayene Maliyeti</h1>
       <p className="mt-1 text-sm text-slate-500">
         {entry.item.label} · {monthName} {entry.year} ({entry.week}. hafta) · Durum: {statusLabel}
       </p>

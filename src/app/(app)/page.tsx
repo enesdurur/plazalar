@@ -7,6 +7,7 @@ import { BarBreakdown } from "@/components/bar-breakdown";
 import { SparePartCostTile, MaintenanceCostTile } from "@/components/spare-part-cost-tile";
 import { TcmbRatesCard } from "@/components/tcmb-rates-card";
 import { getTcmbRates } from "@/lib/tcmb";
+import { MONTH_WEEK_RANGES } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -21,30 +22,34 @@ export default async function DashboardPage() {
     include: { machine: true },
   });
 
-  const machines = await prisma.machine.findMany({
-    where: { plazaId: plaza.id },
-  });
-
   const now = new Date();
   const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const currentMonthRange = MONTH_WEEK_RANGES[now.getMonth()];
+  const currentMonthWeeks = Array.from(
+    { length: currentMonthRange.endWeek - currentMonthRange.startWeek + 1 },
+    (_, i) => currentMonthRange.startWeek + i
+  );
 
   const [
-    inspectionTotal,
-    inspectionExpired,
-    planEntriesThisMonth,
+    maintenancePlanItemTotal,
+    inspectionPlanItemTotal,
+    planWeekEntriesThisMonth,
+    inspectionWeekEntriesThisMonth,
     tcmbRates,
     costedInspections,
     costedPlanEntries,
+    costedPlanWeekEntries,
+    costedInspectionWeekEntries,
     tenantMaintenanceTotal,
     tenantMaintenanceExpired,
   ] = await Promise.all([
-    prisma.periodicInspection.count({ where: { plazaId: plaza.id } }),
-    prisma.periodicInspection.count({
-      where: { plazaId: plaza.id, nextInspectionDate: { lt: now } },
+    prisma.maintenancePlanItem.count({ where: { plazaId: plaza.id } }),
+    prisma.inspectionPlanItem.count({ where: { plazaId: plaza.id } }),
+    prisma.maintenancePlanWeekEntry.findMany({
+      where: { year: currentYear, week: { in: currentMonthWeeks }, item: { plazaId: plaza.id } },
     }),
-    prisma.maintenancePlanEntry.findMany({
-      where: { year: currentYear, month: currentMonth, machine: { plazaId: plaza.id } },
+    prisma.inspectionPlanWeekEntry.findMany({
+      where: { year: currentYear, week: { in: currentMonthWeeks }, item: { plazaId: plaza.id } },
     }),
     getTcmbRates(),
     prisma.periodicInspection.findMany({
@@ -55,15 +60,28 @@ export default async function DashboardPage() {
       where: { cost: { not: null }, machine: { plazaId: plaza.id } },
       select: { cost: true, costCurrency: true },
     }),
+    prisma.maintenancePlanWeekEntry.findMany({
+      where: { cost: { not: null }, item: { plazaId: plaza.id } },
+      select: { cost: true, costCurrency: true },
+    }),
+    prisma.inspectionPlanWeekEntry.findMany({
+      where: { cost: { not: null }, item: { plazaId: plaza.id } },
+      select: { cost: true, costCurrency: true },
+    }),
     prisma.tenantMaintenance.count({ where: { tenant: { plazaId: plaza.id } } }),
     prisma.tenantMaintenance.count({
       where: { tenant: { plazaId: plaza.id }, nextMaintenanceDate: { lt: now } },
     }),
   ]);
-  const machineCount = machines.length;
 
-  const planDoneThisMonth = planEntriesThisMonth.filter((e) => e.completed === true).length;
-  const planMissedThisMonth = planEntriesThisMonth.filter((e) => e.completed === false).length;
+  const planDoneThisMonth = planWeekEntriesThisMonth.filter((e) => e.completed === true).length;
+  const planMissedThisMonth = planWeekEntriesThisMonth.filter((e) => e.completed === false).length;
+  const inspectionDoneThisMonth = inspectionWeekEntriesThisMonth.filter(
+    (e) => e.completed === true
+  ).length;
+  const inspectionMissedThisMonth = inspectionWeekEntriesThisMonth.filter(
+    (e) => e.completed === false
+  ).length;
 
   const arizaCount = records.filter((r) => r.operationType === "ARIZA").length;
   const bakimCount = records.filter((r) => r.operationType === "BAKIM").length;
@@ -90,6 +108,12 @@ export default async function DashboardPage() {
     if (i.cost) maintenanceCostByCurrency[i.costCurrency] += Number(i.cost);
   }
   for (const e of costedPlanEntries) {
+    if (e.cost) maintenanceCostByCurrency[e.costCurrency] += Number(e.cost);
+  }
+  for (const e of costedPlanWeekEntries) {
+    if (e.cost) maintenanceCostByCurrency[e.costCurrency] += Number(e.cost);
+  }
+  for (const e of costedInspectionWeekEntries) {
     if (e.cost) maintenanceCostByCurrency[e.costCurrency] += Number(e.cost);
   }
 
@@ -142,34 +166,20 @@ export default async function DashboardPage() {
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <ComplianceTile
-          href="/inspections"
-          label="Periyodik Muayene"
-          total={inspectionTotal}
-          expired={inspectionExpired}
-        />
-        <Link
+        <PlanStatusTile
           href="/annual-plan"
-          className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
-        >
-          <p className="text-sm font-medium text-slate-500">Yıllık Bakım Planı (Bu Ay)</p>
-          <div className="mt-2 flex flex-wrap items-baseline gap-2">
-            <span
-              className="text-2xl font-semibold tabular-nums"
-              style={{ color: "var(--viz-status-good)" }}
-            >
-              {planDoneThisMonth}
-            </span>
-            <span className="text-sm text-slate-400">yapıldı,</span>
-            <span
-              className="text-2xl font-semibold tabular-nums"
-              style={{ color: "var(--viz-status-critical)" }}
-            >
-              {planMissedThisMonth}
-            </span>
-            <span className="text-sm text-slate-400">yapılmadı / {machineCount} makine</span>
-          </div>
-        </Link>
+          label="Yıllık Bakım Planı (Bu Ay)"
+          done={planDoneThisMonth}
+          missed={planMissedThisMonth}
+          totalItems={maintenancePlanItemTotal}
+        />
+        <PlanStatusTile
+          href="/inspections"
+          label="Periyodik (Fenni) Muayene (Bu Ay)"
+          done={inspectionDoneThisMonth}
+          missed={inspectionMissedThisMonth}
+          totalItems={inspectionPlanItemTotal}
+        />
         <ComplianceTile
           href="/tenant-maintenance"
           label="Kiracı Bakımları"
@@ -227,6 +237,45 @@ export default async function DashboardPage() {
         />
       </div>
     </div>
+  );
+}
+
+function PlanStatusTile({
+  href,
+  label,
+  done,
+  missed,
+  totalItems,
+}: {
+  href: string;
+  label: string;
+  done: number;
+  missed: number;
+  totalItems: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+    >
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <div className="mt-2 flex flex-wrap items-baseline gap-2">
+        <span
+          className="text-2xl font-semibold tabular-nums"
+          style={{ color: "var(--viz-status-good)" }}
+        >
+          {done}
+        </span>
+        <span className="text-sm text-slate-400">yapıldı,</span>
+        <span
+          className="text-2xl font-semibold tabular-nums"
+          style={{ color: "var(--viz-status-critical)" }}
+        >
+          {missed}
+        </span>
+        <span className="text-sm text-slate-400">yapılmadı / {totalItems} kalem</span>
+      </div>
+    </Link>
   );
 }
 

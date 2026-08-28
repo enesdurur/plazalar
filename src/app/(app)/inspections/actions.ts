@@ -95,3 +95,57 @@ export async function deleteInspection(id: string) {
   revalidatePath("/inspections");
   revalidatePath("/");
 }
+
+export async function toggleInspectionWeekEntry(itemId: string, year: number, week: number) {
+  const session = await auth();
+  if (!session?.user || !canWrite(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+  const item = await prisma.inspectionPlanItem.findFirst({
+    where: { id: itemId, plazaId: plaza.id },
+  });
+  if (!item) throw new Error("Fenni muayene kalemi bu plazaya ait değil.");
+
+  const existing = await prisma.inspectionPlanWeekEntry.findUnique({
+    where: { itemId_year_week: { itemId, year, week } },
+  });
+
+  // Cycle: boş (null) -> yapıldı (true) -> yapılmadı (false) -> boş (null)
+  const next = existing?.completed === true ? false : existing?.completed === false ? null : true;
+
+  await prisma.inspectionPlanWeekEntry.upsert({
+    where: { itemId_year_week: { itemId, year, week } },
+    update: { completed: next },
+    create: { itemId, year, week, completed: next },
+  });
+
+  revalidatePath("/inspections");
+  revalidatePath("/");
+}
+
+const inspectionCostSchema = z.object({
+  cost: z.coerce.number().optional(),
+  costCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  note: z.string().optional(),
+});
+
+export async function updateInspectionWeekEntryCost(id: string, formData: FormData) {
+  await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
+
+  const data = inspectionCostSchema.parse({
+    cost: emptyToUndefined(formData.get("cost")),
+    costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
+    note: emptyToUndefined(formData.get("note")),
+  });
+
+  await prisma.inspectionPlanWeekEntry.updateMany({
+    where: { id, item: { plazaId: plaza.id } },
+    data,
+  });
+
+  revalidatePath("/inspections");
+  revalidatePath("/");
+  redirect("/inspections");
+}

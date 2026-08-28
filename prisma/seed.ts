@@ -6,6 +6,10 @@ import rawCalibrations from "./seed-data/kalibrasyon.json";
 import rawVerifications from "./seed-data/dogrulama.json";
 import { LINK_PLAZA_BUDGET_2026 } from "../src/lib/budget/link-plaza-2026";
 import type { BudgetLineItem } from "../src/lib/budget/link-plaza-2026";
+import {
+  MAINTENANCE_PLAN_ITEMS_2026,
+  INSPECTION_PLAN_ITEMS_2026,
+} from "../src/lib/plan/link-plaza-2026";
 
 const prisma = new PrismaClient();
 
@@ -323,6 +327,52 @@ async function main() {
           });
         }
       }
+    }
+  }
+
+  console.log("Seeding Link Plaza yıllık bakım planı ve fenni muayene kalemleri (2026)...");
+
+  if (linkPlazaId) {
+    const linkMachines = await prisma.machine.findMany({
+      where: { plazaId: linkPlazaId },
+      select: { id: true, name: true },
+    });
+    const machineIdByName = new Map(linkMachines.map((m) => [m.name, m.id]));
+
+    for (let i = 0; i < MAINTENANCE_PLAN_ITEMS_2026.length; i++) {
+      const row = MAINTENANCE_PLAN_ITEMS_2026[i];
+      const existing = await prisma.maintenancePlanItem.findFirst({
+        where: { plazaId: linkPlazaId, label: row.label },
+      });
+      if (existing) continue;
+      await prisma.maintenancePlanItem.create({
+        data: {
+          plazaId: linkPlazaId,
+          label: row.label,
+          company: row.company,
+          yearlyCount: row.yearlyCount,
+          machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
+          sortOrder: i,
+        },
+      });
+    }
+
+    for (let i = 0; i < INSPECTION_PLAN_ITEMS_2026.length; i++) {
+      const row = INSPECTION_PLAN_ITEMS_2026[i];
+      const existing = await prisma.inspectionPlanItem.findFirst({
+        where: { plazaId: linkPlazaId, label: row.label },
+      });
+      if (existing) continue;
+      await prisma.inspectionPlanItem.create({
+        data: {
+          plazaId: linkPlazaId,
+          label: row.label,
+          company: row.company,
+          yearlyCount: row.yearlyCount,
+          machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
+          sortOrder: i,
+        },
+      });
     }
   }
 

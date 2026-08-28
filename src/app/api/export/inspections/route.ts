@@ -1,52 +1,53 @@
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { newWorkbook, workbookResponse } from "@/lib/xlsx-response";
-import { validityStatus, VALIDITY_LABELS } from "@/lib/status";
+import { TOTAL_WEEKS, isPastWeek } from "@/lib/plan/weeks";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const plaza = await getSelectedPlaza();
+  const yearParam = request.nextUrl.searchParams.get("year");
+  const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
+  const now = new Date();
 
-  const items = await prisma.periodicInspection.findMany({
-    where: { plazaId: plaza.id },
-    orderBy: { nextInspectionDate: "asc" },
-  });
+  const [items, entries] = await Promise.all([
+    prisma.inspectionPlanItem.findMany({
+      where: { plazaId: plaza.id },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.inspectionPlanWeekEntry.findMany({
+      where: { year, item: { plazaId: plaza.id } },
+    }),
+  ]);
+
+  const entryMap = new Map(entries.map((e) => [`${e.itemId}-${e.week}`, e.completed]));
 
   const workbook = newWorkbook();
-  const sheet = workbook.addWorksheet("Periyodik Muayene");
+  const sheet = workbook.addWorksheet(`${year} Fenni Muayene`);
   sheet.columns = [
-    { header: "Kod", key: "code", width: 14 },
-    { header: "Ekipman Adı", key: "name", width: 24 },
-    { header: "Marka", key: "brand", width: 16 },
-    { header: "Rapor No", key: "reportNo", width: 10 },
-    { header: "Periyot", key: "period", width: 12 },
-    { header: "Teknik Özellik", key: "technicalFeature", width: 20 },
-    { header: "Son Muayene", key: "inspectionDate", width: 16 },
-    { header: "Sonraki Muayene", key: "nextInspectionDate", width: 16 },
-    { header: "Bulunduğu Yer", key: "location", width: 18 },
-    { header: "Sorumlu Kişi", key: "responsiblePerson", width: 20 },
-    { header: "Durum", key: "status", width: 14 },
+    { header: "Fenni Muayene Kalemi", key: "label", width: 32 },
+    { header: "Firma", key: "company", width: 20 },
+    { header: "Yıllık Sayı", key: "yearlyCount", width: 12 },
+    ...Array.from({ length: TOTAL_WEEKS }, (_, i) => ({
+      header: `H${i + 1}`,
+      key: `w${i + 1}`,
+      width: 6,
+    })),
   ];
   sheet.getRow(1).font = { bold: true };
 
-  for (const i of items) {
-    sheet.addRow({
-      code: i.code ?? "",
-      name: i.name,
-      brand: i.brand ?? "",
-      reportNo: i.reportNo ?? "",
-      period: i.period ?? "",
-      technicalFeature: i.technicalFeature ?? "",
-      inspectionDate: i.inspectionDate ?? "",
-      nextInspectionDate: i.nextInspectionDate ?? "",
-      location: i.location ?? "",
-      responsiblePerson: i.responsiblePerson ?? "",
-      status: VALIDITY_LABELS[validityStatus(i.nextInspectionDate)],
-    });
+  for (const item of items) {
+    const row: Record<string, string | number> = {
+      label: item.label,
+      company: item.company ?? "",
+      yearlyCount: item.yearlyCount ?? "",
+    };
+    for (let week = 1; week <= TOTAL_WEEKS; week++) {
+      const completed = entryMap.get(`${item.id}-${week}`) ?? (isPastWeek(year, week, now) ? true : null);
+      row[`w${week}`] = completed === true ? "Yapıldı" : completed === false ? "Yapılmadı" : "";
+    }
+    sheet.addRow(row);
   }
 
-  for (const key of ["inspectionDate", "nextInspectionDate"]) {
-    sheet.getColumn(key).numFmt = "dd.mm.yyyy";
-  }
-
-  return workbookResponse(workbook, `${plaza.name} - Periyodik Muayene.xlsx`);
+  return workbookResponse(workbook, `${plaza.name} - ${year} Fenni Muayene.xlsx`);
 }

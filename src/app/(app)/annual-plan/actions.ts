@@ -8,31 +8,32 @@ import { auth } from "@/auth";
 import { canWrite } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 
-export async function togglePlanEntry(machineId: string, year: number, month: number) {
+export async function togglePlanWeekEntry(itemId: string, year: number, week: number) {
   const session = await auth();
   if (!session?.user || !canWrite(session.user.role)) {
     throw new Error("Bu işlem için yetkiniz yok.");
   }
   const plaza = await getSelectedPlaza();
-  const machine = await prisma.machine.findFirst({
-    where: { id: machineId, plazaId: plaza.id },
+  const item = await prisma.maintenancePlanItem.findFirst({
+    where: { id: itemId, plazaId: plaza.id },
   });
-  if (!machine) throw new Error("Makine bu plazaya ait değil.");
+  if (!item) throw new Error("Bakım kalemi bu plazaya ait değil.");
 
-  const existing = await prisma.maintenancePlanEntry.findUnique({
-    where: { machineId_year_month: { machineId, year, month } },
+  const existing = await prisma.maintenancePlanWeekEntry.findUnique({
+    where: { itemId_year_week: { itemId, year, week } },
   });
 
   // Cycle: boş (null) -> yapıldı (true) -> yapılmadı (false) -> boş (null)
   const next = existing?.completed === true ? false : existing?.completed === false ? null : true;
 
-  await prisma.maintenancePlanEntry.upsert({
-    where: { machineId_year_month: { machineId, year, month } },
+  await prisma.maintenancePlanWeekEntry.upsert({
+    where: { itemId_year_week: { itemId, year, week } },
     update: { completed: next },
-    create: { machineId, year, month, completed: next },
+    create: { itemId, year, week, completed: next },
   });
 
   revalidatePath("/annual-plan");
+  revalidatePath("/");
 }
 
 const costSchema = z.object({
@@ -46,7 +47,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
   return value;
 }
 
-export async function updatePlanEntryCost(id: string, formData: FormData) {
+export async function updatePlanWeekEntryCost(id: string, formData: FormData) {
   const session = await auth();
   if (!session?.user || !canWrite(session.user.role)) {
     throw new Error("Bu işlem için yetkiniz yok.");
@@ -59,8 +60,8 @@ export async function updatePlanEntryCost(id: string, formData: FormData) {
     note: emptyToUndefined(formData.get("note")),
   });
 
-  await prisma.maintenancePlanEntry.updateMany({
-    where: { id, machine: { plazaId: plaza.id } },
+  await prisma.maintenancePlanWeekEntry.updateMany({
+    where: { id, item: { plazaId: plaza.id } },
     data,
   });
 

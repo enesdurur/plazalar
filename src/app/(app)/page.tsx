@@ -7,7 +7,8 @@ import { BarBreakdown } from "@/components/bar-breakdown";
 import { SparePartCostTile, MaintenanceCostTile } from "@/components/spare-part-cost-tile";
 import { TcmbRatesCard } from "@/components/tcmb-rates-card";
 import { getTcmbRates } from "@/lib/tcmb";
-import { MONTH_WEEK_RANGES } from "@/lib/plan/weeks";
+import { MONTH_NAMES } from "@/lib/plan/weeks";
+import { computePlanYearStats, type PlanYearStats } from "@/lib/plan/stats";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -24,17 +25,13 @@ export default async function DashboardPage() {
 
   const now = new Date();
   const currentYear = now.getFullYear();
-  const currentMonthRange = MONTH_WEEK_RANGES[now.getMonth()];
-  const currentMonthWeeks = Array.from(
-    { length: currentMonthRange.endWeek - currentMonthRange.startWeek + 1 },
-    (_, i) => currentMonthRange.startWeek + i
-  );
+  const currentMonthIdx = now.getMonth();
 
   const [
-    maintenancePlanItemTotal,
-    inspectionPlanItemTotal,
-    planWeekEntriesThisMonth,
-    inspectionWeekEntriesThisMonth,
+    maintenancePlanItems,
+    inspectionPlanItems,
+    planWeekEntriesThisYear,
+    inspectionWeekEntriesThisYear,
     tcmbRates,
     costedInspections,
     costedPlanEntries,
@@ -43,13 +40,19 @@ export default async function DashboardPage() {
     tenantMaintenanceTotal,
     tenantMaintenanceExpired,
   ] = await Promise.all([
-    prisma.maintenancePlanItem.count({ where: { plazaId: plaza.id } }),
-    prisma.inspectionPlanItem.count({ where: { plazaId: plaza.id } }),
+    prisma.maintenancePlanItem.findMany({
+      where: { plazaId: plaza.id },
+      select: { id: true, label: true, scheduledWeeks: true },
+    }),
+    prisma.inspectionPlanItem.findMany({
+      where: { plazaId: plaza.id },
+      select: { id: true, label: true, scheduledWeeks: true },
+    }),
     prisma.maintenancePlanWeekEntry.findMany({
-      where: { year: currentYear, week: { in: currentMonthWeeks }, item: { plazaId: plaza.id } },
+      where: { year: currentYear, item: { plazaId: plaza.id } },
     }),
     prisma.inspectionPlanWeekEntry.findMany({
-      where: { year: currentYear, week: { in: currentMonthWeeks }, item: { plazaId: plaza.id } },
+      where: { year: currentYear, item: { plazaId: plaza.id } },
     }),
     getTcmbRates(),
     prisma.periodicInspection.findMany({
@@ -74,14 +77,13 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const planDoneThisMonth = planWeekEntriesThisMonth.filter((e) => e.completed === true).length;
-  const planMissedThisMonth = planWeekEntriesThisMonth.filter((e) => e.completed === false).length;
-  const inspectionDoneThisMonth = inspectionWeekEntriesThisMonth.filter(
-    (e) => e.completed === true
-  ).length;
-  const inspectionMissedThisMonth = inspectionWeekEntriesThisMonth.filter(
-    (e) => e.completed === false
-  ).length;
+  const planStats = computePlanYearStats(maintenancePlanItems, planWeekEntriesThisYear, currentYear, now);
+  const inspectionStats = computePlanYearStats(
+    inspectionPlanItems,
+    inspectionWeekEntriesThisYear,
+    currentYear,
+    now
+  );
 
   const arizaCount = records.filter((r) => r.operationType === "ARIZA").length;
   const bakimCount = records.filter((r) => r.operationType === "BAKIM").length;
@@ -169,22 +171,40 @@ export default async function DashboardPage() {
         <PlanStatusTile
           href="/annual-plan"
           label="Yıllık Bakım Planı (Bu Ay)"
-          done={planDoneThisMonth}
-          missed={planMissedThisMonth}
-          totalItems={maintenancePlanItemTotal}
+          done={planStats.monthlyDone[currentMonthIdx]}
+          missed={planStats.monthlyMissed[currentMonthIdx]}
+          totalItems={maintenancePlanItems.length}
         />
         <PlanStatusTile
           href="/inspections"
           label="Periyodik (Fenni) Muayene (Bu Ay)"
-          done={inspectionDoneThisMonth}
-          missed={inspectionMissedThisMonth}
-          totalItems={inspectionPlanItemTotal}
+          done={inspectionStats.monthlyDone[currentMonthIdx]}
+          missed={inspectionStats.monthlyMissed[currentMonthIdx]}
+          totalItems={inspectionPlanItems.length}
         />
         <ComplianceTile
           href="/tenant-maintenance"
           label="Kiracı Bakımları"
           total={tenantMaintenanceTotal}
           expired={tenantMaintenanceExpired}
+        />
+      </div>
+
+      <h2 className="mt-8 text-sm font-semibold text-slate-900">
+        Bakım ve Muayene Planı — {currentYear} Yılı Detayı
+      </h2>
+      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <PlanYearDetailCard
+          href="/annual-plan"
+          title="Yıllık Bakım Planı"
+          stats={planStats}
+          currentMonthIdx={currentMonthIdx}
+        />
+        <PlanYearDetailCard
+          href="/inspections"
+          title="Periyodik (Fenni) Muayene"
+          stats={inspectionStats}
+          currentMonthIdx={currentMonthIdx}
         />
       </div>
 
@@ -276,6 +296,120 @@ function PlanStatusTile({
         <span className="text-sm text-slate-400">yapılmadı / {totalItems} kalem</span>
       </div>
     </Link>
+  );
+}
+
+function PlanYearDetailCard({
+  href,
+  title,
+  stats,
+  currentMonthIdx,
+}: {
+  href: string;
+  title: string;
+  stats: PlanYearStats;
+  currentMonthIdx: number;
+}) {
+  const donePct =
+    stats.totalScheduled > 0 ? Math.round((stats.done / stats.totalScheduled) * 100) : 0;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
+      <div className="flex items-center justify-between">
+        <Link href={href} className="text-sm font-semibold text-slate-900 hover:underline">
+          {title}
+        </Link>
+        <span className="text-xs text-slate-400">{stats.totalScheduled} planlı</span>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        <span>
+          <span className="font-semibold tabular-nums" style={{ color: "var(--viz-status-good)" }}>
+            {stats.done}
+          </span>{" "}
+          <span className="text-slate-500">yapıldı</span>
+        </span>
+        <span>
+          <span
+            className="font-semibold tabular-nums"
+            style={{ color: "var(--viz-status-critical)" }}
+          >
+            {stats.missed}
+          </span>{" "}
+          <span className="text-slate-500">yapılmadı</span>
+        </span>
+        <span>
+          <span className="font-semibold tabular-nums text-amber-500">{stats.pending}</span>{" "}
+          <span className="text-slate-500">bekliyor</span>
+        </span>
+        <span className="text-slate-400">({donePct}% tamamlandı)</span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-12 gap-1">
+        {MONTH_NAMES.map((name, i) => {
+          const total = stats.monthlyDone[i] + stats.monthlyMissed[i] + stats.monthlyPending[i];
+          return (
+            <div key={name} className="flex flex-col items-center gap-1" title={name}>
+              <div className="flex h-10 w-full flex-col-reverse overflow-hidden rounded bg-slate-100">
+                {total > 0 && (
+                  <>
+                    {stats.monthlyDone[i] > 0 && (
+                      <div
+                        style={{
+                          height: `${(stats.monthlyDone[i] / total) * 100}%`,
+                          backgroundColor: "var(--viz-status-good)",
+                        }}
+                      />
+                    )}
+                    {stats.monthlyMissed[i] > 0 && (
+                      <div
+                        style={{
+                          height: `${(stats.monthlyMissed[i] / total) * 100}%`,
+                          backgroundColor: "var(--viz-status-critical)",
+                        }}
+                      />
+                    )}
+                    {stats.monthlyPending[i] > 0 && (
+                      <div
+                        style={{
+                          height: `${(stats.monthlyPending[i] / total) * 100}%`,
+                          backgroundColor: "var(--viz-status-warning, #f59e0b)",
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+              <span
+                className={`text-[9px] ${i === currentMonthIdx ? "font-bold text-slate-900" : "text-slate-400"}`}
+              >
+                {name.slice(0, 3)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {stats.missedList.length > 0 && (
+        <div className="mt-4 rounded-md border border-red-100 bg-red-50 p-3">
+          <p className="text-xs font-medium text-red-700">
+            Yapılmadı işaretlenen {stats.missedList.length} kayıt
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {stats.missedList.slice(0, 5).map((m) => (
+              <li key={`${m.itemId}-${m.week}`} className="text-xs text-red-600">
+                {m.itemLabel} — {m.month} ({m.week}. hafta)
+              </li>
+            ))}
+            {stats.missedList.length > 5 && (
+              <li className="text-xs text-red-500">
+                + {stats.missedList.length - 5} kayıt daha
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

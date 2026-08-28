@@ -221,7 +221,9 @@ function SubRow({
 }) {
   return (
     <tr className="bg-slate-50/40">
-      <td colSpan={2} className="px-3 py-1 pl-8 text-left text-xs text-slate-500">
+      {/* Sütun 1 (HİZMET TÜRÜ) her zaman ana satırın rowSpan'ından geliyor — burada tekrar
+          render edilmemeli, aksi halde tüm hücreler bir sütun sağa kayar. */}
+      <td colSpan={1} className="px-3 py-1 pl-8 text-left text-xs text-slate-500">
         {label}
       </td>
       {values.map((v, i) => {

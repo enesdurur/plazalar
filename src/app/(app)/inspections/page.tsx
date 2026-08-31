@@ -7,6 +7,7 @@ import { toggleInspectionWeekEntry } from "./actions";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
+import { WeekMatrixScroller } from "@/components/week-matrix-scroller";
 import { MONTH_NAMES, MONTH_WEEK_RANGES, TOTAL_WEEKS, isPastWeek } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
@@ -95,7 +96,12 @@ export default async function InspectionsPage({
         </div>
       </div>
 
-      <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
+      <WeekMatrixScroller
+        leadingWidth={SIRA_W + LABEL_W + FIRMA_W + SAYI_W}
+        weekWidth={WEEK_W}
+        monthWeekCounts={MONTH_WEEK_RANGES.map((r) => r.endWeek - r.startWeek + 1)}
+        initialMonthIndex={year === now.getFullYear() ? now.getMonth() : null}
+      >
         <table
           className="divide-y divide-slate-200 text-sm"
           style={{ tableLayout: "fixed", width: SIRA_W + LABEL_W + FIRMA_W + SAYI_W + TOTAL_WEEKS * WEEK_W }}
@@ -297,7 +303,7 @@ export default async function InspectionsPage({
             </tr>
           </tfoot>
         </table>
-      </div>
+      </WeekMatrixScroller>
     </div>
   );
 }

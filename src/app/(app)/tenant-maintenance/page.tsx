@@ -6,6 +6,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { toggleTenantMaintenanceWeekEntry } from "./actions";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
+import { WeekMatrixScroller } from "@/components/week-matrix-scroller";
 import { MONTH_NAMES, MONTH_WEEK_RANGES, TOTAL_WEEKS, isPastWeek } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
@@ -95,7 +96,12 @@ export default async function TenantMaintenancePage({
         </div>
       </div>
 
-      <div className="mt-6 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white">
+      <WeekMatrixScroller
+        leadingWidth={KAT_W + KIRACI_W + TUR_W}
+        weekWidth={WEEK_W}
+        monthWeekCounts={MONTH_WEEK_RANGES.map((r) => r.endWeek - r.startWeek + 1)}
+        initialMonthIndex={year === now.getFullYear() ? now.getMonth() : null}
+      >
         <table
           className="divide-y divide-slate-200 text-sm"
           style={{ tableLayout: "fixed", width: KAT_W + KIRACI_W + TUR_W + TOTAL_WEEKS * WEEK_W }}
@@ -261,7 +267,7 @@ export default async function TenantMaintenancePage({
             </tr>
           </tfoot>
         </table>
-      </div>
+      </WeekMatrixScroller>
     </div>
   );
 }

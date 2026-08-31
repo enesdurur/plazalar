@@ -64,12 +64,49 @@ model Tenant {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  plaza        Plaza               @relation(fields: [plazaId], references: [id])
-  maintenances TenantMaintenance[]
+  plaza            Plaza                   @relation(fields: [plazaId], references: [id])
+  maintenances     TenantMaintenance[]
+  maintenanceItems TenantMaintenanceItem[]
 
   @@unique([plazaId, floor])
   @@index([plazaId])
   @@map("tenants")
+}
+
+// Kiracı Bakımları: Yıllık Bakım Planı / Periyodik (Fenni) Muayene ile aynı desen — her kiracı
+// için bakım türü (Fancoil Bakımı, Elektrik Bakımı gibi; liste ileride genişleyebilir) bir
+// TenantMaintenanceItem'dır ve haftalık (1-53) matris ile takip edilir.
+model TenantMaintenanceItem {
+  id             String   @id @default(cuid())
+  tenantId       String
+  label          String
+  scheduledWeeks Int[]    @default([])
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  weekEntries TenantMaintenanceWeekEntry[]
+
+  @@unique([tenantId, label])
+  @@index([tenantId])
+  @@map("tenant_maintenance_items")
+}
+
+model TenantMaintenanceWeekEntry {
+  id        String   @id @default(cuid())
+  itemId    String
+  year      Int
+  week      Int
+  completed Boolean?
+  note      String?
+  updatedAt DateTime @updatedAt
+
+  item TenantMaintenanceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, year, week])
+  @@index([year, week])
+  @@map("tenant_maintenance_week_entries")
 }
 
 model TenantMaintenance {

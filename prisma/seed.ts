@@ -10,6 +10,10 @@ import {
   MAINTENANCE_PLAN_ITEMS_2026,
   INSPECTION_PLAN_ITEMS_2026,
 } from "../src/lib/plan/link-plaza-2026";
+import {
+  TENANT_MAINTENANCE_TYPES,
+  defaultMonthlyScheduledWeeks,
+} from "../src/lib/plan/tenant-maintenance-types";
 
 const prisma = new PrismaClient();
 
@@ -368,6 +372,23 @@ async function main() {
         where: { plazaId_label: { plazaId: linkPlazaId, label: row.label } },
         update: data,
         create: { plazaId: linkPlazaId, label: row.label, ...data },
+      });
+    }
+  }
+
+  console.log("Seeding kiracı bakım kalemleri (Fancoil / Elektrik)...");
+
+  const allTenants = await prisma.tenant.findMany({ select: { id: true } });
+  const defaultWeeks = defaultMonthlyScheduledWeeks();
+  for (const tenant of allTenants) {
+    for (let i = 0; i < TENANT_MAINTENANCE_TYPES.length; i++) {
+      const label = TENANT_MAINTENANCE_TYPES[i];
+      const existing = await prisma.tenantMaintenanceItem.findFirst({
+        where: { tenantId: tenant.id, label },
+      });
+      if (existing) continue;
+      await prisma.tenantMaintenanceItem.create({
+        data: { tenantId: tenant.id, label, scheduledWeeks: defaultWeeks, sortOrder: i },
       });
     }
   }

@@ -99,3 +99,31 @@ export async function deleteTenantMaintenance(id: string) {
   revalidatePath("/tenant-maintenance");
   revalidatePath("/");
 }
+
+export async function toggleTenantMaintenanceWeekEntry(itemId: string, year: number, week: number) {
+  await requireWriteAccess();
+  const plaza = await getSelectedPlaza();
+  const item = await prisma.tenantMaintenanceItem.findFirst({
+    where: { id: itemId, tenant: { plazaId: plaza.id } },
+  });
+  if (!item) throw new Error("Bakım kalemi bu plazaya ait değil.");
+  if (!item.scheduledWeeks.includes(week)) {
+    throw new Error("Bu hafta bu kalem için planlanmamış.");
+  }
+
+  const existing = await prisma.tenantMaintenanceWeekEntry.findUnique({
+    where: { itemId_year_week: { itemId, year, week } },
+  });
+
+  // Cycle: boş (null) -> yapıldı (true) -> yapılmadı (false) -> boş (null)
+  const next = existing?.completed === true ? false : existing?.completed === false ? null : true;
+
+  await prisma.tenantMaintenanceWeekEntry.upsert({
+    where: { itemId_year_week: { itemId, year, week } },
+    update: { completed: next },
+    create: { itemId, year, week, completed: next },
+  });
+
+  revalidatePath("/tenant-maintenance");
+  revalidatePath("/");
+}

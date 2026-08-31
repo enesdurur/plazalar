@@ -37,8 +37,8 @@ export default async function DashboardPage() {
     costedPlanEntries,
     costedPlanWeekEntries,
     costedInspectionWeekEntries,
-    tenantMaintenanceTotal,
-    tenantMaintenanceExpired,
+    tenantMaintenanceItems,
+    tenantMaintenanceWeekEntriesThisYear,
   ] = await Promise.all([
     prisma.maintenancePlanItem.findMany({
       where: { plazaId: plaza.id },
@@ -71,9 +71,12 @@ export default async function DashboardPage() {
       where: { cost: { not: null }, item: { plazaId: plaza.id } },
       select: { cost: true, costCurrency: true },
     }),
-    prisma.tenantMaintenance.count({ where: { tenant: { plazaId: plaza.id } } }),
-    prisma.tenantMaintenance.count({
-      where: { tenant: { plazaId: plaza.id }, nextMaintenanceDate: { lt: now } },
+    prisma.tenantMaintenanceItem.findMany({
+      where: { tenant: { plazaId: plaza.id } },
+      include: { tenant: { select: { floor: true, companyName: true } } },
+    }),
+    prisma.tenantMaintenanceWeekEntry.findMany({
+      where: { year: currentYear, item: { tenant: { plazaId: plaza.id } } },
     }),
   ]);
 
@@ -81,6 +84,17 @@ export default async function DashboardPage() {
   const inspectionStats = computePlanYearStats(
     inspectionPlanItems,
     inspectionWeekEntriesThisYear,
+    currentYear,
+    now
+  );
+  const tenantMaintenanceLabeledItems = tenantMaintenanceItems.map((i) => ({
+    id: i.id,
+    label: `${i.tenant.floor} · ${i.tenant.companyName} — ${i.label}`,
+    scheduledWeeks: i.scheduledWeeks,
+  }));
+  const tenantMaintenanceStats = computePlanYearStats(
+    tenantMaintenanceLabeledItems,
+    tenantMaintenanceWeekEntriesThisYear,
     currentYear,
     now
   );
@@ -182,11 +196,12 @@ export default async function DashboardPage() {
           missed={inspectionStats.monthlyMissed[currentMonthIdx]}
           totalItems={inspectionPlanItems.length}
         />
-        <ComplianceTile
+        <PlanStatusTile
           href="/tenant-maintenance"
-          label="Kiracı Bakımları"
-          total={tenantMaintenanceTotal}
-          expired={tenantMaintenanceExpired}
+          label="Kiracı Bakımları (Bu Ay)"
+          done={tenantMaintenanceStats.monthlyDone[currentMonthIdx]}
+          missed={tenantMaintenanceStats.monthlyMissed[currentMonthIdx]}
+          totalItems={tenantMaintenanceItems.length}
         />
       </div>
 
@@ -205,6 +220,15 @@ export default async function DashboardPage() {
           title="Periyodik (Fenni) Muayene"
           stats={inspectionStats}
           currentMonthIdx={currentMonthIdx}
+        />
+      </div>
+      <div className="mt-4">
+        <PlanYearDetailCard
+          href="/tenant-maintenance"
+          title="Kiracı Bakımları"
+          stats={tenantMaintenanceStats}
+          currentMonthIdx={currentMonthIdx}
+          missedListLimit={12}
         />
       </div>
 
@@ -304,11 +328,13 @@ function PlanYearDetailCard({
   title,
   stats,
   currentMonthIdx,
+  missedListLimit = 5,
 }: {
   href: string;
   title: string;
   stats: PlanYearStats;
   currentMonthIdx: number;
+  missedListLimit?: number;
 }) {
   const donePct =
     stats.totalScheduled > 0 ? Math.round((stats.done / stats.totalScheduled) * 100) : 0;
@@ -395,52 +421,23 @@ function PlanYearDetailCard({
           <p className="text-xs font-medium text-red-700">
             Yapılmadı işaretlenen {stats.missedList.length} kayıt
           </p>
-          <ul className="mt-1.5 space-y-1">
-            {stats.missedList.slice(0, 5).map((m) => (
+          <ul
+            className={`mt-1.5 grid grid-cols-1 gap-1 ${missedListLimit > 5 ? "sm:grid-cols-2 lg:grid-cols-3" : ""}`}
+          >
+            {stats.missedList.slice(0, missedListLimit).map((m) => (
               <li key={`${m.itemId}-${m.week}`} className="text-xs text-red-600">
                 {m.itemLabel} — {m.month} ({m.week}. hafta)
               </li>
             ))}
-            {stats.missedList.length > 5 && (
+            {stats.missedList.length > missedListLimit && (
               <li className="text-xs text-red-500">
-                + {stats.missedList.length - 5} kayıt daha
+                + {stats.missedList.length - missedListLimit} kayıt daha
               </li>
             )}
           </ul>
         </div>
       )}
     </div>
-  );
-}
-
-function ComplianceTile({
-  href,
-  label,
-  total,
-  expired,
-}: {
-  href: string;
-  label: string;
-  total: number;
-  expired: number;
-}) {
-  const ok = expired === 0;
-  return (
-    <Link
-      href={href}
-      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
-    >
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span
-          className="text-2xl font-semibold tabular-nums"
-          style={{ color: ok ? "var(--viz-status-good)" : "var(--viz-status-critical)" }}
-        >
-          {expired}
-        </span>
-        <span className="text-sm text-slate-400">/ {total} süresi geçmiş</span>
-      </div>
-    </Link>
   );
 }
 

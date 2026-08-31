@@ -108,26 +108,26 @@ export default async function TenantMaintenancePage({
               <col key={i} style={{ width: WEEK_W }} />
             ))}
           </colgroup>
-          <thead className="sticky top-0 z-20 bg-slate-50">
+          <thead className="bg-slate-50">
             <tr>
               <th
                 rowSpan={2}
-                style={{ left: 0, width: KAT_W }}
-                className="sticky z-10 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+                style={{ width: KAT_W }}
+                className="bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
               >
                 Kat
               </th>
               <th
                 rowSpan={2}
-                style={{ left: KAT_W, width: KIRACI_W }}
-                className="sticky z-10 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+                style={{ width: KIRACI_W }}
+                className="bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
               >
                 Kiracı
               </th>
               <th
                 rowSpan={2}
-                style={{ left: KAT_W + KIRACI_W, width: TUR_W }}
-                className="sticky z-10 border-r border-slate-200 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+                style={{ width: TUR_W }}
+                className="border-r border-slate-200 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
               >
                 Bakım Türü
               </th>
@@ -161,20 +161,20 @@ export default async function TenantMaintenancePage({
               return (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td
-                    style={{ left: 0, width: KAT_W }}
-                    className="sticky z-10 bg-white px-3 py-2 text-slate-600"
+                    style={{ width: KAT_W }}
+                    className="bg-white px-3 py-2 text-slate-600"
                   >
                     {item.tenant.floor}
                   </td>
                   <td
-                    style={{ left: KAT_W, width: KIRACI_W }}
-                    className="sticky z-10 bg-white px-3 py-2 font-medium text-slate-900"
+                    style={{ width: KIRACI_W }}
+                    className="bg-white px-3 py-2 font-medium text-slate-900"
                   >
                     {item.tenant.companyName}
                   </td>
                   <td
-                    style={{ left: KAT_W + KIRACI_W, width: TUR_W }}
-                    className="sticky z-10 border-r border-slate-200 bg-white px-3 py-2 text-slate-600"
+                    style={{ width: TUR_W }}
+                    className="border-r border-slate-200 bg-white px-3 py-2 text-slate-600"
                   >
                     {item.label}
                   </td>
@@ -239,8 +239,7 @@ export default async function TenantMaintenancePage({
             <tr>
               <td
                 colSpan={3}
-                style={{ left: 0 }}
-                className="sticky bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500"
+                className="bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500"
               >
                 Yapıldı / Yapılmadı
               </td>

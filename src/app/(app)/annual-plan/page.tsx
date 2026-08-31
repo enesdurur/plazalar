@@ -20,8 +20,7 @@ const CELL_STYLES = {
   EMPTY: "bg-amber-50 text-amber-300 hover:bg-amber-100",
 };
 
-// Sabit sütunları (Sıra No / Bakım Kalemi / Firma / Bakım Sayısı) yatay kaydırmada sabit
-// tutmak için her birinin px cinsinden genişliği ve buna göre hesaplanan "left" ofseti.
+// Sütun genişlikleri (px) — colgroup ile birlikte sabit tablo düzeni sağlar.
 const SIRA_W = 48;
 const LABEL_W = 260;
 const FIRMA_W = 150;
@@ -111,33 +110,33 @@ export default async function AnnualPlanPage({
               <col key={i} style={{ width: WEEK_W }} />
             ))}
           </colgroup>
-          <thead className="sticky top-0 z-20 bg-slate-50">
+          <thead className="bg-slate-50">
             <tr>
               <th
                 rowSpan={2}
-                style={{ left: 0, width: SIRA_W }}
-                className="sticky z-10 bg-slate-50 px-2 py-2 text-center align-bottom font-medium text-slate-600"
+                style={{ width: SIRA_W }}
+                className="bg-slate-50 px-2 py-2 text-center align-bottom font-medium text-slate-600"
               >
                 Sıra No
               </th>
               <th
                 rowSpan={2}
-                style={{ left: SIRA_W, width: LABEL_W }}
-                className="sticky z-10 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+                style={{ width: LABEL_W }}
+                className="bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
               >
                 Bakım
               </th>
               <th
                 rowSpan={2}
-                style={{ left: SIRA_W + LABEL_W, width: FIRMA_W }}
-                className="sticky z-10 bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
+                style={{ width: FIRMA_W }}
+                className="bg-slate-50 px-3 py-2 text-left align-bottom font-medium text-slate-600"
               >
                 Bakımı Yapacak Firma
               </th>
               <th
                 rowSpan={2}
-                style={{ left: SIRA_W + LABEL_W + FIRMA_W, width: SAYI_W }}
-                className="sticky z-10 border-r border-slate-200 bg-slate-50 px-2 py-2 text-center align-bottom font-medium text-slate-600"
+                style={{ width: SAYI_W }}
+                className="border-r border-slate-200 bg-slate-50 px-2 py-2 text-center align-bottom font-medium text-slate-600"
               >
                 Bakım Sayısı
               </th>
@@ -171,26 +170,26 @@ export default async function AnnualPlanPage({
               return (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td
-                    style={{ left: 0, width: SIRA_W }}
-                    className="sticky z-10 bg-white px-2 py-2 text-center text-slate-500"
+                    style={{ width: SIRA_W }}
+                    className="bg-white px-2 py-2 text-center text-slate-500"
                   >
                     {idx + 1}
                   </td>
                   <td
-                    style={{ left: SIRA_W, width: LABEL_W }}
-                    className="sticky z-10 bg-white px-3 py-2 font-medium text-slate-900"
+                    style={{ width: LABEL_W }}
+                    className="bg-white px-3 py-2 font-medium text-slate-900"
                   >
                     {item.label}
                   </td>
                   <td
-                    style={{ left: SIRA_W + LABEL_W, width: FIRMA_W }}
-                    className="sticky z-10 bg-white px-3 py-2 text-slate-600"
+                    style={{ width: FIRMA_W }}
+                    className="bg-white px-3 py-2 text-slate-600"
                   >
                     {item.company}
                   </td>
                   <td
-                    style={{ left: SIRA_W + LABEL_W + FIRMA_W, width: SAYI_W }}
-                    className="sticky z-10 border-r border-slate-200 bg-white px-2 py-2 text-center text-slate-600"
+                    style={{ width: SAYI_W }}
+                    className="border-r border-slate-200 bg-white px-2 py-2 text-center text-slate-600"
                   >
                     {item.yearlyCount ?? ""}
                   </td>
@@ -277,8 +276,7 @@ export default async function AnnualPlanPage({
             <tr>
               <td
                 colSpan={4}
-                style={{ left: 0 }}
-                className="sticky bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500"
+                className="bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500"
               >
                 Yapıldı / Yapılmadı
               </td>

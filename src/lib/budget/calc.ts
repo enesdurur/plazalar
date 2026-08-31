@@ -201,6 +201,7 @@ function mapLineItems(
 
 const SHARE_COUNT = 16000;
 const MANAGEMENT_PROFIT_RATE = 0.07;
+const MANAGEMENT_PROFIT_LABEL = "YÖNETİM KARI";
 
 export interface ComputedLinkPlazaBudget {
   year: number;
@@ -244,11 +245,16 @@ export function computeLinkPlazaBudget(
     monthsElapsed
   );
 
-  const managementRows = mapLineItems(
-    byName.get(SECTION_NAMES.management)?.items ?? [],
-    monthsElapsed,
-    "YÖNETİM GİDERLERİ"
+  // "YÖNETİM KARI" artık (varsa) Bütçe Kalemleri'nde elle tanımlanmış gerçek bir kalem —
+  // Veri Girişi'nden ay ay elle girilir. Henüz hiçbir plaza için tanımlanmamışsa (eski
+  // davranışla uyumluluk için) eski otomatik %7 formülüne geri düşülür.
+  const managementSectionItems = byName.get(SECTION_NAMES.management)?.items ?? [];
+  const profitItem = managementSectionItems.find((i) => i.label === MANAGEMENT_PROFIT_LABEL);
+  const regularManagementItems = managementSectionItems.filter(
+    (i) => i.label !== MANAGEMENT_PROFIT_LABEL
   );
+
+  const managementRows = mapLineItems(regularManagementItems, monthsElapsed, "YÖNETİM GİDERLERİ");
   const managementTotal = sumRows(
     managementRows,
     "YÖNETİM GİDERLERİ TOPLAM MALİYETİ",
@@ -256,17 +262,21 @@ export function computeLinkPlazaBudget(
     monthsElapsed
   );
 
-  const profitBudget =
-    Math.round(personnelTotal.monthlyBudget * MANAGEMENT_PROFIT_RATE * 100) / 100;
-  const managementProfit = computeRow(
-    undefined,
-    undefined,
-    "YÖNETİM KARI",
-    null,
-    profitBudget,
-    Array.from({ length: 12 }, (_, i) => (i < monthsElapsed ? profitBudget : 0)),
-    monthsElapsed
-  );
+  const managementProfit = profitItem
+    ? mapLineItems([profitItem], monthsElapsed)[0]
+    : (() => {
+        const profitBudget =
+          Math.round(personnelTotal.monthlyBudget * MANAGEMENT_PROFIT_RATE * 100) / 100;
+        return computeRow(
+          undefined,
+          undefined,
+          MANAGEMENT_PROFIT_LABEL,
+          null,
+          profitBudget,
+          Array.from({ length: 12 }, (_, i) => (i < monthsElapsed ? profitBudget : 0)),
+          monthsElapsed
+        );
+      })();
 
   const managementGrandTotal = sumRows(
     [managementTotal, managementProfit],

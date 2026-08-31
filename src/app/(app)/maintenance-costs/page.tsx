@@ -15,27 +15,45 @@ export const metadata: Metadata = {
 export default async function MaintenanceCostsPage() {
   const plaza = await getSelectedPlaza();
 
-  const [inspections, planEntries] = await Promise.all([
-    prisma.periodicInspection.findMany({
-      where: { plazaId: plaza.id, cost: { not: null } },
-      orderBy: { inspectionDate: "desc" },
+  const [planEntries, inspectionEntries] = await Promise.all([
+    prisma.maintenancePlanWeekEntry.findMany({
+      where: {
+        item: { plazaId: plaza.id },
+        OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
+      },
+      include: { item: true },
+      orderBy: [{ year: "desc" }, { week: "desc" }],
     }),
-    prisma.maintenancePlanEntry.findMany({
-      where: { cost: { not: null }, machine: { plazaId: plaza.id } },
-      include: { machine: true },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
+    prisma.inspectionPlanWeekEntry.findMany({
+      where: {
+        item: { plazaId: plaza.id },
+        OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
+      },
+      include: { item: true },
+      orderBy: [{ year: "desc" }, { week: "desc" }],
     }),
   ]);
 
   const totals = { TRY: 0, USD: 0, EUR: 0 };
-  for (const i of inspections) {
-    if (i.cost) totals[i.costCurrency] += Number(i.cost);
-  }
-  for (const e of planEntries) {
+  const sparePartTotals = { TRY: 0, USD: 0, EUR: 0 };
+  for (const e of [...planEntries, ...inspectionEntries]) {
     if (e.cost) totals[e.costCurrency] += Number(e.cost);
+    if (e.sparePartCost) sparePartTotals[e.sparePartCostCurrency] += Number(e.sparePartCost);
   }
 
-  const totalCount = inspections.length + planEntries.length;
+  const totalCount = planEntries.length + inspectionEntries.length;
+
+  // Prisma Decimal alanları Client Component'lere doğrudan aktarılamaz — düz sayıya çeviriyoruz.
+  const planEntriesSerialized = planEntries.map((e) => ({
+    ...e,
+    cost: e.cost != null ? Number(e.cost) : null,
+    sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+  }));
+  const inspectionEntriesSerialized = inspectionEntries.map((e) => ({
+    ...e,
+    cost: e.cost != null ? Number(e.cost) : null,
+    sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+  }));
 
   return (
     <div>
@@ -46,10 +64,18 @@ export default async function MaintenanceCostsPage() {
           </Link>
           <h1 className="mt-1 text-xl font-semibold text-slate-900">Bakım Maliyetleri</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Periyodik Muayene ve Yıllık Bakım Planı&apos;na girilen maliyetler · Toplam{" "}
-            {totalCount} kayıt · {formatCostAmount(totals.TRY, "TRY")}
+            Yıllık Bakım Planı ve Periyodik (Fenni) Muayene&apos;ye girilen maliyetler · Toplam{" "}
+            {totalCount} kayıt · Bakım: {formatCostAmount(totals.TRY, "TRY")}
             {totals.USD > 0 && ` · ${formatCostAmount(totals.USD, "USD")}`}
             {totals.EUR > 0 && ` · ${formatCostAmount(totals.EUR, "EUR")}`}
+            {(sparePartTotals.TRY > 0 || sparePartTotals.USD > 0 || sparePartTotals.EUR > 0) && (
+              <>
+                {" "}
+                · Yedek Parça: {formatCostAmount(sparePartTotals.TRY, "TRY")}
+                {sparePartTotals.USD > 0 && ` · ${formatCostAmount(sparePartTotals.USD, "USD")}`}
+                {sparePartTotals.EUR > 0 && ` · ${formatCostAmount(sparePartTotals.EUR, "EUR")}`}
+              </>
+            )}
           </p>
         </div>
         <div className="flex gap-2 print:hidden">
@@ -60,12 +86,12 @@ export default async function MaintenanceCostsPage() {
 
       <h2 className="mt-6 text-sm font-semibold text-slate-900">Yıllık Bakım Planı</h2>
       <div className="mt-3">
-        <PlanEntriesTable entries={planEntries} />
+        <PlanEntriesTable entries={planEntriesSerialized} />
       </div>
 
-      <h2 className="mt-8 text-sm font-semibold text-slate-900">Periyodik Muayene</h2>
+      <h2 className="mt-8 text-sm font-semibold text-slate-900">Periyodik (Fenni) Muayene</h2>
       <div className="mt-3">
-        <InspectionsCostTable items={inspections} />
+        <InspectionsCostTable entries={inspectionEntriesSerialized} />
       </div>
     </div>
   );

@@ -287,19 +287,26 @@ model MaintenancePlanItem {
 }
 
 model MaintenancePlanWeekEntry {
-  id           String   @id @default(cuid())
-  itemId       String
-  year         Int
+  id                    String   @id @default(cuid())
+  itemId                String
+  year                  Int
   /**
    * 1-53: Excel'deki aylara bölünmüş hafta numarası (bkz. lib/plan/weeks.ts)
    */
-  week         Int
+  week                  Int
   // null = boş, true = yapıldı, false = yapılmadı
-  completed    Boolean?
-  note         String?
-  cost         Decimal? @db.Decimal(12, 2)
-  costCurrency Currency @default(TRY)
-  updatedAt    DateTime @updatedAt
+  completed             Boolean?
+  note                  String?
+  cost                  Decimal? @db.Decimal(12, 2)
+  costCurrency          Currency @default(TRY)
+  /**
+   * Bu bakımda kullanılan yedek parça varsa: maliyet + not. sparePartCost dolu olduğunda
+   * matriste ayrı bir işaret gösterilir.
+   */
+  sparePartCost         Decimal? @db.Decimal(12, 2)
+  sparePartCostCurrency Currency @default(TRY)
+  sparePartNote         String?
+  updatedAt             DateTime @updatedAt
 
   item MaintenancePlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
@@ -335,15 +342,18 @@ model InspectionPlanItem {
 }
 
 model InspectionPlanWeekEntry {
-  id           String   @id @default(cuid())
-  itemId       String
-  year         Int
-  week         Int
-  completed    Boolean?
-  note         String?
-  cost         Decimal? @db.Decimal(12, 2)
-  costCurrency Currency @default(TRY)
-  updatedAt    DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  itemId                String
+  year                  Int
+  week                  Int
+  completed             Boolean?
+  note                  String?
+  cost                  Decimal? @db.Decimal(12, 2)
+  costCurrency          Currency @default(TRY)
+  sparePartCost         Decimal? @db.Decimal(12, 2)
+  sparePartCostCurrency Currency @default(TRY)
+  sparePartNote         String?
+  updatedAt             DateTime @updatedAt
 
   item InspectionPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 

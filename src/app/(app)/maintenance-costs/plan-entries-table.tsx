@@ -3,58 +3,64 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import type { Machine, MaintenancePlanEntry } from "@prisma/client";
+import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
+import type { MaintenancePlanWeekEntry, MaintenancePlanItem } from "@prisma/client";
 
-const MONTH_NAMES = [
-  "Oca",
-  "Şub",
-  "Mar",
-  "Nis",
-  "May",
-  "Haz",
-  "Tem",
-  "Ağu",
-  "Eyl",
-  "Eki",
-  "Kas",
-  "Ara",
-];
+type WeekEntryWithItem = Omit<MaintenancePlanWeekEntry, "cost" | "sparePartCost"> & {
+  cost: number | null;
+  sparePartCost: number | null;
+  item: MaintenancePlanItem;
+};
 
-type PlanEntryWithMachine = MaintenancePlanEntry & { machine: Machine };
-
-export function PlanEntriesTable({ entries }: { entries: PlanEntryWithMachine[] }) {
-  const columns: DataTableColumn<PlanEntryWithMachine>[] = [
+export function PlanEntriesTable({ entries }: { entries: WeekEntryWithItem[] }) {
+  const columns: DataTableColumn<WeekEntryWithItem>[] = [
     {
-      key: "machine",
-      header: "Makine",
-      filterValue: (e) => e.machine.name,
-      render: (e) => <span className="font-medium text-slate-900">{e.machine.name}</span>,
+      key: "item",
+      header: "Bakım Kalemi",
+      filterValue: (e) => e.item.label,
+      render: (e) => <span className="font-medium text-slate-900">{e.item.label}</span>,
     },
     {
       key: "monthYear",
       header: "Ay / Yıl",
-      filterValue: (e) => `${MONTH_NAMES[e.month - 1]} ${e.year}`,
+      filterValue: (e) => `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`,
       render: (e) => (
         <span className="whitespace-nowrap text-slate-600">
-          {MONTH_NAMES[e.month - 1]} {e.year}
+          {MONTH_NAMES[monthOfWeek(e.week) - 1]} {e.year} ({e.week}. hafta)
         </span>
       ),
-    },
-    {
-      key: "note",
-      header: "Not",
-      render: (e) => <span className="max-w-xs truncate text-slate-600">{e.note ?? "-"}</span>,
     },
     {
       key: "amount",
-      header: "Tutar",
+      header: "Bakım Maliyeti",
       align: "right",
       money: (e) => (e.cost != null ? { amount: Number(e.cost), currency: e.costCurrency } : null),
-      render: (e) => (
-        <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
-          {formatCostAmount(Number(e.cost), e.costCurrency)}
-        </span>
-      ),
+      render: (e) =>
+        e.cost != null ? (
+          <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
+            {formatCostAmount(Number(e.cost), e.costCurrency)}
+          </span>
+        ) : (
+          <span className="text-slate-300">-</span>
+        ),
+    },
+    {
+      key: "sparePart",
+      header: "Yedek Parça",
+      align: "right",
+      money: (e) =>
+        e.sparePartCost != null
+          ? { amount: Number(e.sparePartCost), currency: e.sparePartCostCurrency }
+          : null,
+      render: (e) =>
+        e.sparePartCost != null ? (
+          <span className="whitespace-nowrap font-medium tabular-nums text-amber-600">
+            🔧 {formatCostAmount(Number(e.sparePartCost), e.sparePartCostCurrency)}
+            {e.sparePartNote && <span className="ml-1 text-slate-400">({e.sparePartNote})</span>}
+          </span>
+        ) : (
+          <span className="text-slate-300">-</span>
+        ),
     },
   ];
 

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { updatePlanWeekEntryCost } from "../../../actions";
-import { SubmitButton } from "@/components/submit-button";
+import { WeekEntryCostForm } from "@/components/week-entry-cost-form";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
@@ -37,33 +37,17 @@ export default async function EditPlanWeekEntryPage({
         {entry.item.label} · {monthName} {entry.year} ({entry.week}. hafta) · Durum: {statusLabel}
       </p>
 
-      <form action={updateWithId} className="mt-6 max-w-md space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Maliyet</span>
-          <div className="flex gap-2">
-            <input
-              name="cost"
-              type="number"
-              step="0.01"
-              defaultValue={entry.cost?.toString() ?? ""}
-              className="input"
-            />
-            <select name="costCurrency" defaultValue={entry.costCurrency} className="input w-24">
-              <option value="TRY">TL</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Not</span>
-          <textarea name="note" rows={3} defaultValue={entry.note ?? ""} className="input" />
-        </label>
-
-        <div className="flex gap-3 pt-2">
-          <SubmitButton />
-        </div>
-      </form>
+      <WeekEntryCostForm
+        action={updateWithId}
+        defaults={{
+          cost: entry.cost?.toString(),
+          costCurrency: entry.costCurrency,
+          note: entry.note,
+          sparePartCost: entry.sparePartCost?.toString(),
+          sparePartCostCurrency: entry.sparePartCostCurrency,
+          sparePartNote: entry.sparePartNote,
+        }}
+      />
     </div>
   );
 }

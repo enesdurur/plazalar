@@ -3,49 +3,77 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import type { PeriodicInspection } from "@prisma/client";
+import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
+import type { InspectionPlanWeekEntry, InspectionPlanItem } from "@prisma/client";
 
-export function InspectionsCostTable({ items }: { items: PeriodicInspection[] }) {
-  const columns: DataTableColumn<PeriodicInspection>[] = [
+type WeekEntryWithItem = Omit<InspectionPlanWeekEntry, "cost" | "sparePartCost"> & {
+  cost: number | null;
+  sparePartCost: number | null;
+  item: InspectionPlanItem;
+};
+
+export function InspectionsCostTable({ entries }: { entries: WeekEntryWithItem[] }) {
+  const columns: DataTableColumn<WeekEntryWithItem>[] = [
     {
-      key: "name",
-      header: "Ekipman",
-      filterValue: (i) => i.name,
-      render: (i) => <span className="font-medium text-slate-900">{i.name}</span>,
+      key: "item",
+      header: "Fenni Muayene Kalemi",
+      filterValue: (e) => e.item.label,
+      render: (e) => <span className="font-medium text-slate-900">{e.item.label}</span>,
     },
     {
-      key: "inspectionDate",
-      header: "Muayene Tarihi",
-      filterValue: (i) => (i.inspectionDate ? i.inspectionDate.toLocaleDateString("tr-TR") : "-"),
-      render: (i) => (
+      key: "monthYear",
+      header: "Ay / Yıl",
+      filterValue: (e) => `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`,
+      render: (e) => (
         <span className="whitespace-nowrap text-slate-600">
-          {i.inspectionDate ? i.inspectionDate.toLocaleDateString("tr-TR") : "-"}
+          {MONTH_NAMES[monthOfWeek(e.week) - 1]} {e.year} ({e.week}. hafta)
         </span>
       ),
     },
     {
       key: "amount",
-      header: "Tutar",
+      header: "Bakım Maliyeti",
       align: "right",
-      money: (i) => (i.cost != null ? { amount: Number(i.cost), currency: i.costCurrency } : null),
-      render: (i) => (
-        <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
-          {formatCostAmount(Number(i.cost), i.costCurrency)}
-        </span>
-      ),
+      money: (e) => (e.cost != null ? { amount: Number(e.cost), currency: e.costCurrency } : null),
+      render: (e) =>
+        e.cost != null ? (
+          <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
+            {formatCostAmount(Number(e.cost), e.costCurrency)}
+          </span>
+        ) : (
+          <span className="text-slate-300">-</span>
+        ),
+    },
+    {
+      key: "sparePart",
+      header: "Yedek Parça",
+      align: "right",
+      money: (e) =>
+        e.sparePartCost != null
+          ? { amount: Number(e.sparePartCost), currency: e.sparePartCostCurrency }
+          : null,
+      render: (e) =>
+        e.sparePartCost != null ? (
+          <span className="whitespace-nowrap font-medium tabular-nums text-amber-600">
+            🔧 {formatCostAmount(Number(e.sparePartCost), e.sparePartCostCurrency)}
+            {e.sparePartNote && <span className="ml-1 text-slate-400">({e.sparePartNote})</span>}
+          </span>
+        ) : (
+          <span className="text-slate-300">-</span>
+        ),
     },
   ];
 
   return (
     <DataTable
       columns={columns}
-      rows={items}
-      rowKey={(i) => i.id}
-      emptyMessage="Henüz maliyetli bir periyodik muayene kaydı yok."
+      rows={entries}
+      rowKey={(e) => e.id}
+      emptyMessage="Henüz maliyetli bir fenni muayene kaydı yok."
       maxHeight="50vh"
-      renderActions={(i) => (
+      renderActions={(e) => (
         <Link
-          href={`/inspections/${i.id}/edit`}
+          href={`/inspections/entries/${e.id}/edit`}
           className="text-sm font-medium text-slate-600 hover:text-slate-900"
         >
           Düzenle

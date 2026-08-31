@@ -131,24 +131,42 @@ const inspectionCostSchema = z.object({
   cost: z.coerce.number().optional(),
   costCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
   note: z.string().optional(),
+  hasSparePart: z.boolean(),
+  sparePartCost: z.coerce.number().optional(),
+  sparePartCostCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  sparePartNote: z.string().optional(),
 });
 
 export async function updateInspectionWeekEntryCost(id: string, formData: FormData) {
   await requireWriteAccess();
   const plaza = await getSelectedPlaza();
 
-  const data = inspectionCostSchema.parse({
+  const parsed = inspectionCostSchema.parse({
     cost: emptyToUndefined(formData.get("cost")),
     costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
     note: emptyToUndefined(formData.get("note")),
+    hasSparePart: formData.get("hasSparePart") === "on",
+    sparePartCost: emptyToUndefined(formData.get("sparePartCost")),
+    sparePartCostCurrency: emptyToUndefined(formData.get("sparePartCostCurrency")) ?? "TRY",
+    sparePartNote: emptyToUndefined(formData.get("sparePartNote")),
   });
+
+  const { hasSparePart, ...rest } = parsed;
 
   await prisma.inspectionPlanWeekEntry.updateMany({
     where: { id, item: { plazaId: plaza.id } },
-    data,
+    data: {
+      cost: rest.cost,
+      costCurrency: rest.costCurrency,
+      note: rest.note,
+      sparePartCost: hasSparePart ? rest.sparePartCost : null,
+      sparePartCostCurrency: hasSparePart ? rest.sparePartCostCurrency : "TRY",
+      sparePartNote: hasSparePart ? rest.sparePartNote : null,
+    },
   });
 
   revalidatePath("/inspections");
   revalidatePath("/");
+  revalidatePath("/maintenance-costs");
   redirect("/inspections");
 }

@@ -51,7 +51,23 @@ export function SparePartCostTile({
 }: {
   totals: { TRY: number; USD: number; EUR: number };
 }) {
-  return <CostTile href="/records/costs" label="Toplam Yedek Parça Maliyeti" totals={totals} />;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
+      <p className="text-sm font-medium text-slate-500">Toplam Yedek Parça Maliyeti</p>
+      <CostLines totals={totals} />
+      <div className="mt-3 flex flex-col gap-1 border-t border-slate-100 pt-3 text-xs">
+        <Link href="/records/costs" className="text-slate-500 hover:text-slate-900 hover:underline">
+          → Arıza / Bakım Kayıtları
+        </Link>
+        <Link
+          href="/maintenance-costs"
+          className="text-slate-500 hover:text-slate-900 hover:underline"
+        >
+          → Periyodik ve Yıllık Bakımlar
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export function MaintenanceCostTile({

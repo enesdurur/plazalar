@@ -64,12 +64,28 @@ export default async function DashboardPage() {
       select: { cost: true, costCurrency: true },
     }),
     prisma.maintenancePlanWeekEntry.findMany({
-      where: { cost: { not: null }, item: { plazaId: plaza.id } },
-      select: { cost: true, costCurrency: true },
+      where: {
+        item: { plazaId: plaza.id },
+        OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
+      },
+      select: {
+        cost: true,
+        costCurrency: true,
+        sparePartCost: true,
+        sparePartCostCurrency: true,
+      },
     }),
     prisma.inspectionPlanWeekEntry.findMany({
-      where: { cost: { not: null }, item: { plazaId: plaza.id } },
-      select: { cost: true, costCurrency: true },
+      where: {
+        item: { plazaId: plaza.id },
+        OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
+      },
+      select: {
+        cost: true,
+        costCurrency: true,
+        sparePartCost: true,
+        sparePartCostCurrency: true,
+      },
     }),
     prisma.tenantMaintenanceItem.findMany({
       where: { tenant: { plazaId: plaza.id } },
@@ -116,6 +132,11 @@ export default async function DashboardPage() {
   for (const r of records) {
     if (r.sparePartCost) {
       sparePartCostByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
+    }
+  }
+  for (const e of [...costedPlanWeekEntries, ...costedInspectionWeekEntries]) {
+    if (e.sparePartCost) {
+      sparePartCostByCurrency[e.sparePartCostCurrency] += Number(e.sparePartCost);
     }
   }
 

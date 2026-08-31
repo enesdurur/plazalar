@@ -210,6 +210,9 @@ export default async function InspectionsPage({
                     const costLabel = entry?.cost
                       ? formatCostAmount(Number(entry.cost), entry.costCurrency)
                       : null;
+                    const sparePartLabel = entry?.sparePartCost
+                      ? formatCostAmount(Number(entry.sparePartCost), entry.sparePartCostCurrency)
+                      : null;
 
                     if (!writable) {
                       return (
@@ -243,6 +246,15 @@ export default async function InspectionsPage({
                             className="mt-0.5 block whitespace-nowrap text-[9px] text-slate-400 hover:text-slate-600 print:hidden"
                           >
                             {costLabel ?? "+"}
+                          </Link>
+                        )}
+                        {sparePartLabel && (
+                          <Link
+                            href={`/inspections/entries/${entry!.id}/edit`}
+                            title={`Yedek parça: ${sparePartLabel}`}
+                            className="mt-0.5 block whitespace-nowrap text-[9px] font-medium text-amber-600 hover:text-amber-700 print:hidden"
+                          >
+                            🔧 {sparePartLabel}
                           </Link>
                         )}
                       </td>

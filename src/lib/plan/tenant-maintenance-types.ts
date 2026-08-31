@@ -1,11 +1,15 @@
-import { MONTH_WEEK_RANGES } from "./weeks";
+/** Kiracı Bakımları için standart bakım türleri ve her birinin yıllık planlanan haftası.
+ * Yeni bir tür eklemek için buraya ekleyin — seed.ts her kiracı için eksik olan türleri
+ * otomatik oluşturur ve mevcut olanların scheduledWeeks'ini bu tabloyla senkron tutar.
+ *
+ * Hafta numaraları lib/plan/weeks.ts'deki 1-53 şemasına göre: Elektrik Bakımı yılda 1 kez,
+ * Mayıs ayının ortası (~15'i) → hafta 20; Fancoil Bakımı yılda 1 kez, Haziran ayının ortası
+ * (~15'i) → hafta 24. */
+export const TENANT_MAINTENANCE_SCHEDULES: Record<string, number[]> = {
+  "Fancoil Bakımı": [24],
+  "Elektrik Bakımı": [20],
+};
 
-/** Kiracı Bakımları için standart bakım türleri. Yeni bir tür eklemek için buraya ekleyin —
- * seed.ts her kiracı için eksik olan türleri otomatik olarak oluşturur. */
-export const TENANT_MAINTENANCE_TYPES = ["Fancoil Bakımı", "Elektrik Bakımı"] as const;
-
-/** Başlangıç varsayımı: ayda bir kez, her ayın ilk haftasında. Gerçek periyot netleşince
- * kalem bazında (Kalemleri Yönet üzerinden) değiştirilebilir. */
-export function defaultMonthlyScheduledWeeks(): number[] {
-  return MONTH_WEEK_RANGES.map((r) => r.startWeek);
-}
+export const TENANT_MAINTENANCE_TYPES = Object.keys(
+  TENANT_MAINTENANCE_SCHEDULES
+) as (keyof typeof TENANT_MAINTENANCE_SCHEDULES)[];

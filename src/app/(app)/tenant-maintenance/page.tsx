@@ -67,9 +67,9 @@ export default async function TenantMaintenancePage({
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Kiracı Bakımları</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Excel&apos;de işaretli haftalarda tıklayarak durumu değiştirin: bekliyor → yapıldı →
-            yapılmadı → bekliyor. Şimdilik Fancoil ve Elektrik bakımları — ayda bir kez varsayımıyla
-            oluşturuldu, gerekirse birlikte ayarlarız.
+            İşaretli haftada tıklayarak durumu değiştirin: bekliyor → yapıldı → yapılmadı →
+            bekliyor. Şimdilik Fancoil Bakımı (yılda 1 kez, Haziran ortası) ve Elektrik Bakımı
+            (yılda 1 kez, Mayıs ortası).
           </p>
         </div>
         <div className="flex items-center gap-2">

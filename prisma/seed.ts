@@ -12,7 +12,7 @@ import {
 } from "../src/lib/plan/link-plaza-2026";
 import {
   TENANT_MAINTENANCE_TYPES,
-  defaultMonthlyScheduledWeeks,
+  TENANT_MAINTENANCE_SCHEDULES,
 } from "../src/lib/plan/tenant-maintenance-types";
 
 const prisma = new PrismaClient();
@@ -379,16 +379,14 @@ async function main() {
   console.log("Seeding kiracı bakım kalemleri (Fancoil / Elektrik)...");
 
   const allTenants = await prisma.tenant.findMany({ select: { id: true } });
-  const defaultWeeks = defaultMonthlyScheduledWeeks();
   for (const tenant of allTenants) {
     for (let i = 0; i < TENANT_MAINTENANCE_TYPES.length; i++) {
       const label = TENANT_MAINTENANCE_TYPES[i];
-      const existing = await prisma.tenantMaintenanceItem.findFirst({
-        where: { tenantId: tenant.id, label },
-      });
-      if (existing) continue;
-      await prisma.tenantMaintenanceItem.create({
-        data: { tenantId: tenant.id, label, scheduledWeeks: defaultWeeks, sortOrder: i },
+      const scheduledWeeks = TENANT_MAINTENANCE_SCHEDULES[label];
+      await prisma.tenantMaintenanceItem.upsert({
+        where: { tenantId_label: { tenantId: tenant.id, label } },
+        update: { scheduledWeeks },
+        create: { tenantId: tenant.id, label, scheduledWeeks, sortOrder: i },
       });
     }
   }

@@ -12,6 +12,18 @@ export const metadata: Metadata = {
   title: "Bütçe Veri Girişi",
 };
 
+const AUTO_SOURCE_LABELS: Record<string, string> = {
+  MAINTENANCE_PLAN: "3. Firma Bakım Planı",
+  INSPECTION: "Periyodik (Fenni) Muayene",
+  FAULT_RECORDS: "Arıza Kayıtları",
+};
+
+const AUTO_SOURCE_HREFS: Record<string, string> = {
+  MAINTENANCE_PLAN: "/annual-plan",
+  INSPECTION: "/inspections",
+  FAULT_RECORDS: "/records",
+};
+
 const MONTHS = [
   "Oca",
   "Şub",
@@ -127,9 +139,11 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
       <td className="sticky left-0 z-10 bg-white px-4 py-2">
         <p className="font-medium text-slate-900">{item.label}</p>
         <p className="text-xs text-slate-400">
-          {item.isFixedContract
-            ? `Sabit: ${Number(item.fixedAmount ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`
-            : "Elle girilir"}
+          {item.autoSource
+            ? `Otomatik: ${AUTO_SOURCE_LABELS[item.autoSource]}`
+            : item.isFixedContract
+              ? `Sabit: ${Number(item.fixedAmount ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`
+              : "Elle girilir"}
         </p>
       </td>
       {MONTHS.map((_, i) => {
@@ -141,6 +155,14 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
           return (
             <td key={month} className="px-2 py-2 text-center">
               <LockedCell amount={entry?.manualAmount ?? null} />
+            </td>
+          );
+        }
+
+        if (item.autoSource) {
+          return (
+            <td key={month} className="px-2 py-2 text-center">
+              <AutoCell amount={entry?.manualAmount ?? null} href={AUTO_SOURCE_HREFS[item.autoSource]} />
             </td>
           );
         }
@@ -215,6 +237,20 @@ function LockedCell({ amount }: { amount: number | null }) {
         ? amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : "-"}
     </span>
+  );
+}
+
+function AutoCell({ amount, href }: { amount: number | null; href: string }) {
+  return (
+    <Link
+      href={href}
+      title="Otomatik hesaplanır, kaynağı görmek için tıklayın"
+      className="inline-block w-20 text-right text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline"
+    >
+      {amount != null
+        ? amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : "-"}
+    </Link>
   );
 }
 

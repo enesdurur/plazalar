@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { SparePart } from "@prisma/client";
 
 const OTHER_VALUE = "__other__";
 
@@ -10,7 +9,7 @@ export function SparePartField({
   defaultSparePartId,
   defaultSparePartOther,
 }: {
-  spareParts: SparePart[];
+  spareParts: { id: string; name: string }[];
   defaultSparePartId?: string | null;
   defaultSparePartOther?: string | null;
 }) {

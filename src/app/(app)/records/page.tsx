@@ -25,8 +25,15 @@ export default async function RecordsPage() {
     take: 200,
   });
 
-  const ongoing = records.filter((r) => !r.finishedAt);
-  const completed = records.filter((r) => r.finishedAt);
+  // Prisma Decimal alanları Client Component'lere doğrudan aktarılamaz — düz sayıya çeviriyoruz.
+  const serialized = records.map((r) => ({
+    ...r,
+    sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
+    sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
+  }));
+
+  const ongoing = serialized.filter((r) => !r.finishedAt);
+  const completed = serialized.filter((r) => r.finishedAt);
 
   return (
     <div>

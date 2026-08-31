@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
+import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 
 const OTHER_SPARE_PART = "__other__";
 
@@ -24,6 +25,7 @@ const recordSchema = z.object({
   sparePartQty: z.coerce.number().int().optional(),
   sparePartCost: z.coerce.number().optional(),
   sparePartCostCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  sparePartExchangeRate: z.coerce.number().positive().optional(),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -46,6 +48,7 @@ function parseRecordForm(formData: FormData) {
     sparePartQty: emptyToUndefined(formData.get("sparePartQty")),
     sparePartCost: emptyToUndefined(formData.get("sparePartCost")),
     sparePartCostCurrency: emptyToUndefined(formData.get("sparePartCostCurrency")) ?? "TRY",
+    sparePartExchangeRate: emptyToUndefined(formData.get("sparePartExchangeRate")),
   });
 
   const isOther = parsed.sparePartId === OTHER_SPARE_PART;
@@ -64,6 +67,8 @@ function parseRecordForm(formData: FormData) {
     sparePartQty: parsed.sparePartQty,
     sparePartCost: parsed.sparePartCost,
     sparePartCostCurrency: parsed.sparePartCostCurrency,
+    sparePartExchangeRate:
+      parsed.sparePartCostCurrency !== "TRY" ? (parsed.sparePartExchangeRate ?? null) : null,
   };
 }
 
@@ -84,17 +89,25 @@ async function assertMachineInPlaza(machineId: string) {
   return plaza;
 }
 
+async function recomputeFaultMonth(plazaId: string, date: Date) {
+  await recomputeAutoBudgetEntry(plazaId, date.getFullYear(), date.getMonth() + 1, "FAULT_RECORDS");
+}
+
 export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
   const data = parseRecordForm(formData);
-  await assertMachineInPlaza(data.machineId);
+  const plaza = await assertMachineInPlaza(data.machineId);
 
   await prisma.maintenanceRecord.create({
     data: { ...data, createdById: session.user.id },
   });
 
+  await recomputeFaultMonth(plaza.id, data.reportedAt);
+
   revalidatePath("/records");
   revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
   redirect("/records");
 }
 
@@ -103,13 +116,25 @@ export async function updateRecord(id: string, formData: FormData) {
   const data = parseRecordForm(formData);
   const plaza = await assertMachineInPlaza(data.machineId);
 
+  const previous = await prisma.maintenanceRecord.findFirst({
+    where: { id, machine: { plazaId: plaza.id } },
+    select: { reportedAt: true },
+  });
+
   await prisma.maintenanceRecord.updateMany({
     where: { id, machine: { plazaId: plaza.id } },
     data,
   });
 
+  if (previous) await recomputeFaultMonth(plaza.id, previous.reportedAt);
+  if (!previous || previous.reportedAt.getTime() !== data.reportedAt.getTime()) {
+    await recomputeFaultMonth(plaza.id, data.reportedAt);
+  }
+
   revalidatePath("/records");
   revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
   redirect("/records");
 }
 
@@ -120,9 +145,19 @@ export async function deleteRecord(id: string) {
   }
   const plaza = await getSelectedPlaza();
 
+  const existing = await prisma.maintenanceRecord.findFirst({
+    where: { id, machine: { plazaId: plaza.id } },
+    select: { reportedAt: true },
+  });
+
   await prisma.maintenanceRecord.deleteMany({
     where: { id, machine: { plazaId: plaza.id } },
   });
+
+  if (existing) await recomputeFaultMonth(plaza.id, existing.reportedAt);
+
   revalidatePath("/records");
   revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
 }

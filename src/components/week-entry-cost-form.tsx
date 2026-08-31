@@ -11,13 +11,17 @@ export function WeekEntryCostForm({
   defaults: {
     cost?: string | null;
     costCurrency: string;
+    costExchangeRate?: string | null;
     note?: string | null;
     sparePartCost?: string | null;
     sparePartCostCurrency: string;
+    sparePartExchangeRate?: string | null;
     sparePartNote?: string | null;
   };
 }) {
   const [hasSparePart, setHasSparePart] = useState(defaults.sparePartCost != null);
+  const [costCurrency, setCostCurrency] = useState(defaults.costCurrency);
+  const [sparePartCostCurrency, setSparePartCostCurrency] = useState(defaults.sparePartCostCurrency);
 
   return (
     <form action={action} className="mt-6 max-w-md space-y-4">
@@ -31,12 +35,33 @@ export function WeekEntryCostForm({
             defaultValue={defaults.cost ?? ""}
             className="input"
           />
-          <select name="costCurrency" defaultValue={defaults.costCurrency} className="input w-24">
+          <select
+            name="costCurrency"
+            value={costCurrency}
+            onChange={(e) => setCostCurrency(e.target.value)}
+            className="input w-24"
+          >
             <option value="TRY">TL</option>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
           </select>
         </div>
+        {costCurrency !== "TRY" && (
+          <div className="mt-2">
+            <span className="mb-1 block text-xs text-slate-500">
+              Kur (1 {costCurrency} = ? TL) — gerçekleşen bütçeye yansıması için gerekli
+            </span>
+            <input
+              name="costExchangeRate"
+              type="number"
+              step="0.0001"
+              min="0"
+              defaultValue={defaults.costExchangeRate ?? ""}
+              className="input"
+              placeholder="örn. 34.50"
+            />
+          </div>
+        )}
       </label>
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-slate-700">Not</span>
@@ -69,7 +94,8 @@ export function WeekEntryCostForm({
               />
               <select
                 name="sparePartCostCurrency"
-                defaultValue={defaults.sparePartCostCurrency}
+                value={sparePartCostCurrency}
+                onChange={(e) => setSparePartCostCurrency(e.target.value)}
                 className="input w-24"
               >
                 <option value="TRY">TL</option>
@@ -77,6 +103,22 @@ export function WeekEntryCostForm({
                 <option value="EUR">EUR</option>
               </select>
             </div>
+            {sparePartCostCurrency !== "TRY" && (
+              <div className="mt-2">
+                <span className="mb-1 block text-xs text-slate-500">
+                  Kur (1 {sparePartCostCurrency} = ? TL) — gerçekleşen bütçeye yansıması için gerekli
+                </span>
+                <input
+                  name="sparePartExchangeRate"
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  defaultValue={defaults.sparePartExchangeRate ?? ""}
+                  className="input"
+                  placeholder="örn. 34.50"
+                />
+              </div>
+            )}
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700">

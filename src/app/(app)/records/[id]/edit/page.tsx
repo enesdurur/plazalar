@@ -22,7 +22,7 @@ export default async function EditRecordPage({
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
     prisma.issueType.findMany({ orderBy: { name: "asc" } }),
     prisma.technician.findMany({ orderBy: { name: "asc" } }),
-    prisma.sparePart.findMany({ orderBy: { name: "asc" } }),
+    prisma.sparePart.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   if (!record) notFound();

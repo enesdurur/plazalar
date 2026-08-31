@@ -217,6 +217,11 @@ model MaintenanceRecord {
   sparePartQty          Int?
   sparePartCost         Decimal?      @db.Decimal(12, 2)
   sparePartCostCurrency Currency      @default(TRY)
+  /**
+   * sparePartCostCurrency TRY değilse, gerçekleşen bütçeye TL karşılığıyla yansıtabilmek için
+   * elle girilen kur (1 birim [USD/EUR] = ? TL). TRY girişlerde kullanılmaz.
+   */
+  sparePartExchangeRate Decimal?      @db.Decimal(10, 4)
   createdById           String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -300,11 +305,17 @@ model MaintenancePlanWeekEntry {
   cost                  Decimal? @db.Decimal(12, 2)
   costCurrency          Currency @default(TRY)
   /**
+   * costCurrency TRY değilse, gerçekleşen bütçeye TL karşılığıyla yansıtabilmek için elle
+   * girilen kur (1 birim [USD/EUR] = ? TL). TRY girişlerde kullanılmaz.
+   */
+  costExchangeRate      Decimal? @db.Decimal(10, 4)
+  /**
    * Bu bakımda kullanılan yedek parça varsa: maliyet + not. sparePartCost dolu olduğunda
    * matriste ayrı bir işaret gösterilir.
    */
   sparePartCost         Decimal? @db.Decimal(12, 2)
   sparePartCostCurrency Currency @default(TRY)
+  sparePartExchangeRate Decimal? @db.Decimal(10, 4)
   sparePartNote         String?
   updatedAt             DateTime @updatedAt
 
@@ -350,8 +361,10 @@ model InspectionPlanWeekEntry {
   note                  String?
   cost                  Decimal? @db.Decimal(12, 2)
   costCurrency          Currency @default(TRY)
+  costExchangeRate      Decimal? @db.Decimal(10, 4)
   sparePartCost         Decimal? @db.Decimal(12, 2)
   sparePartCostCurrency Currency @default(TRY)
+  sparePartExchangeRate Decimal? @db.Decimal(10, 4)
   sparePartNote         String?
   updatedAt             DateTime @updatedAt
 
@@ -422,19 +435,31 @@ model BudgetSection {
   @@map("budget_sections")
 }
 
+enum BudgetAutoSource {
+  MAINTENANCE_PLAN
+  INSPECTION
+  FAULT_RECORDS
+}
+
 model BudgetLineItem {
-  id              String        @id @default(cuid())
+  id              String            @id @default(cuid())
   sectionId       String
-  section         BudgetSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section         BudgetSection     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   category        String?
   label           String
-  monthlyBudget   Decimal       @db.Decimal(12, 2)
-  isFixedContract Boolean       @default(false)
-  fixedAmount     Decimal?      @db.Decimal(12, 2)
+  monthlyBudget   Decimal           @db.Decimal(12, 2)
+  isFixedContract Boolean           @default(false)
+  fixedAmount     Decimal?          @db.Decimal(12, 2)
   fill            String?
-  sortOrder       Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  sortOrder       Int               @default(0)
+  /**
+   * Doluysa bu kalemin aylık tutarı elle girilmez — 3. Firma Bakım Planı / Periyodik Muayene /
+   * Arıza Kayıtları'na girilen maliyetlerden otomatik hesaplanıp BudgetMonthEntry.manualAmount'a
+   * yazılır (bkz. src/lib/budget/auto-sync.ts). Plaza+yıl başına her kaynak için tek kalem olabilir.
+   */
+  autoSource      BudgetAutoSource?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   entries     BudgetMonthEntry[]
   adjustments BudgetAdjustment[]

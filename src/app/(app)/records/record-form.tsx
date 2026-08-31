@@ -1,12 +1,7 @@
-import type {
-  Machine,
-  IssueType,
-  Technician,
-  SparePart,
-  MaintenanceRecord,
-} from "@prisma/client";
+import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
 import { SubmitButton } from "@/components/submit-button";
 import { SparePartField } from "./spare-part-field";
+import { SparePartCostField } from "./spare-part-cost-field";
 
 function toDatetimeLocal(date: Date | null | undefined) {
   if (!date) return "";
@@ -28,7 +23,7 @@ export function RecordForm({
   machines: Machine[];
   issueTypes: IssueType[];
   technicians: Technician[];
-  spareParts: SparePart[];
+  spareParts: { id: string; name: string }[];
   record?: MaintenanceRecord;
 }) {
   return (
@@ -44,16 +39,11 @@ export function RecordForm({
             ))}
           </select>
         </Field>
-        <Field label="İşlem Türü *">
-          <select
-            name="operationType"
-            required
-            defaultValue={record?.operationType ?? "ARIZA"}
-            className="input"
-          >
-            <option value="ARIZA">Arıza</option>
-            <option value="BAKIM">Bakım</option>
-          </select>
+        <Field label="İşlem Türü">
+          <input type="hidden" name="operationType" value={record?.operationType ?? "ARIZA"} />
+          <div className="input flex items-center bg-slate-50 text-slate-500">
+            {record?.operationType === "BAKIM" ? "Bakım (eski kayıt)" : "Arıza"}
+          </div>
         </Field>
         <Field label="Arıza / Bakım Türü">
           <select name="issueTypeId" defaultValue={record?.issueTypeId ?? ""} className="input">
@@ -130,26 +120,11 @@ export function RecordForm({
             className="input"
           />
         </Field>
-        <Field label="Yedek Parça Maliyeti">
-          <div className="flex gap-2">
-            <input
-              name="sparePartCost"
-              type="number"
-              step="0.01"
-              defaultValue={record?.sparePartCost?.toString() ?? ""}
-              className="input"
-            />
-            <select
-              name="sparePartCostCurrency"
-              defaultValue={record?.sparePartCostCurrency ?? "TRY"}
-              className="input w-24"
-            >
-              <option value="TRY">TL</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-        </Field>
+        <SparePartCostField
+          defaultCost={record?.sparePartCost?.toString() ?? null}
+          defaultCurrency={record?.sparePartCostCurrency ?? "TRY"}
+          defaultExchangeRate={record?.sparePartExchangeRate?.toString() ?? null}
+        />
       </div>
 
       <div className="flex gap-3 pt-2">

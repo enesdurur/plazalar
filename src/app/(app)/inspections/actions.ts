@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
+import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
+import { monthOfWeek } from "@/lib/plan/weeks";
 
 const schema = z.object({
   code: z.string().optional(),
@@ -130,10 +132,12 @@ export async function toggleInspectionWeekEntry(itemId: string, year: number, we
 const inspectionCostSchema = z.object({
   cost: z.coerce.number().optional(),
   costCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  costExchangeRate: z.coerce.number().positive().optional(),
   note: z.string().optional(),
   hasSparePart: z.boolean(),
   sparePartCost: z.coerce.number().optional(),
   sparePartCostCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  sparePartExchangeRate: z.coerce.number().positive().optional(),
   sparePartNote: z.string().optional(),
 });
 
@@ -141,32 +145,48 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
   await requireWriteAccess();
   const plaza = await getSelectedPlaza();
 
+  const existing = await prisma.inspectionPlanWeekEntry.findFirst({
+    where: { id, item: { plazaId: plaza.id } },
+  });
+  if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
+
   const parsed = inspectionCostSchema.parse({
     cost: emptyToUndefined(formData.get("cost")),
     costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
+    costExchangeRate: emptyToUndefined(formData.get("costExchangeRate")),
     note: emptyToUndefined(formData.get("note")),
     hasSparePart: formData.get("hasSparePart") === "on",
     sparePartCost: emptyToUndefined(formData.get("sparePartCost")),
     sparePartCostCurrency: emptyToUndefined(formData.get("sparePartCostCurrency")) ?? "TRY",
+    sparePartExchangeRate: emptyToUndefined(formData.get("sparePartExchangeRate")),
     sparePartNote: emptyToUndefined(formData.get("sparePartNote")),
   });
 
   const { hasSparePart, ...rest } = parsed;
 
-  await prisma.inspectionPlanWeekEntry.updateMany({
-    where: { id, item: { plazaId: plaza.id } },
+  await prisma.inspectionPlanWeekEntry.update({
+    where: { id: existing.id },
     data: {
       cost: rest.cost,
       costCurrency: rest.costCurrency,
+      costExchangeRate: rest.costCurrency === "TRY" ? null : (rest.costExchangeRate ?? null),
       note: rest.note,
       sparePartCost: hasSparePart ? rest.sparePartCost : null,
       sparePartCostCurrency: hasSparePart ? rest.sparePartCostCurrency : "TRY",
+      sparePartExchangeRate:
+        hasSparePart && rest.sparePartCostCurrency !== "TRY"
+          ? (rest.sparePartExchangeRate ?? null)
+          : null,
       sparePartNote: hasSparePart ? rest.sparePartNote : null,
     },
   });
 
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+
   revalidatePath("/inspections");
   revalidatePath("/");
   revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
   redirect("/inspections");
 }

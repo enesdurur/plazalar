@@ -12,7 +12,12 @@ const OPERATION_LABELS: Record<string, string> = {
   BAKIM: "Bakım",
 };
 
-type RecordWithRelations = MaintenanceRecord & {
+type RecordWithRelations = Omit<
+  MaintenanceRecord,
+  "sparePartCost" | "sparePartExchangeRate"
+> & {
+  sparePartCost: number | null;
+  sparePartExchangeRate: number | null;
   machine: Machine;
   issueType: IssueType | null;
   technician: Technician | null;

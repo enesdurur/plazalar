@@ -42,9 +42,11 @@ export default async function EditInspectionWeekEntryPage({
         defaults={{
           cost: entry.cost?.toString(),
           costCurrency: entry.costCurrency,
+          costExchangeRate: entry.costExchangeRate?.toString(),
           note: entry.note,
           sparePartCost: entry.sparePartCost?.toString(),
           sparePartCostCurrency: entry.sparePartCostCurrency,
+          sparePartExchangeRate: entry.sparePartExchangeRate?.toString(),
           sparePartNote: entry.sparePartNote,
         }}
       />

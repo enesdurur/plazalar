@@ -8,7 +8,7 @@ import { CostsTable } from "./costs-table";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Yedek Parça Maliyetleri",
+  title: "Arıza Maliyetleri",
 };
 
 export default async function MaintenanceCostsPage() {
@@ -34,7 +34,7 @@ export default async function MaintenanceCostsPage() {
           <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
             ← Panel
           </Link>
-          <h1 className="mt-1 text-xl font-semibold text-slate-900">Yedek Parça Maliyetleri</h1>
+          <h1 className="mt-1 text-xl font-semibold text-slate-900">Arıza Maliyetleri</h1>
           <p className="mt-1 text-sm text-slate-500">
             Toplam {records.length} maliyetli kayıt · {formatCostAmount(totals.TRY, "TRY")}
             {totals.USD > 0 && ` · ${formatCostAmount(totals.USD, "USD")}`}

@@ -12,7 +12,7 @@ export async function GET() {
   });
 
   const workbook = newWorkbook();
-  const sheet = workbook.addWorksheet("Yedek Parça Maliyetleri");
+  const sheet = workbook.addWorksheet("Arıza Maliyetleri");
   sheet.columns = [
     { header: "Tarih", key: "reportedAt", width: 16 },
     { header: "Makine", key: "machine", width: 24 },
@@ -38,5 +38,5 @@ export async function GET() {
 
   sheet.getColumn("reportedAt").numFmt = "dd.mm.yyyy hh:mm";
 
-  return workbookResponse(workbook, `${plaza.name} - Bakim Maliyetleri.xlsx`);
+  return workbookResponse(workbook, `${plaza.name} - Ariza Maliyetleri.xlsx`);
 }

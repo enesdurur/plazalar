@@ -11,7 +11,7 @@ import { MONTH_NAMES, MONTH_WEEK_RANGES, TOTAL_WEEKS, isPastWeek } from "@/lib/p
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Yıllık Bakım Planı",
+  title: "3. Firma Bakım Planı",
 };
 
 const CELL_STYLES = {
@@ -68,7 +68,7 @@ export default async function AnnualPlanPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Yıllık Bakım Planı</h1>
+          <h1 className="text-xl font-semibold text-slate-900">3. Firma Bakım Planı</h1>
           <p className="mt-1 text-sm text-slate-500">
             Excel&apos;de işaretli haftalarda tıklayarak durumu değiştirin: bekliyor → yapıldı →
             yapılmadı → bekliyor. Geçmiş aylardaki işaretli haftalar otomatik yapıldı kabul edilir.

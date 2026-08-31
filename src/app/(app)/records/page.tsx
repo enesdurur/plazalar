@@ -9,7 +9,7 @@ import { RecordsTable } from "./records-table";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Arıza / Bakım Kayıtları",
+  title: "Arıza Kayıtları",
 };
 
 export default async function RecordsPage() {
@@ -33,7 +33,7 @@ export default async function RecordsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">
-            Arıza / Bakım Kayıtları
+            Arıza Kayıtları
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Son {records.length} kayıt gösteriliyor.

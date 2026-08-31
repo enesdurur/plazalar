@@ -42,7 +42,7 @@ export async function GET() {
 
   for (const e of planEntries) {
     sheet.addRow({
-      source: "Yıllık Bakım Planı",
+      source: "3. Firma Bakım Planı",
       related: e.item.label,
       date: `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year} (${e.week}. hafta)`,
       note: e.note ?? "",

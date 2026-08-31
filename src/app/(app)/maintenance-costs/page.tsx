@@ -64,7 +64,7 @@ export default async function MaintenanceCostsPage() {
           </Link>
           <h1 className="mt-1 text-xl font-semibold text-slate-900">Bakım Maliyetleri</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Yıllık Bakım Planı ve Periyodik (Fenni) Muayene&apos;ye girilen maliyetler · Toplam{" "}
+            3. Firma Bakım Planı ve Periyodik (Fenni) Muayene&apos;ye girilen maliyetler · Toplam{" "}
             {totalCount} kayıt · Bakım: {formatCostAmount(totals.TRY, "TRY")}
             {totals.USD > 0 && ` · ${formatCostAmount(totals.USD, "USD")}`}
             {totals.EUR > 0 && ` · ${formatCostAmount(totals.EUR, "EUR")}`}
@@ -84,7 +84,7 @@ export default async function MaintenanceCostsPage() {
         </div>
       </div>
 
-      <h2 className="mt-6 text-sm font-semibold text-slate-900">Yıllık Bakım Planı</h2>
+      <h2 className="mt-6 text-sm font-semibold text-slate-900">3. Firma Bakım Planı</h2>
       <div className="mt-3">
         <PlanEntriesTable entries={planEntriesSerialized} />
       </div>

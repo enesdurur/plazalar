@@ -4,7 +4,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
-import { SparePartCostTile, MaintenanceCostTile } from "@/components/spare-part-cost-tile";
+import { CostBreakdownTile, FaultCostTile } from "@/components/spare-part-cost-tile";
 import { TcmbRatesCard } from "@/components/tcmb-rates-card";
 import { getTcmbRates } from "@/lib/tcmb";
 import { MONTH_NAMES } from "@/lib/plan/weeks";
@@ -128,15 +128,21 @@ export default async function DashboardPage() {
     .map((r) => mttr(r.respondedAt, r.finishedAt))
     .filter((v): v is number => v !== null);
 
-  const sparePartCostByCurrency = { TRY: 0, USD: 0, EUR: 0 };
+  // Arıza kayıtlarındaki (MaintenanceRecord) yedek parça maliyeti — "Arıza Maliyetleri"
+  // kutucuğunun kaynağı, yalnızca Arıza Kayıtları'na yönlendirir.
+  const faultSparePartCostByCurrency = { TRY: 0, USD: 0, EUR: 0 };
   for (const r of records) {
     if (r.sparePartCost) {
-      sparePartCostByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
+      faultSparePartCostByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
     }
   }
+
+  // 3. Firma Bakım Planı / Periyodik Muayene'ye girilen yedek parça maliyeti — Bakım/Yedek
+  // Parça split kutucuğunun sağ yarısının kaynağı.
+  const planSparePartCostByCurrency = { TRY: 0, USD: 0, EUR: 0 };
   for (const e of [...costedPlanWeekEntries, ...costedInspectionWeekEntries]) {
     if (e.sparePartCost) {
-      sparePartCostByCurrency[e.sparePartCostCurrency] += Number(e.sparePartCost);
+      planSparePartCostByCurrency[e.sparePartCostCurrency] += Number(e.sparePartCost);
     }
   }
 
@@ -197,8 +203,11 @@ export default async function DashboardPage() {
             </span>
           </div>
         </Link>
-        <MaintenanceCostTile totals={maintenanceCostByCurrency} />
-        <SparePartCostTile totals={sparePartCostByCurrency} />
+        <CostBreakdownTile
+          maintenanceTotals={maintenanceCostByCurrency}
+          sparePartTotals={planSparePartCostByCurrency}
+        />
+        <FaultCostTile totals={faultSparePartCostByCurrency} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">
@@ -207,7 +216,7 @@ export default async function DashboardPage() {
       <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PlanYearDetailCard
           href="/annual-plan"
-          title="Yıllık Bakım Planı"
+          title="3. Firma Bakım Planı"
           stats={planStats}
           currentMonthIdx={currentMonthIdx}
         />

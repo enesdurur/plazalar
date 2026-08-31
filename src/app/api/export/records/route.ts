@@ -18,7 +18,7 @@ export async function GET() {
   });
 
   const workbook = newWorkbook();
-  const sheet = workbook.addWorksheet("Arıza-Bakım Kayıtları");
+  const sheet = workbook.addWorksheet("Arıza Kayıtları");
   sheet.columns = [
     { header: "Bildirim Zamanı", key: "reportedAt", width: 20 },
     { header: "Makine", key: "machine", width: 18 },

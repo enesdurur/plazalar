@@ -26,54 +26,44 @@ function CostLines({ totals }: { totals: { TRY: number; USD: number; EUR: number
   );
 }
 
-function CostTile({
-  href,
-  label,
-  totals,
+/** Panel'deki bakım maliyeti kutucuğu: tek bir kart, kendi içinde ikiye bölünmüş — solda
+ * bakım (işçilik/sözleşme) maliyeti, sağda 3. Firma Bakım Planı ve Periyodik (Fenni)
+ * Muayene'ye girilen yedek parça maliyeti. Her iki yarı da /maintenance-costs'a gider. */
+export function CostBreakdownTile({
+  maintenanceTotals,
+  sparePartTotals,
 }: {
-  href: string;
-  label: string;
-  totals: { TRY: number; USD: number; EUR: number };
+  maintenanceTotals: { TRY: number; USD: number; EUR: number };
+  sparePartTotals: { TRY: number; USD: number; EUR: number };
 }) {
   return (
-    <Link
-      href={href}
-      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
-    >
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <CostLines totals={totals} />
-    </Link>
-  );
-}
-
-export function SparePartCostTile({
-  totals,
-}: {
-  totals: { TRY: number; USD: number; EUR: number };
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <p className="text-sm font-medium text-slate-500">Toplam Yedek Parça Maliyeti</p>
-      <CostLines totals={totals} />
-      <div className="mt-3 flex flex-col gap-1 border-t border-slate-100 pt-3 text-xs">
-        <Link href="/records/costs" className="text-slate-500 hover:text-slate-900 hover:underline">
-          → Arıza / Bakım Kayıtları
-        </Link>
-        <Link
-          href="/maintenance-costs"
-          className="text-slate-500 hover:text-slate-900 hover:underline"
-        >
-          → Periyodik ve Yıllık Bakımlar
-        </Link>
-      </div>
+    <div className="grid grid-cols-2 divide-x divide-slate-100 rounded-lg border border-slate-200 bg-white">
+      <Link href="/maintenance-costs" className="p-5 hover:bg-slate-50">
+        <p className="text-sm font-medium text-slate-500">Bakım Maliyetleri</p>
+        <CostLines totals={maintenanceTotals} />
+      </Link>
+      <Link href="/maintenance-costs" className="p-5 hover:bg-slate-50">
+        <p className="text-sm font-medium text-slate-500">Yedek Parça Maliyetleri</p>
+        <CostLines totals={sparePartTotals} />
+      </Link>
     </div>
   );
 }
 
-export function MaintenanceCostTile({
+/** Arıza kayıtlarına girilen yedek parça maliyetlerinin toplamı — yalnızca Arıza Kayıtları'na
+ * yönlendirir (3. Firma Bakım Planı / Periyodik Muayene'deki yedek parça CostBreakdownTile'da). */
+export function FaultCostTile({
   totals,
 }: {
   totals: { TRY: number; USD: number; EUR: number };
 }) {
-  return <CostTile href="/maintenance-costs" label="Toplam Bakım Maliyeti" totals={totals} />;
+  return (
+    <Link
+      href="/records/costs"
+      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+    >
+      <p className="text-sm font-medium text-slate-500">Arıza Maliyetleri</p>
+      <CostLines totals={totals} />
+    </Link>
+  );
 }

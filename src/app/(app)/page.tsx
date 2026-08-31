@@ -180,31 +180,6 @@ export default async function DashboardPage() {
         <SparePartCostTile totals={sparePartCostByCurrency} />
       </div>
 
-      <h2 className="mt-8 text-sm font-semibold text-slate-900">Uygunluk Durumu</h2>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <PlanStatusTile
-          href="/annual-plan"
-          label="Yıllık Bakım Planı (Bu Ay)"
-          done={planStats.monthlyDone[currentMonthIdx]}
-          missed={planStats.monthlyMissed[currentMonthIdx]}
-          totalItems={maintenancePlanItems.length}
-        />
-        <PlanStatusTile
-          href="/inspections"
-          label="Periyodik (Fenni) Muayene (Bu Ay)"
-          done={inspectionStats.monthlyDone[currentMonthIdx]}
-          missed={inspectionStats.monthlyMissed[currentMonthIdx]}
-          totalItems={inspectionPlanItems.length}
-        />
-        <PlanStatusTile
-          href="/tenant-maintenance"
-          label="Kiracı Bakımları (Bu Ay)"
-          done={tenantMaintenanceStats.monthlyDone[currentMonthIdx]}
-          missed={tenantMaintenanceStats.monthlyMissed[currentMonthIdx]}
-          totalItems={tenantMaintenanceItems.length}
-        />
-      </div>
-
       <h2 className="mt-8 text-sm font-semibold text-slate-900">
         Bakım ve Muayene Planı — {currentYear} Yılı Detayı
       </h2>
@@ -281,45 +256,6 @@ export default async function DashboardPage() {
         />
       </div>
     </div>
-  );
-}
-
-function PlanStatusTile({
-  href,
-  label,
-  done,
-  missed,
-  totalItems,
-}: {
-  href: string;
-  label: string;
-  done: number;
-  missed: number;
-  totalItems: number;
-}) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
-    >
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <div className="mt-2 flex flex-wrap items-baseline gap-2">
-        <span
-          className="text-2xl font-semibold tabular-nums"
-          style={{ color: "var(--viz-status-good)" }}
-        >
-          {done}
-        </span>
-        <span className="text-sm text-slate-400">yapıldı,</span>
-        <span
-          className="text-2xl font-semibold tabular-nums"
-          style={{ color: "var(--viz-status-critical)" }}
-        >
-          {missed}
-        </span>
-        <span className="text-sm text-slate-400">yapılmadı / {totalItems} kalem</span>
-      </div>
-    </Link>
   );
 }
 

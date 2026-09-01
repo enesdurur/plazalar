@@ -263,10 +263,6 @@ export default async function DashboardPage() {
           {arizaRecords.length === 0 && (
             <p className="mt-3 text-sm text-slate-500">Henüz arıza kaydı yok.</p>
           )}
-
-          <MaintenanceStatusBreakdown title="3. Firma Bakım Planı" stats={planStats} />
-          <MaintenanceStatusBreakdown title="Fenni Muayeneler" stats={inspectionStats} />
-          <MaintenanceStatusBreakdown title="Kiracı Bakımları" stats={tenantMaintenanceStats} />
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -284,6 +280,12 @@ export default async function DashboardPage() {
             <p className="mt-4 text-sm text-slate-500">Henüz veri yok.</p>
           )}
         </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <MaintenanceStatusBreakdown title="3. Firma Bakım Planı" stats={planStats} />
+        <MaintenanceStatusBreakdown title="Fenni Muayeneler" stats={inspectionStats} />
+        <MaintenanceStatusBreakdown title="Kiracı Bakımları" stats={tenantMaintenanceStats} />
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -423,7 +425,7 @@ function PlanYearDetailCard({
 function MaintenanceStatusBreakdown({ title, stats }: { title: string; stats: PlanYearStats }) {
   const total = stats.done + stats.missed + stats.pending;
   return (
-    <div className="mt-6">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
       <div className="mt-3 space-y-3">
         <CategoricalBar

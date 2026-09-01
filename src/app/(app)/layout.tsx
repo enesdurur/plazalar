@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ROLE_LABELS, canManageUsers } from "@/lib/permissions";
-import { NavLinks } from "@/components/nav-links";
+import { NavLinks, NavLink } from "@/components/nav-links";
 import { LogoutButton } from "@/components/logout-button";
 import { Sidebar } from "@/components/sidebar";
 
@@ -28,14 +28,19 @@ export default async function AppLayout({
             Değiştir
           </Link>
         </div>
-        <NavLinks showUsers={canManageUsers(user?.role)} />
-        <div className="mt-4 border-t border-slate-800 pt-4">
+        <NavLinks />
+        <div className="mt-auto border-t border-slate-800 pt-4">
           {user && (
             <div className="px-2 pb-2">
               <p className="truncate text-sm font-medium text-white">{user.name}</p>
               <p className="text-xs text-slate-400">
                 {ROLE_LABELS[user.role] ?? user.role}
               </p>
+            </div>
+          )}
+          {canManageUsers(user?.role) && (
+            <div className="pb-2">
+              <NavLink href="/users" label="Kullanıcılar" />
             </div>
           )}
           <LogoutButton />

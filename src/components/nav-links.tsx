@@ -16,31 +16,30 @@ const LINKS = [
   // (sayfalar hâlâ mevcut: /calibrations, /verifications)
 ];
 
-const ADMIN_LINKS = [{ href: "/users", label: "Kullanıcılar" }];
-
-export function NavLinks({ showUsers = false }: { showUsers?: boolean }) {
+export function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
-  const links = showUsers ? [...LINKS, ...ADMIN_LINKS] : LINKS;
+  const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
+    <Link
+      href={href}
+      className={`rounded-md px-3 py-2 text-sm font-medium ${
+        active
+          ? "bg-slate-800 text-white"
+          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function NavLinks() {
+  return (
     <nav className="flex flex-col gap-1">
-      {links.map((link) => {
-        const active =
-          link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`rounded-md px-3 py-2 text-sm font-medium ${
-              active
-                ? "bg-slate-800 text-white"
-                : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`}
-          >
-            {link.label}
-          </Link>
-        );
-      })}
+      {LINKS.map((link) => (
+        <NavLink key={link.href} href={link.href} label={link.label} />
+      ))}
     </nav>
   );
 }

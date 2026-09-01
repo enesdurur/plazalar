@@ -38,6 +38,7 @@ export function RecordsTable({
     {
       key: "reportedAt",
       header: "Bildirim Zamanı",
+      width: "170px",
       filterValue: (r) => r.reportedAt.toLocaleString("tr-TR"),
       render: (r) => (
         <span className="whitespace-nowrap text-slate-600">
@@ -48,12 +49,14 @@ export function RecordsTable({
     {
       key: "machine",
       header: "Makine",
+      width: "150px",
       filterValue: (r) => r.machine.name,
       render: (r) => <span className="font-medium text-slate-900">{r.machine.name}</span>,
     },
     {
       key: "operationType",
       header: "Tür",
+      width: "90px",
       filterValue: (r) => OPERATION_LABELS[r.operationType],
       render: (r) => (
         <span
@@ -68,14 +71,16 @@ export function RecordsTable({
     {
       key: "issueType",
       header: "Kategori",
+      width: "150px",
       filterValue: (r) => r.issueType?.name ?? "-",
       render: (r) => <span className="text-slate-600">{r.issueType?.name ?? "-"}</span>,
     },
     {
       key: "description",
       header: "Açıklama",
+      width: "300px",
       render: (r) => (
-        <span className="block max-w-xs truncate text-slate-600" title={r.description}>
+        <span className="block truncate text-slate-600" title={r.description}>
           {r.description}
         </span>
       ),
@@ -83,12 +88,14 @@ export function RecordsTable({
     {
       key: "technician",
       header: "Teknisyen",
+      width: "140px",
       filterValue: (r) => r.technician?.name ?? "-",
       render: (r) => <span className="text-slate-600">{r.technician?.name ?? "-"}</span>,
     },
     {
       key: "mtta",
       header: "MTTA",
+      width: "80px",
       render: (r) => (
         <span className="text-slate-600">{formatMinutes(mtta(r.reportedAt, r.respondedAt))}</span>
       ),
@@ -96,6 +103,7 @@ export function RecordsTable({
     {
       key: "mttr",
       header: "MTTR",
+      width: "80px",
       render: (r) => (
         <span className="text-slate-600">{formatMinutes(mttr(r.respondedAt, r.finishedAt))}</span>
       ),
@@ -103,6 +111,7 @@ export function RecordsTable({
     {
       key: "status",
       header: "Durum",
+      width: "120px",
       filterValue: (r) => (r.finishedAt ? "Tamamlandı" : "Devam Ediyor"),
       render: (r) =>
         r.finishedAt ? (
@@ -124,6 +133,7 @@ export function RecordsTable({
       rowKey={(r) => r.id}
       emptyMessage={emptyMessage}
       maxHeight="50vh"
+      actionsWidth="110px"
       renderActions={(r) => (
         <>
           {writable && (

@@ -15,6 +15,12 @@ export interface DataTableColumn<T> {
   filterValue?: (row: T) => string;
   /** Marks this column as a money column: contributes to the totals footer row. */
   money?: (row: T) => MoneyValue;
+  /**
+   * Fixed column width (e.g. "140px"). If every column provides one, the table renders with
+   * table-layout: fixed and a matching <colgroup> — useful when two separate DataTable
+   * instances (e.g. "devam eden" / "tamamlanan" splits) need their columns to line up.
+   */
+  width?: string;
 }
 
 interface DataTableProps<T> {
@@ -24,6 +30,8 @@ interface DataTableProps<T> {
   emptyMessage: string;
   renderActions?: (row: T) => React.ReactNode;
   maxHeight?: string;
+  /** Width for the actions column (only used when every column has a fixed width). */
+  actionsWidth?: string;
 }
 
 function sumMoney<T>(rows: T[], getMoney: (row: T) => MoneyValue) {
@@ -42,8 +50,10 @@ export function DataTable<T>({
   emptyMessage,
   renderActions,
   maxHeight = "70vh",
+  actionsWidth,
 }: DataTableProps<T>) {
   const [filters, setFilters] = useState<Record<string, Set<string>>>({});
+  const fixedLayout = columns.every((c) => c.width);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const uniqueValues = useMemo(() => {
@@ -95,7 +105,18 @@ export function DataTable<T>({
         className="max-h-[var(--dt-max-h)] overflow-auto rounded-lg border border-slate-200 bg-white"
         style={{ ["--dt-max-h" as string]: maxHeight }}
       >
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <table
+          className="min-w-full divide-y divide-slate-200 text-sm"
+          style={fixedLayout ? { tableLayout: "fixed" } : undefined}
+        >
+          {fixedLayout && (
+            <colgroup>
+              {columns.map((col) => (
+                <col key={col.key} style={{ width: col.width }} />
+              ))}
+              {renderActions && <col style={{ width: actionsWidth ?? "100px" }} />}
+            </colgroup>
+          )}
           <thead className="sticky top-0 z-10 bg-slate-50">
             <tr>
               {columns.map((col) => (

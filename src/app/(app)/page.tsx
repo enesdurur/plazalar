@@ -123,15 +123,9 @@ export default async function DashboardPage() {
   const arizaOngoing = arizaRecords.filter((r) => !r.finishedAt).length;
   const arizaCompleted = arizaRecords.length - arizaOngoing;
 
-  // Bakım Durumu: 3. Firma Bakım Planı + Periyodik (Fenni) Muayene + Kiracı Bakımları'nın
-  // bu yılki yapıldı/yapılmadı/bekliyor toplamı (operationType=BAKIM artık kullanılmıyor,
-  // bakım eski Arıza Kayıtları'ndaki serbest metin türü yerine bu 3 ayrı modülle takip ediliyor).
-  const bakimYapildi = planStats.done + inspectionStats.done + tenantMaintenanceStats.done;
-  const bakimYapilmadi =
-    planStats.missed + inspectionStats.missed + tenantMaintenanceStats.missed;
-  const bakimBekliyor =
-    planStats.pending + inspectionStats.pending + tenantMaintenanceStats.pending;
-  const bakimTotal = bakimYapildi + bakimYapilmadi + bakimBekliyor;
+  // Bakım Durumu: operationType=BAKIM artık kullanılmıyor — bakım, 3 ayrı modülle
+  // (3. Firma Bakım Planı / Periyodik Muayene / Kiracı Bakımları) takip ediliyor, bu yüzden
+  // her biri kendi yapıldı/yapılmadı/bekliyor dağılımıyla ayrı ayrı gösteriliyor.
 
   const mttaValues = records
     .map((r) => mtta(r.reportedAt, r.respondedAt))
@@ -270,32 +264,9 @@ export default async function DashboardPage() {
             <p className="mt-3 text-sm text-slate-500">Henüz arıza kaydı yok.</p>
           )}
 
-          <h2 className="mt-6 text-sm font-semibold text-slate-900">
-            Bakım Durumu ({currentYear})
-          </h2>
-          <div className="mt-4 space-y-3">
-            <CategoricalBar
-              label="Yapıldı"
-              value={bakimYapildi}
-              total={bakimTotal}
-              color="var(--viz-status-good)"
-            />
-            <CategoricalBar
-              label="Yapılmadı"
-              value={bakimYapilmadi}
-              total={bakimTotal}
-              color="var(--viz-status-critical)"
-            />
-            <CategoricalBar
-              label="Bekliyor"
-              value={bakimBekliyor}
-              total={bakimTotal}
-              color="var(--viz-status-warning, #f59e0b)"
-            />
-          </div>
-          {bakimTotal === 0 && (
-            <p className="mt-3 text-sm text-slate-500">Henüz bakım planı yok.</p>
-          )}
+          <MaintenanceStatusBreakdown title="3. Firma Bakım Planı" stats={planStats} />
+          <MaintenanceStatusBreakdown title="Fenni Muayeneler" stats={inspectionStats} />
+          <MaintenanceStatusBreakdown title="Kiracı Bakımları" stats={tenantMaintenanceStats} />
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -445,6 +416,36 @@ function PlanYearDetailCard({
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function MaintenanceStatusBreakdown({ title, stats }: { title: string; stats: PlanYearStats }) {
+  const total = stats.done + stats.missed + stats.pending;
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <div className="mt-3 space-y-3">
+        <CategoricalBar
+          label="Yapıldı"
+          value={stats.done}
+          total={total}
+          color="var(--viz-status-good)"
+        />
+        <CategoricalBar
+          label="Yapılmadı"
+          value={stats.missed}
+          total={total}
+          color="var(--viz-status-critical)"
+        />
+        <CategoricalBar
+          label="Bekliyor"
+          value={stats.pending}
+          total={total}
+          color="var(--viz-status-warning, #f59e0b)"
+        />
+      </div>
+      {total === 0 && <p className="mt-2 text-sm text-slate-500">Henüz planlı kayıt yok.</p>}
     </div>
   );
 }

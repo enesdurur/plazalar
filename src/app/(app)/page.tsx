@@ -115,11 +115,23 @@ export default async function DashboardPage() {
     now
   );
 
-  const arizaCount = records.filter((r) => r.operationType === "ARIZA").length;
-  const bakimCount = records.filter((r) => r.operationType === "BAKIM").length;
-
   const completedRecordCount = records.filter((r) => r.finishedAt).length;
   const ongoingRecordCount = records.length - completedRecordCount;
+
+  // Arıza Durumu: Arıza Kayıtları'ndaki (operationType=ARIZA) devam eden/tamamlanan dağılımı.
+  const arizaRecords = records.filter((r) => r.operationType === "ARIZA");
+  const arizaOngoing = arizaRecords.filter((r) => !r.finishedAt).length;
+  const arizaCompleted = arizaRecords.length - arizaOngoing;
+
+  // Bakım Durumu: 3. Firma Bakım Planı + Periyodik (Fenni) Muayene + Kiracı Bakımları'nın
+  // bu yılki yapıldı/yapılmadı/bekliyor toplamı (operationType=BAKIM artık kullanılmıyor,
+  // bakım eski Arıza Kayıtları'ndaki serbest metin türü yerine bu 3 ayrı modülle takip ediliyor).
+  const bakimYapildi = planStats.done + inspectionStats.done + tenantMaintenanceStats.done;
+  const bakimYapilmadi =
+    planStats.missed + inspectionStats.missed + tenantMaintenanceStats.missed;
+  const bakimBekliyor =
+    planStats.pending + inspectionStats.pending + tenantMaintenanceStats.pending;
+  const bakimTotal = bakimYapildi + bakimYapilmadi + bakimBekliyor;
 
   const mttaValues = records
     .map((r) => mtta(r.reportedAt, r.respondedAt))
@@ -239,21 +251,51 @@ export default async function DashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-slate-900">İşlem Türü Dağılımı</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Arıza Durumu</h2>
           <div className="mt-4 space-y-3">
             <CategoricalBar
-              label="Arıza"
-              value={arizaCount}
-              total={records.length}
-              color="var(--viz-series-fault)"
+              label="Devam Eden"
+              value={arizaOngoing}
+              total={arizaRecords.length}
+              color="var(--viz-status-warning, #f59e0b)"
             />
             <CategoricalBar
-              label="Bakım"
-              value={bakimCount}
-              total={records.length}
-              color="var(--viz-series-maint)"
+              label="Tamamlanan"
+              value={arizaCompleted}
+              total={arizaRecords.length}
+              color="var(--viz-status-good)"
             />
           </div>
+          {arizaRecords.length === 0 && (
+            <p className="mt-3 text-sm text-slate-500">Henüz arıza kaydı yok.</p>
+          )}
+
+          <h2 className="mt-6 text-sm font-semibold text-slate-900">
+            Bakım Durumu ({currentYear})
+          </h2>
+          <div className="mt-4 space-y-3">
+            <CategoricalBar
+              label="Yapıldı"
+              value={bakimYapildi}
+              total={bakimTotal}
+              color="var(--viz-status-good)"
+            />
+            <CategoricalBar
+              label="Yapılmadı"
+              value={bakimYapilmadi}
+              total={bakimTotal}
+              color="var(--viz-status-critical)"
+            />
+            <CategoricalBar
+              label="Bekliyor"
+              value={bakimBekliyor}
+              total={bakimTotal}
+              color="var(--viz-status-warning, #f59e0b)"
+            />
+          </div>
+          {bakimTotal === 0 && (
+            <p className="mt-3 text-sm text-slate-500">Henüz bakım planı yok.</p>
+          )}
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5">

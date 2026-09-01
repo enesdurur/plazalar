@@ -25,7 +25,7 @@ export default async function MaintenanceCostsPage() {
         item: { plazaId: plaza.id },
         OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
       },
-      include: { item: true },
+      include: { item: true, attachments: { select: { kind: true } } },
       orderBy: [{ year: "desc" }, { week: "desc" }],
     }),
     prisma.inspectionPlanWeekEntry.findMany({
@@ -33,7 +33,7 @@ export default async function MaintenanceCostsPage() {
         item: { plazaId: plaza.id },
         OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
       },
-      include: { item: true },
+      include: { item: true, attachments: { select: { kind: true } } },
       orderBy: [{ year: "desc" }, { week: "desc" }],
     }),
   ]);
@@ -52,11 +52,15 @@ export default async function MaintenanceCostsPage() {
     ...e,
     cost: e.cost != null ? Number(e.cost) : null,
     sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+    hasMaintenanceForm: e.attachments.some((a) => a.kind === "MAINTENANCE_FORM"),
+    hasInvoice: e.attachments.some((a) => a.kind === "INVOICE"),
   }));
   const inspectionEntriesSerialized = inspectionEntries.map((e) => ({
     ...e,
     cost: e.cost != null ? Number(e.cost) : null,
     sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+    hasMaintenanceForm: e.attachments.some((a) => a.kind === "MAINTENANCE_FORM"),
+    hasInvoice: e.attachments.some((a) => a.kind === "INVOICE"),
   }));
 
   return (

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { ApprovalControl } from "@/components/approval-control";
+import { AttachmentStatusBadges } from "@/components/attachment-upload";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import { setInspectionWeekEntryApproval } from "../inspections/actions";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
@@ -11,6 +12,8 @@ import type { InspectionPlanWeekEntry, InspectionPlanItem } from "@prisma/client
 type WeekEntryWithItem = Omit<InspectionPlanWeekEntry, "cost" | "sparePartCost"> & {
   cost: number | null;
   sparePartCost: number | null;
+  hasMaintenanceForm: boolean;
+  hasInvoice: boolean;
   item: InspectionPlanItem;
 };
 
@@ -85,6 +88,16 @@ export function InspectionsCostTable({
           canApprove={approver}
           action={approver ? setInspectionWeekEntryApproval.bind(null, e.id) : undefined}
         />
+      ),
+    },
+    {
+      key: "documents",
+      header: "Belgeler",
+      width: "160px",
+      filterValue: (e) =>
+        `Form ${e.hasMaintenanceForm ? "✓" : "✗"} Fatura ${e.hasInvoice ? "✓" : "✗"}`,
+      render: (e) => (
+        <AttachmentStatusBadges hasForm={e.hasMaintenanceForm} hasInvoice={e.hasInvoice} />
       ),
     },
   ];

@@ -13,8 +13,14 @@ enum Role {
   ADMIN
   TECHNICIAN
   STPU
+  TEKNIKER
   MANAGEMENT_DIRECTOR
   VIEWER
+}
+
+enum AttachmentKind {
+  INVOICE
+  MAINTENANCE_FORM
 }
 
 enum OperationType {
@@ -41,8 +47,38 @@ model User {
   approvedRecords           MaintenanceRecord[]        @relation("RecordApprovedBy")
   approvedPlanEntries       MaintenancePlanWeekEntry[] @relation("PlanEntryApprovedBy")
   approvedInspectionEntries InspectionPlanWeekEntry[]  @relation("InspectionEntryApprovedBy")
+  uploadedAttachments       Attachment[]               @relation("AttachmentUploadedBy")
 
   @@map("users")
+}
+
+// Bakım/muayene/arıza kayıtlarına eklenen fatura ve bakım formu dosyaları (PDF/görsel).
+// Vercel Blob'da saklanır, burada sadece metadata + URL tutulur. Bir kayıt/hafta girdisi
+// başına her türden (INVOICE/MAINTENANCE_FORM) en fazla bir aktif dosya olabilir — yeni
+// yükleme eskisinin yerine geçer (bkz. src/lib/attachments/service.ts).
+model Attachment {
+  id           String         @id @default(cuid())
+  kind         AttachmentKind
+  fileName     String
+  fileUrl      String
+  mimeType     String
+  fileSize     Int
+  uploadedById String?
+  uploadedAt   DateTime       @default(now())
+
+  planWeekEntryId       String?
+  inspectionWeekEntryId String?
+  maintenanceRecordId   String?
+
+  planWeekEntry       MaintenancePlanWeekEntry? @relation(fields: [planWeekEntryId], references: [id], onDelete: Cascade)
+  inspectionWeekEntry InspectionPlanWeekEntry?  @relation(fields: [inspectionWeekEntryId], references: [id], onDelete: Cascade)
+  maintenanceRecord   MaintenanceRecord?        @relation(fields: [maintenanceRecordId], references: [id], onDelete: Cascade)
+  uploadedBy          User?                     @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@unique([planWeekEntryId, kind])
+  @@unique([inspectionWeekEntryId, kind])
+  @@unique([maintenanceRecordId, kind])
+  @@map("attachments")
 }
 
 model Plaza {
@@ -239,12 +275,13 @@ model MaintenanceRecord {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  machine    Machine     @relation(fields: [machineId], references: [id])
-  issueType  IssueType?  @relation(fields: [issueTypeId], references: [id])
-  technician Technician? @relation(fields: [technicianId], references: [id])
-  sparePart  SparePart?  @relation(fields: [sparePartId], references: [id])
-  createdBy  User?       @relation("RecordCreatedBy", fields: [createdById], references: [id])
-  approvedBy User?       @relation("RecordApprovedBy", fields: [approvedById], references: [id])
+  machine     Machine      @relation(fields: [machineId], references: [id])
+  issueType   IssueType?   @relation(fields: [issueTypeId], references: [id])
+  technician  Technician?  @relation(fields: [technicianId], references: [id])
+  sparePart   SparePart?   @relation(fields: [sparePartId], references: [id])
+  createdBy   User?        @relation("RecordCreatedBy", fields: [createdById], references: [id])
+  approvedBy  User?        @relation("RecordApprovedBy", fields: [approvedById], references: [id])
+  attachments Attachment[]
 
   @@index([machineId])
   @@index([reportedAt])
@@ -340,8 +377,9 @@ model MaintenancePlanWeekEntry {
   approvedAt            DateTime?
   updatedAt             DateTime  @updatedAt
 
-  item       MaintenancePlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  approvedBy User?               @relation("PlanEntryApprovedBy", fields: [approvedById], references: [id])
+  item        MaintenancePlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  approvedBy  User?               @relation("PlanEntryApprovedBy", fields: [approvedById], references: [id])
+  attachments Attachment[]
 
   @@unique([itemId, year, week])
   @@index([year, week])
@@ -397,8 +435,9 @@ model InspectionPlanWeekEntry {
   approvedAt            DateTime?
   updatedAt             DateTime  @updatedAt
 
-  item       InspectionPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  approvedBy User?              @relation("InspectionEntryApprovedBy", fields: [approvedById], references: [id])
+  item        InspectionPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  approvedBy  User?              @relation("InspectionEntryApprovedBy", fields: [approvedById], references: [id])
+  attachments Attachment[]
 
   @@unique([itemId, year, week])
   @@index([year, week])

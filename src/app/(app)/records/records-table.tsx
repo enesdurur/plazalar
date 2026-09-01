@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteButton } from "@/components/delete-button";
 import { ApprovalControl } from "@/components/approval-control";
+import { AttachmentStatusBadges } from "@/components/attachment-upload";
 import { mtta, mttr, formatMinutes } from "@/lib/kpi";
 import { deleteRecord, setRecordApproval } from "./actions";
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
@@ -19,6 +20,8 @@ type RecordWithRelations = Omit<
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
+  hasMaintenanceForm: boolean;
+  hasInvoice: boolean;
   machine: Machine;
   issueType: IssueType | null;
   technician: Technician | null;
@@ -144,6 +147,21 @@ export function RecordsTable({
             canApprove={approver}
             action={approver ? setRecordApproval.bind(null, r.id) : undefined}
           />
+        ) : (
+          <span className="text-slate-300">-</span>
+        ),
+    },
+    {
+      key: "documents",
+      header: "Belgeler",
+      width: "160px",
+      filterValue: (r) =>
+        r.operationType === "ARIZA"
+          ? `Form ${r.hasMaintenanceForm ? "✓" : "✗"} Fatura ${r.hasInvoice ? "✓" : "✗"}`
+          : "-",
+      render: (r) =>
+        r.operationType === "ARIZA" ? (
+          <AttachmentStatusBadges hasForm={r.hasMaintenanceForm} hasInvoice={r.hasInvoice} />
         ) : (
           <span className="text-slate-300">-</span>
         ),

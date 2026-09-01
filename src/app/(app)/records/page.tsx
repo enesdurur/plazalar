@@ -21,7 +21,12 @@ export default async function RecordsPage() {
 
   const records = await prisma.maintenanceRecord.findMany({
     where: { machine: { plazaId: plaza.id } },
-    include: { machine: true, issueType: true, technician: true },
+    include: {
+      machine: true,
+      issueType: true,
+      technician: true,
+      attachments: { select: { kind: true } },
+    },
     orderBy: { reportedAt: "desc" },
     take: 200,
   });
@@ -31,6 +36,8 @@ export default async function RecordsPage() {
     ...r,
     sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
     sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
+    hasMaintenanceForm: r.attachments.some((a) => a.kind === "MAINTENANCE_FORM"),
+    hasInvoice: r.attachments.some((a) => a.kind === "INVOICE"),
   }));
 
   const ongoing = serialized.filter((r) => !r.finishedAt);

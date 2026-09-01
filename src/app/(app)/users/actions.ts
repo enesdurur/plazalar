@@ -8,7 +8,14 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canManageUsers } from "@/lib/permissions";
 
-const roleSchema = z.enum(["ADMIN", "TECHNICIAN", "STPU", "MANAGEMENT_DIRECTOR", "VIEWER"]);
+const roleSchema = z.enum([
+  "ADMIN",
+  "TECHNICIAN",
+  "STPU",
+  "TEKNIKER",
+  "MANAGEMENT_DIRECTOR",
+  "VIEWER",
+]);
 
 const createSchema = z.object({
   name: z.string().min(1, "Ad Soyad zorunludur"),

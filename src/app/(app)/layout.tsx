@@ -29,7 +29,7 @@ export default async function AppLayout({
           </Link>
         </div>
         <NavLinks showUsers={canManageUsers(user?.role)} />
-        <div className="mt-auto border-t border-slate-800 pt-4 md:mt-auto">
+        <div className="mt-4 border-t border-slate-800 pt-4">
           {user && (
             <div className="px-2 pb-2">
               <p className="truncate text-sm font-medium text-white">{user.name}</p>

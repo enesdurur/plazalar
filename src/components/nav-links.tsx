@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/", label: "Panel" },
   { href: "/budget", label: "Gerçekleşen Bütçe" },
-  { href: "/machines", label: "Makine / Teçhizat" },
-  { href: "/records", label: "Arıza Kayıtları" },
   { href: "/annual-plan", label: "3. Firma Bakım Planı" },
   { href: "/inspections", label: "Periyodik (Fenni) Muayene" },
+  { href: "/records", label: "Arıza Kayıtları" },
+  { href: "/machines", label: "Makine / Teçhizat" },
   { href: "/tenants", label: "Kiracılar" },
   { href: "/tenant-maintenance", label: "Kiracı Bakımları" },
   // Kalibrasyon Planı ve Doğrulama Planı şu anlık menüden gizlendi

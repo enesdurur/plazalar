@@ -77,6 +77,24 @@ export async function saveAttachment({
   });
 }
 
+/** Prisma'dan gelen bir Attachment satırını (uploadedBy dahil) client component'lere
+ * aktarılabilir düz bir nesneye çevirir (Date -> ISO string). */
+export function toAttachmentInfo(
+  a:
+    | { id: string; fileName: string; fileUrl: string; uploadedAt: Date; uploadedBy: { name: string } | null }
+    | null
+    | undefined
+) {
+  if (!a) return null;
+  return {
+    id: a.id,
+    fileName: a.fileName,
+    fileUrl: a.fileUrl,
+    uploadedAt: a.uploadedAt.toISOString(),
+    uploaderName: a.uploadedBy?.name ?? null,
+  };
+}
+
 export async function removeAttachment(attachmentId: string) {
   const existing = await prisma.attachment.findUnique({ where: { id: attachmentId } });
   if (!existing) return;

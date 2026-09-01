@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { ApprovalControl } from "@/components/approval-control";
-import { AttachmentStatusBadges } from "@/components/attachment-upload";
+import { AttachmentQuickPanel, type AttachmentInfo } from "@/components/attachment-upload";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import { setRecordApproval } from "../actions";
+import {
+  setRecordApproval,
+  uploadRecordAttachment,
+  deleteRecordAttachment,
+} from "../actions";
 import type { Machine, SparePart, MaintenanceRecord } from "@prisma/client";
 
 type RecordWithRelations = Omit<
@@ -14,8 +18,8 @@ type RecordWithRelations = Omit<
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
-  hasMaintenanceForm: boolean;
-  hasInvoice: boolean;
+  formAttachment: AttachmentInfo | null;
+  invoiceAttachment: AttachmentInfo | null;
   machine: Machine;
   sparePart: SparePart | null;
 };
@@ -23,9 +27,13 @@ type RecordWithRelations = Omit<
 export function CostsTable({
   records,
   approver,
+  canForm,
+  canInvoice,
 }: {
   records: RecordWithRelations[];
   approver: boolean;
+  canForm: boolean;
+  canInvoice: boolean;
 }) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
     {
@@ -91,9 +99,27 @@ export function CostsTable({
       key: "documents",
       header: "Belgeler",
       filterValue: (r) =>
-        `Form ${r.hasMaintenanceForm ? "✓" : "✗"} Fatura ${r.hasInvoice ? "✓" : "✗"}`,
+        `Form ${r.formAttachment ? "✓" : "✗"} Fatura ${r.invoiceAttachment ? "✓" : "✗"}`,
       render: (r) => (
-        <AttachmentStatusBadges hasForm={r.hasMaintenanceForm} hasInvoice={r.hasInvoice} />
+        <AttachmentQuickPanel
+          title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
+          form={r.formAttachment}
+          invoice={r.invoiceAttachment}
+          canForm={canForm}
+          canInvoice={canInvoice}
+          uploadFormAction={uploadRecordAttachment.bind(null, r.id)}
+          uploadInvoiceAction={uploadRecordAttachment.bind(null, r.id)}
+          deleteFormAction={
+            r.formAttachment
+              ? deleteRecordAttachment.bind(null, r.id, r.formAttachment.id)
+              : undefined
+          }
+          deleteInvoiceAction={
+            r.invoiceAttachment
+              ? deleteRecordAttachment.bind(null, r.id, r.invoiceAttachment.id)
+              : undefined
+          }
+        />
       ),
     },
   ];

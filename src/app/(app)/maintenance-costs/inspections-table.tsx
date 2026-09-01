@@ -3,26 +3,34 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { ApprovalControl } from "@/components/approval-control";
-import { AttachmentStatusBadges } from "@/components/attachment-upload";
+import { AttachmentQuickPanel, type AttachmentInfo } from "@/components/attachment-upload";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import { setInspectionWeekEntryApproval } from "../inspections/actions";
+import {
+  setInspectionWeekEntryApproval,
+  uploadInspectionWeekEntryAttachment,
+  deleteInspectionWeekEntryAttachment,
+} from "../inspections/actions";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { InspectionPlanWeekEntry, InspectionPlanItem } from "@prisma/client";
 
 type WeekEntryWithItem = Omit<InspectionPlanWeekEntry, "cost" | "sparePartCost"> & {
   cost: number | null;
   sparePartCost: number | null;
-  hasMaintenanceForm: boolean;
-  hasInvoice: boolean;
+  formAttachment: AttachmentInfo | null;
+  invoiceAttachment: AttachmentInfo | null;
   item: InspectionPlanItem;
 };
 
 export function InspectionsCostTable({
   entries,
   approver,
+  canForm,
+  canInvoice,
 }: {
   entries: WeekEntryWithItem[];
   approver: boolean;
+  canForm: boolean;
+  canInvoice: boolean;
 }) {
   const columns: DataTableColumn<WeekEntryWithItem>[] = [
     {
@@ -95,9 +103,27 @@ export function InspectionsCostTable({
       header: "Belgeler",
       width: "160px",
       filterValue: (e) =>
-        `Form ${e.hasMaintenanceForm ? "✓" : "✗"} Fatura ${e.hasInvoice ? "✓" : "✗"}`,
+        `Form ${e.formAttachment ? "✓" : "✗"} Fatura ${e.invoiceAttachment ? "✓" : "✗"}`,
       render: (e) => (
-        <AttachmentStatusBadges hasForm={e.hasMaintenanceForm} hasInvoice={e.hasInvoice} />
+        <AttachmentQuickPanel
+          title={`${e.item.label} · ${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`}
+          form={e.formAttachment}
+          invoice={e.invoiceAttachment}
+          canForm={canForm}
+          canInvoice={canInvoice}
+          uploadFormAction={uploadInspectionWeekEntryAttachment.bind(null, e.id)}
+          uploadInvoiceAction={uploadInspectionWeekEntryAttachment.bind(null, e.id)}
+          deleteFormAction={
+            e.formAttachment
+              ? deleteInspectionWeekEntryAttachment.bind(null, e.id, e.formAttachment.id)
+              : undefined
+          }
+          deleteInvoiceAction={
+            e.invoiceAttachment
+              ? deleteInspectionWeekEntryAttachment.bind(null, e.id, e.invoiceAttachment.id)
+              : undefined
+          }
+        />
       ),
     },
   ];

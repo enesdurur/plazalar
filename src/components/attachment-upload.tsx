@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export interface AttachmentInfo {
@@ -26,31 +26,111 @@ function UploadButton({ hasExisting }: { hasExisting: boolean }) {
   );
 }
 
-/** Kompakt "Form ✓ / Fatura ✗" göstergesi — liste/rapor tablolarında hızlı eksik-belge kontrolü için. */
-export function AttachmentStatusBadges({
-  hasForm,
-  hasInvoice,
-}: {
-  hasForm: boolean;
-  hasInvoice: boolean;
-}) {
+function StatusBadge({ label, present }: { label: string; present: boolean }) {
   return (
-    <div className="flex flex-wrap gap-1">
-      <span
-        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
-          hasForm ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}
+    <span
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+        present ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+      }`}
+    >
+      {label} {present ? "✓" : "✗"}
+    </span>
+  );
+}
+
+type AttachmentActionFn = (formData: FormData) => Promise<{ error: string | null }>;
+
+/**
+ * "Form ✓ / Fatura ✗" rozetleri — liste/rapor tablolarında hızlı eksik-belge kontrolü için.
+ * Tıklanınca o kayda ait belgeleri görüntüleyip yükleyebileceğin bir panel açılır; ayrı bir
+ * "Düzenle" sayfasına gitmeye gerek kalmaz.
+ */
+export function AttachmentQuickPanel({
+  title,
+  form,
+  invoice,
+  canForm,
+  canInvoice,
+  uploadFormAction,
+  uploadInvoiceAction,
+  deleteFormAction,
+  deleteInvoiceAction,
+}: {
+  title: string;
+  form: AttachmentInfo | null;
+  invoice: AttachmentInfo | null;
+  canForm: boolean;
+  canInvoice: boolean;
+  uploadFormAction: AttachmentActionFn;
+  uploadInvoiceAction: AttachmentActionFn;
+  deleteFormAction?: AttachmentActionFn;
+  deleteInvoiceAction?: AttachmentActionFn;
+}) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Belgeleri görüntüle / yükle"
+        className="flex flex-wrap gap-1 rounded hover:opacity-80"
       >
-        Form {hasForm ? "✓" : "✗"}
-      </span>
-      <span
-        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
-          hasInvoice ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}
-      >
-        Fatura {hasInvoice ? "✓" : "✗"}
-      </span>
-    </div>
+        <StatusBadge label="Form" present={!!form} />
+        <StatusBadge label="Fatura" present={!!invoice} />
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:hidden"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl rounded-lg bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Kapat"
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <AttachmentUpload
+                label="Bakım Formu"
+                kind="MAINTENANCE_FORM"
+                attachment={form}
+                canManage={canForm}
+                uploadAction={uploadFormAction}
+                deleteAction={deleteFormAction}
+              />
+              <AttachmentUpload
+                label="Fatura"
+                kind="INVOICE"
+                attachment={invoice}
+                canManage={canInvoice}
+                uploadAction={uploadInvoiceAction}
+                deleteAction={deleteInvoiceAction}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -114,11 +194,11 @@ export function AttachmentUpload({
 
       {canManage ? (
         <>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <form
               key={attachment?.id ?? "empty"}
               action={handleUpload}
-              className="flex flex-1 items-center gap-2"
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
             >
               <input type="hidden" name="kind" value={kind} />
               <input
@@ -126,7 +206,7 @@ export function AttachmentUpload({
                 name="file"
                 accept={ACCEPT}
                 required
-                className="block flex-1 text-xs text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-900 file:px-2 file:py-1 file:text-xs file:font-medium file:text-white file:hover:bg-slate-800"
+                className="block min-w-0 flex-1 text-xs text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-900 file:px-2 file:py-1 file:text-xs file:font-medium file:text-white file:hover:bg-slate-800"
               />
               <UploadButton hasExisting={!!attachment} />
             </form>

@@ -114,15 +114,15 @@ export function RecordsTable({
     {
       key: "status",
       header: "Durum",
-      width: "120px",
+      width: "140px",
       filterValue: (r) => (r.finishedAt ? "Tamamlandı" : "Devam Ediyor"),
       render: (r) =>
         r.finishedAt ? (
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+          <span className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
             Tamamlandı
           </span>
         ) : (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+          <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
             Devam Ediyor
           </span>
         ),

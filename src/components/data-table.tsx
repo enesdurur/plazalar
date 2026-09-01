@@ -111,7 +111,11 @@ export function DataTable<T>({
       >
         <table
           className={fixedLayout ? "divide-y divide-slate-200 text-sm" : "min-w-full divide-y divide-slate-200 text-sm"}
-          style={fixedLayout ? { tableLayout: "fixed", width: totalWidth } : undefined}
+          style={
+            fixedLayout
+              ? { tableLayout: "fixed", width: "100%", minWidth: totalWidth }
+              : undefined
+          }
         >
           {fixedLayout && (
             <colgroup>

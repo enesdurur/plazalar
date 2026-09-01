@@ -54,6 +54,10 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   const [filters, setFilters] = useState<Record<string, Set<string>>>({});
   const fixedLayout = columns.every((c) => c.width);
+  const totalWidth = fixedLayout
+    ? columns.reduce((sum, c) => sum + parseFloat(c.width!), 0) +
+      (renderActions ? parseFloat(actionsWidth ?? "100px") : 0)
+    : undefined;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const uniqueValues = useMemo(() => {
@@ -106,8 +110,8 @@ export function DataTable<T>({
         style={{ ["--dt-max-h" as string]: maxHeight }}
       >
         <table
-          className="min-w-full divide-y divide-slate-200 text-sm"
-          style={fixedLayout ? { tableLayout: "fixed" } : undefined}
+          className={fixedLayout ? "divide-y divide-slate-200 text-sm" : "min-w-full divide-y divide-slate-200 text-sm"}
+          style={fixedLayout ? { tableLayout: "fixed", width: totalWidth } : undefined}
         >
           {fixedLayout && (
             <colgroup>

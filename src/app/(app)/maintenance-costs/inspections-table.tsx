@@ -25,12 +25,14 @@ export function InspectionsCostTable({
     {
       key: "item",
       header: "Fenni Muayene Kalemi",
+      width: "260px",
       filterValue: (e) => e.item.label,
       render: (e) => <span className="font-medium text-slate-900">{e.item.label}</span>,
     },
     {
       key: "monthYear",
       header: "Ay / Yıl",
+      width: "170px",
       filterValue: (e) => `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`,
       render: (e) => (
         <span className="whitespace-nowrap text-slate-600">
@@ -41,6 +43,7 @@ export function InspectionsCostTable({
     {
       key: "amount",
       header: "Bakım Maliyeti",
+      width: "150px",
       align: "right",
       money: (e) => (e.cost != null ? { amount: Number(e.cost), currency: e.costCurrency } : null),
       render: (e) =>
@@ -55,6 +58,7 @@ export function InspectionsCostTable({
     {
       key: "sparePart",
       header: "Yedek Parça",
+      width: "220px",
       align: "right",
       money: (e) =>
         e.sparePartCost != null
@@ -73,6 +77,7 @@ export function InspectionsCostTable({
     {
       key: "approved",
       header: "Bütçe Onayı",
+      width: "150px",
       filterValue: (e) => (e.approved ? "Onaylandı" : "Onay Bekliyor"),
       render: (e) => (
         <ApprovalControl
@@ -91,6 +96,7 @@ export function InspectionsCostTable({
       rowKey={(e) => e.id}
       emptyMessage="Henüz maliyetli bir fenni muayene kaydı yok."
       maxHeight="50vh"
+      actionsWidth="90px"
       renderActions={(e) => (
         <Link
           href={`/inspections/entries/${e.id}/edit`}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export interface AttachmentInfo {
@@ -68,6 +69,26 @@ export function AttachmentUpload({
   uploadAction: (formData: FormData) => Promise<void>;
   deleteAction?: (formData: FormData) => Promise<void>;
 }) {
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(formData: FormData) {
+    setError(null);
+    try {
+      await uploadAction(formData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Yükleme başarısız oldu.");
+    }
+  }
+
+  async function handleDelete(formData: FormData) {
+    setError(null);
+    try {
+      await deleteAction!(formData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Silme başarısız oldu.");
+    }
+  }
+
   return (
     <div className="rounded-md border border-slate-200 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -98,33 +119,36 @@ export function AttachmentUpload({
       )}
 
       {canManage ? (
-        <div className="mt-2 flex items-center gap-2">
-          <form
-            key={attachment?.id ?? "empty"}
-            action={uploadAction}
-            className="flex flex-1 items-center gap-2"
-          >
-            <input type="hidden" name="kind" value={kind} />
-            <input
-              type="file"
-              name="file"
-              accept={ACCEPT}
-              required
-              className="block flex-1 text-xs text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-900 file:px-2 file:py-1 file:text-xs file:font-medium file:text-white file:hover:bg-slate-800"
-            />
-            <UploadButton hasExisting={!!attachment} />
-          </form>
-          {attachment && deleteAction && (
-            <form action={deleteAction}>
-              <button
-                type="submit"
-                className="whitespace-nowrap text-xs font-medium text-red-600 hover:underline"
-              >
-                Sil
-              </button>
+        <>
+          <div className="mt-2 flex items-center gap-2">
+            <form
+              key={attachment?.id ?? "empty"}
+              action={handleUpload}
+              className="flex flex-1 items-center gap-2"
+            >
+              <input type="hidden" name="kind" value={kind} />
+              <input
+                type="file"
+                name="file"
+                accept={ACCEPT}
+                required
+                className="block flex-1 text-xs text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-900 file:px-2 file:py-1 file:text-xs file:font-medium file:text-white file:hover:bg-slate-800"
+              />
+              <UploadButton hasExisting={!!attachment} />
             </form>
-          )}
-        </div>
+            {attachment && deleteAction && (
+              <form action={handleDelete}>
+                <button
+                  type="submit"
+                  className="whitespace-nowrap text-xs font-medium text-red-600 hover:underline"
+                >
+                  Sil
+                </button>
+              </form>
+            )}
+          </div>
+          {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+        </>
       ) : (
         <p className="mt-2 text-xs text-slate-400">
           Bu dosyayı yalnızca yetkili roller ekleyebilir/değiştirebilir.

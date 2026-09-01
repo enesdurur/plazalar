@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { canApprove } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
@@ -13,6 +15,8 @@ export const metadata: Metadata = {
 };
 
 export default async function MaintenanceCostsPage() {
+  const session = await auth();
+  const approver = canApprove(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const [planEntries, inspectionEntries] = await Promise.all([
@@ -86,12 +90,12 @@ export default async function MaintenanceCostsPage() {
 
       <h2 className="mt-6 text-sm font-semibold text-slate-900">3. Firma Bakım Planı</h2>
       <div className="mt-3">
-        <PlanEntriesTable entries={planEntriesSerialized} />
+        <PlanEntriesTable entries={planEntriesSerialized} approver={approver} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Periyodik (Fenni) Muayene</h2>
       <div className="mt-3">
-        <InspectionsCostTable entries={inspectionEntriesSerialized} />
+        <InspectionsCostTable entries={inspectionEntriesSerialized} approver={approver} />
       </div>
     </div>
   );

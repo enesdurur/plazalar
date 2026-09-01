@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canDelete } from "@/lib/permissions";
+import { canWrite, canDelete, canApprove } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
@@ -16,6 +16,7 @@ export default async function RecordsPage() {
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
+  const approver = canApprove(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
@@ -68,6 +69,7 @@ export default async function RecordsPage() {
           records={ongoing}
           writable={writable}
           deletable={deletable}
+          approver={approver}
           emptyMessage="Devam eden kayıt yok."
         />
       </div>
@@ -80,6 +82,7 @@ export default async function RecordsPage() {
           records={completed}
           writable={writable}
           deletable={deletable}
+          approver={approver}
           emptyMessage="Tamamlanan kayıt yok."
         />
       </div>

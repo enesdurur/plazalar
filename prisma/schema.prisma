@@ -12,6 +12,8 @@ datasource db {
 enum Role {
   ADMIN
   TECHNICIAN
+  STPU
+  MANAGEMENT_DIRECTOR
   VIEWER
 }
 
@@ -35,7 +37,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  createdRecords MaintenanceRecord[] @relation("RecordCreatedBy")
+  createdRecords            MaintenanceRecord[]        @relation("RecordCreatedBy")
+  approvedRecords           MaintenanceRecord[]        @relation("RecordApprovedBy")
+  approvedPlanEntries       MaintenancePlanWeekEntry[] @relation("PlanEntryApprovedBy")
+  approvedInspectionEntries InspectionPlanWeekEntry[]  @relation("InspectionEntryApprovedBy")
 
   @@map("users")
 }
@@ -223,6 +228,14 @@ model MaintenanceRecord {
    */
   sparePartExchangeRate Decimal?      @db.Decimal(10, 4)
   createdById           String?
+  /**
+   * Arıza kayıtlarındaki yedek parça maliyeti, Yönetim Müdürü onaylamadan Gerçekleşen
+   * Bütçe'ye yansımaz (bkz. src/lib/budget/auto-sync.ts). Maliyet her düzenlendiğinde
+   * yeniden onaya düşer (approved=false'a döner).
+   */
+  approved              Boolean       @default(false)
+  approvedById          String?
+  approvedAt            DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -231,6 +244,7 @@ model MaintenanceRecord {
   technician Technician? @relation(fields: [technicianId], references: [id])
   sparePart  SparePart?  @relation(fields: [sparePartId], references: [id])
   createdBy  User?       @relation("RecordCreatedBy", fields: [createdById], references: [id])
+  approvedBy User?       @relation("RecordApprovedBy", fields: [approvedById], references: [id])
 
   @@index([machineId])
   @@index([reportedAt])
@@ -292,7 +306,7 @@ model MaintenancePlanItem {
 }
 
 model MaintenancePlanWeekEntry {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   itemId                String
   year                  Int
   /**
@@ -302,24 +316,32 @@ model MaintenancePlanWeekEntry {
   // null = boş, true = yapıldı, false = yapılmadı
   completed             Boolean?
   note                  String?
-  cost                  Decimal? @db.Decimal(12, 2)
-  costCurrency          Currency @default(TRY)
+  cost                  Decimal?  @db.Decimal(12, 2)
+  costCurrency          Currency  @default(TRY)
   /**
    * costCurrency TRY değilse, gerçekleşen bütçeye TL karşılığıyla yansıtabilmek için elle
    * girilen kur (1 birim [USD/EUR] = ? TL). TRY girişlerde kullanılmaz.
    */
-  costExchangeRate      Decimal? @db.Decimal(10, 4)
+  costExchangeRate      Decimal?  @db.Decimal(10, 4)
   /**
    * Bu bakımda kullanılan yedek parça varsa: maliyet + not. sparePartCost dolu olduğunda
    * matriste ayrı bir işaret gösterilir.
    */
-  sparePartCost         Decimal? @db.Decimal(12, 2)
-  sparePartCostCurrency Currency @default(TRY)
-  sparePartExchangeRate Decimal? @db.Decimal(10, 4)
+  sparePartCost         Decimal?  @db.Decimal(12, 2)
+  sparePartCostCurrency Currency  @default(TRY)
+  sparePartExchangeRate Decimal?  @db.Decimal(10, 4)
   sparePartNote         String?
-  updatedAt             DateTime @updatedAt
+  /**
+   * Bakım/yedek parça maliyeti, Yönetim Müdürü onaylamadan Gerçekleşen Bütçe'ye yansımaz
+   * (bkz. src/lib/budget/auto-sync.ts). Maliyet her düzenlendiğinde yeniden onaya düşer.
+   */
+  approved              Boolean   @default(false)
+  approvedById          String?
+  approvedAt            DateTime?
+  updatedAt             DateTime  @updatedAt
 
-  item MaintenancePlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item       MaintenancePlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  approvedBy User?               @relation("PlanEntryApprovedBy", fields: [approvedById], references: [id])
 
   @@unique([itemId, year, week])
   @@index([year, week])
@@ -353,22 +375,30 @@ model InspectionPlanItem {
 }
 
 model InspectionPlanWeekEntry {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   itemId                String
   year                  Int
   week                  Int
   completed             Boolean?
   note                  String?
-  cost                  Decimal? @db.Decimal(12, 2)
-  costCurrency          Currency @default(TRY)
-  costExchangeRate      Decimal? @db.Decimal(10, 4)
-  sparePartCost         Decimal? @db.Decimal(12, 2)
-  sparePartCostCurrency Currency @default(TRY)
-  sparePartExchangeRate Decimal? @db.Decimal(10, 4)
+  cost                  Decimal?  @db.Decimal(12, 2)
+  costCurrency          Currency  @default(TRY)
+  costExchangeRate      Decimal?  @db.Decimal(10, 4)
+  sparePartCost         Decimal?  @db.Decimal(12, 2)
+  sparePartCostCurrency Currency  @default(TRY)
+  sparePartExchangeRate Decimal?  @db.Decimal(10, 4)
   sparePartNote         String?
-  updatedAt             DateTime @updatedAt
+  /**
+   * Muayene/yedek parça maliyeti, Yönetim Müdürü onaylamadan Gerçekleşen Bütçe'ye yansımaz
+   * (bkz. src/lib/budget/auto-sync.ts). Maliyet her düzenlendiğinde yeniden onaya düşer.
+   */
+  approved              Boolean   @default(false)
+  approvedById          String?
+  approvedAt            DateTime?
+  updatedAt             DateTime  @updatedAt
 
-  item InspectionPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item       InspectionPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  approvedBy User?              @relation("InspectionEntryApprovedBy", fields: [approvedById], references: [id])
 
   @@unique([itemId, year, week])
   @@index([year, week])

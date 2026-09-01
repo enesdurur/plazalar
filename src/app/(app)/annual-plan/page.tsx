@@ -244,7 +244,18 @@ export default async function AnnualPlanPage({
                         {entry && (
                           <Link
                             href={`/annual-plan/entries/${entry.id}/edit`}
-                            className="mt-0.5 block whitespace-nowrap text-[9px] text-slate-400 hover:text-slate-600 print:hidden"
+                            title={
+                              costLabel
+                                ? entry.approved
+                                  ? "Onaylandı"
+                                  : "Bütçe onayı bekliyor"
+                                : undefined
+                            }
+                            className={`mt-0.5 block whitespace-nowrap text-[9px] hover:text-slate-600 print:hidden ${
+                              costLabel && !entry.approved
+                                ? "font-medium text-amber-500"
+                                : "text-slate-400"
+                            }`}
                           >
                             {costLabel ?? "+"}
                           </Link>
@@ -252,8 +263,12 @@ export default async function AnnualPlanPage({
                         {sparePartLabel && (
                           <Link
                             href={`/annual-plan/entries/${entry!.id}/edit`}
-                            title={`Yedek parça: ${sparePartLabel}`}
-                            className="mt-0.5 block whitespace-nowrap text-[9px] font-medium text-amber-600 hover:text-amber-700 print:hidden"
+                            title={`Yedek parça: ${sparePartLabel}${entry!.approved ? " (onaylandı)" : " (onay bekliyor)"}`}
+                            className={`mt-0.5 block whitespace-nowrap text-[9px] font-medium print:hidden ${
+                              entry!.approved
+                                ? "text-emerald-600 hover:text-emerald-700"
+                                : "text-amber-600 hover:text-amber-700"
+                            }`}
                           >
                             🔧 {sparePartLabel}
                           </Link>

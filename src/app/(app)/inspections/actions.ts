@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canDelete } from "@/lib/permissions";
+import { canWrite, canDelete, canApprove } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 import { monthOfWeek } from "@/lib/plan/weeks";
@@ -178,6 +178,10 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
           ? (rest.sparePartExchangeRate ?? null)
           : null,
       sparePartNote: hasSparePart ? rest.sparePartNote : null,
+      // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
+      approved: false,
+      approvedById: null,
+      approvedAt: null,
     },
   });
 
@@ -189,4 +193,37 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
   revalidatePath("/budget");
   revalidatePath("/budget/entry");
   redirect("/inspections");
+}
+
+export async function setInspectionWeekEntryApproval(id: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user || !canApprove(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+
+  const existing = await prisma.inspectionPlanWeekEntry.findFirst({
+    where: { id, item: { plazaId: plaza.id } },
+  });
+  if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
+
+  const approved = formData.get("approved") === "true";
+
+  await prisma.inspectionPlanWeekEntry.update({
+    where: { id: existing.id },
+    data: {
+      approved,
+      approvedById: approved ? session.user.id : null,
+      approvedAt: approved ? new Date() : null,
+    },
+  });
+
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+
+  revalidatePath("/inspections");
+  revalidatePath("/");
+  revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath(`/inspections/entries/${id}/edit`);
 }

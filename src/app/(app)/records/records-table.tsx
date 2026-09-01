@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteButton } from "@/components/delete-button";
+import { ApprovalControl } from "@/components/approval-control";
 import { mtta, mttr, formatMinutes } from "@/lib/kpi";
-import { deleteRecord } from "./actions";
+import { deleteRecord, setRecordApproval } from "./actions";
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
 
 const OPERATION_LABELS: Record<string, string> = {
@@ -27,11 +28,13 @@ export function RecordsTable({
   records,
   writable,
   deletable,
+  approver,
   emptyMessage,
 }: {
   records: RecordWithRelations[];
   writable: boolean;
   deletable: boolean;
+  approver: boolean;
   emptyMessage: string;
 }) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
@@ -122,6 +125,27 @@ export function RecordsTable({
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
             Devam Ediyor
           </span>
+        ),
+    },
+    {
+      key: "approved",
+      header: "Bütçe Onayı",
+      width: "130px",
+      filterValue: (r) =>
+        r.operationType === "ARIZA" && r.sparePartCost != null
+          ? r.approved
+            ? "Onaylandı"
+            : "Onay Bekliyor"
+          : "-",
+      render: (r) =>
+        r.operationType === "ARIZA" && r.sparePartCost != null ? (
+          <ApprovalControl
+            approved={r.approved}
+            canApprove={approver}
+            action={approver ? setRecordApproval.bind(null, r.id) : undefined}
+          />
+        ) : (
+          <span className="text-slate-300">-</span>
         ),
     },
   ];

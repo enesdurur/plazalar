@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { ApprovalControl } from "@/components/approval-control";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
+import { setPlanWeekEntryApproval } from "../annual-plan/actions";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { MaintenancePlanWeekEntry, MaintenancePlanItem } from "@prisma/client";
 
@@ -12,7 +14,13 @@ type WeekEntryWithItem = Omit<MaintenancePlanWeekEntry, "cost" | "sparePartCost"
   item: MaintenancePlanItem;
 };
 
-export function PlanEntriesTable({ entries }: { entries: WeekEntryWithItem[] }) {
+export function PlanEntriesTable({
+  entries,
+  approver,
+}: {
+  entries: WeekEntryWithItem[];
+  approver: boolean;
+}) {
   const columns: DataTableColumn<WeekEntryWithItem>[] = [
     {
       key: "item",
@@ -61,6 +69,18 @@ export function PlanEntriesTable({ entries }: { entries: WeekEntryWithItem[] }) 
         ) : (
           <span className="text-slate-300">-</span>
         ),
+    },
+    {
+      key: "approved",
+      header: "Bütçe Onayı",
+      filterValue: (e) => (e.approved ? "Onaylandı" : "Onay Bekliyor"),
+      render: (e) => (
+        <ApprovalControl
+          approved={e.approved}
+          canApprove={approver}
+          action={approver ? setPlanWeekEntryApproval.bind(null, e.id) : undefined}
+        />
+      ),
     },
   ];
 

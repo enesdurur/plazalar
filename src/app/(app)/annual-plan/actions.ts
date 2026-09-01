@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite } from "@/lib/permissions";
+import { canWrite, canApprove } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 import { monthOfWeek } from "@/lib/plan/weeks";
@@ -98,6 +98,10 @@ export async function updatePlanWeekEntryCost(id: string, formData: FormData) {
           ? (rest.sparePartExchangeRate ?? null)
           : null,
       sparePartNote: hasSparePart ? rest.sparePartNote : null,
+      // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
+      approved: false,
+      approvedById: null,
+      approvedAt: null,
     },
   });
 
@@ -109,4 +113,37 @@ export async function updatePlanWeekEntryCost(id: string, formData: FormData) {
   revalidatePath("/budget");
   revalidatePath("/budget/entry");
   redirect("/annual-plan");
+}
+
+export async function setPlanWeekEntryApproval(id: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user || !canApprove(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+
+  const existing = await prisma.maintenancePlanWeekEntry.findFirst({
+    where: { id, item: { plazaId: plaza.id } },
+  });
+  if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
+
+  const approved = formData.get("approved") === "true";
+
+  await prisma.maintenancePlanWeekEntry.update({
+    where: { id: existing.id },
+    data: {
+      approved,
+      approvedById: approved ? session.user.id : null,
+      approvedAt: approved ? new Date() : null,
+    },
+  });
+
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "MAINTENANCE_PLAN");
+
+  revalidatePath("/annual-plan");
+  revalidatePath("/");
+  revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath(`/annual-plan/entries/${id}/edit`);
 }

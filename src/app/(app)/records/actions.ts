@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canDelete } from "@/lib/permissions";
+import { canWrite, canDelete, canApprove } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 
@@ -123,7 +123,8 @@ export async function updateRecord(id: string, formData: FormData) {
 
   await prisma.maintenanceRecord.updateMany({
     where: { id, machine: { plazaId: plaza.id } },
-    data,
+    // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
+    data: { ...data, approved: false, approvedById: null, approvedAt: null },
   });
 
   if (previous) await recomputeFaultMonth(plaza.id, previous.reportedAt);
@@ -155,6 +156,38 @@ export async function deleteRecord(id: string) {
   });
 
   if (existing) await recomputeFaultMonth(plaza.id, existing.reportedAt);
+
+  revalidatePath("/records");
+  revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+}
+
+export async function setRecordApproval(id: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user || !canApprove(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+
+  const existing = await prisma.maintenanceRecord.findFirst({
+    where: { id, machine: { plazaId: plaza.id } },
+    select: { reportedAt: true },
+  });
+  if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
+
+  const approved = formData.get("approved") === "true";
+
+  await prisma.maintenanceRecord.updateMany({
+    where: { id, machine: { plazaId: plaza.id } },
+    data: {
+      approved,
+      approvedById: approved ? session.user.id : null,
+      approvedAt: approved ? new Date() : null,
+    },
+  });
+
+  await recomputeFaultMonth(plaza.id, existing.reportedAt);
 
   revalidatePath("/records");
   revalidatePath("/");

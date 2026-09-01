@@ -15,7 +15,7 @@ function toTRY(amount: number, currency: string, exchangeRate: number | null): n
 
 async function sumMaintenancePlan(plazaId: string, year: number, month: number) {
   const entries = await prisma.maintenancePlanWeekEntry.findMany({
-    where: { year, item: { plazaId }, week: { in: weeksOfMonth(month) } },
+    where: { year, item: { plazaId }, week: { in: weeksOfMonth(month) }, approved: true },
     select: {
       cost: true,
       costCurrency: true,
@@ -46,7 +46,7 @@ async function sumMaintenancePlan(plazaId: string, year: number, month: number) 
 
 async function sumInspection(plazaId: string, year: number, month: number) {
   const entries = await prisma.inspectionPlanWeekEntry.findMany({
-    where: { year, item: { plazaId }, week: { in: weeksOfMonth(month) } },
+    where: { year, item: { plazaId }, week: { in: weeksOfMonth(month) }, approved: true },
     select: {
       cost: true,
       costCurrency: true,
@@ -85,6 +85,7 @@ async function sumFaultRecords(plazaId: string, year: number, month: number) {
       operationType: "ARIZA",
       reportedAt: { gte: start, lt: end },
       sparePartCost: { not: null },
+      approved: true,
     },
     select: { sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
   });

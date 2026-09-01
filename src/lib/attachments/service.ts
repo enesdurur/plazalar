@@ -19,6 +19,13 @@ type AttachmentTarget =
   | { maintenanceRecordId: string };
 
 /**
+ * Server Action'lardan dönülen sonuç şekli. Next.js, Server Action'lardan throw edilen
+ * hataların mesajını production'da sansürlüyor ("Server Components render" hatası) —
+ * bu yüzden hataları throw etmek yerine bu tip üzerinden geri döndürüyoruz.
+ */
+export type AttachmentActionResult = { error: string | null };
+
+/**
  * Yeni bir fatura/bakım formu dosyası yükler. Aynı kayıt+tür için zaten bir dosya varsa
  * (Blob + DB satırı) önce onu siler — böylece her zaman en fazla bir aktif dosya kalır.
  */

@@ -9,7 +9,7 @@ import { canWrite, canApprove, canAddAttachmentKind } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 import { monthOfWeek } from "@/lib/plan/weeks";
-import { saveAttachment, removeAttachment } from "@/lib/attachments/service";
+import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
 import type { AttachmentKind } from "@prisma/client";
 
 export async function togglePlanWeekEntry(itemId: string, year: number, week: number) {
@@ -150,49 +150,65 @@ export async function setPlanWeekEntryApproval(id: string, formData: FormData) {
   revalidatePath(`/annual-plan/entries/${id}/edit`);
 }
 
-export async function uploadPlanWeekEntryAttachment(id: string, formData: FormData) {
-  const session = await auth();
-  const kind = formData.get("kind") as AttachmentKind;
-  if (!session?.user || !canAddAttachmentKind(session.user.role, kind)) {
-    throw new Error("Bu işlem için yetkiniz yok.");
+export async function uploadPlanWeekEntryAttachment(
+  id: string,
+  formData: FormData
+): Promise<AttachmentActionResult> {
+  try {
+    const session = await auth();
+    const kind = formData.get("kind") as AttachmentKind;
+    if (!session?.user || !canAddAttachmentKind(session.user.role, kind)) {
+      return { error: "Bu işlem için yetkiniz yok." };
+    }
+    const plaza = await getSelectedPlaza();
+
+    const existing = await prisma.maintenancePlanWeekEntry.findFirst({
+      where: { id, item: { plazaId: plaza.id } },
+    });
+    if (!existing) return { error: "Kayıt bu plazaya ait değil." };
+
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      return { error: "Lütfen bir dosya seçin." };
+    }
+
+    await saveAttachment({
+      kind,
+      file,
+      target: { planWeekEntryId: id },
+      uploaderId: session.user.id,
+    });
+
+    revalidatePath(`/annual-plan/entries/${id}/edit`);
+    revalidatePath("/maintenance-costs");
+    return { error: null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Yükleme başarısız oldu." };
   }
-  const plaza = await getSelectedPlaza();
-
-  const existing = await prisma.maintenancePlanWeekEntry.findFirst({
-    where: { id, item: { plazaId: plaza.id } },
-  });
-  if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Lütfen bir dosya seçin.");
-  }
-
-  await saveAttachment({
-    kind,
-    file,
-    target: { planWeekEntryId: id },
-    uploaderId: session.user.id,
-  });
-
-  revalidatePath(`/annual-plan/entries/${id}/edit`);
-  revalidatePath("/maintenance-costs");
 }
 
-export async function deletePlanWeekEntryAttachment(entryId: string, attachmentId: string) {
-  const session = await auth();
-  const plaza = await getSelectedPlaza();
+export async function deletePlanWeekEntryAttachment(
+  entryId: string,
+  attachmentId: string
+): Promise<AttachmentActionResult> {
+  try {
+    const session = await auth();
+    const plaza = await getSelectedPlaza();
 
-  const attachment = await prisma.attachment.findFirst({
-    where: { id: attachmentId, planWeekEntry: { id: entryId, item: { plazaId: plaza.id } } },
-  });
-  if (!attachment) throw new Error("Belge bulunamadı.");
-  if (!session?.user || !canAddAttachmentKind(session.user.role, attachment.kind)) {
-    throw new Error("Bu işlem için yetkiniz yok.");
+    const attachment = await prisma.attachment.findFirst({
+      where: { id: attachmentId, planWeekEntry: { id: entryId, item: { plazaId: plaza.id } } },
+    });
+    if (!attachment) return { error: "Belge bulunamadı." };
+    if (!session?.user || !canAddAttachmentKind(session.user.role, attachment.kind)) {
+      return { error: "Bu işlem için yetkiniz yok." };
+    }
+
+    await removeAttachment(attachmentId);
+
+    revalidatePath(`/annual-plan/entries/${entryId}/edit`);
+    revalidatePath("/maintenance-costs");
+    return { error: null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Silme başarısız oldu." };
   }
-
-  await removeAttachment(attachmentId);
-
-  revalidatePath(`/annual-plan/entries/${entryId}/edit`);
-  revalidatePath("/maintenance-costs");
 }

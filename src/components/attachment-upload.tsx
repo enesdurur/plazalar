@@ -66,27 +66,21 @@ export function AttachmentUpload({
   kind: "INVOICE" | "MAINTENANCE_FORM";
   attachment: AttachmentInfo | null;
   canManage: boolean;
-  uploadAction: (formData: FormData) => Promise<void>;
-  deleteAction?: (formData: FormData) => Promise<void>;
+  uploadAction: (formData: FormData) => Promise<{ error: string | null }>;
+  deleteAction?: (formData: FormData) => Promise<{ error: string | null }>;
 }) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleUpload(formData: FormData) {
     setError(null);
-    try {
-      await uploadAction(formData);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Yükleme başarısız oldu.");
-    }
+    const result = await uploadAction(formData);
+    if (result.error) setError(result.error);
   }
 
   async function handleDelete(formData: FormData) {
     setError(null);
-    try {
-      await deleteAction!(formData);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Silme başarısız oldu.");
-    }
+    const result = await deleteAction!(formData);
+    if (result.error) setError(result.error);
   }
 
   return (

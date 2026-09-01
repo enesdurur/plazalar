@@ -26,9 +26,11 @@ function CostLines({ totals }: { totals: { TRY: number; USD: number; EUR: number
   );
 }
 
-/** Panel'deki bakım maliyeti kutucuğu: tek bir kart, kendi içinde ikiye bölünmüş — solda
- * bakım (işçilik/sözleşme) maliyeti, sağda 3. Firma Bakım Planı ve Periyodik (Fenni)
- * Muayene'ye girilen yedek parça maliyeti. Her iki yarı da /maintenance-costs'a gider. */
+/** Panel'deki bakım maliyeti kutucuğu: tek bir kart, tek bir tıklama alanı (ikisi de
+ * /maintenance-costs'a gittiği için ayrı ayrı Link olmasının bir anlamı yok — ayrı olunca
+ * fare üzerine gelindiğinde sadece yarısı vurgulanıp bölünmüş gibi hissettiriyordu). İçinde
+ * solda bakım (işçilik/sözleşme) maliyeti, sağda 3. Firma Bakım Planı ve Periyodik (Fenni)
+ * Muayene'ye girilen yedek parça maliyeti gösteriliyor. */
 export function CostBreakdownTile({
   maintenanceTotals,
   sparePartTotals,
@@ -37,16 +39,19 @@ export function CostBreakdownTile({
   sparePartTotals: { TRY: number; USD: number; EUR: number };
 }) {
   return (
-    <div className="grid grid-cols-2 divide-x divide-slate-100 rounded-lg border border-slate-200 bg-white">
-      <Link href="/maintenance-costs" className="p-5 hover:bg-slate-50">
+    <Link
+      href="/maintenance-costs"
+      className="grid grid-cols-2 divide-x divide-slate-100 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+    >
+      <div className="p-5">
         <p className="text-sm font-medium text-slate-500">Bakım Maliyetleri</p>
         <CostLines totals={maintenanceTotals} />
-      </Link>
-      <Link href="/maintenance-costs" className="p-5 hover:bg-slate-50">
+      </div>
+      <div className="p-5">
         <p className="text-sm font-medium text-slate-500">Yedek Parça Maliyetleri</p>
         <CostLines totals={sparePartTotals} />
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }
 

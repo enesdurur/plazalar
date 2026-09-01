@@ -2,15 +2,31 @@
 
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { ApprovalControl } from "@/components/approval-control";
+import { AttachmentStatusBadges } from "@/components/attachment-upload";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
+import { setRecordApproval } from "../actions";
 import type { Machine, SparePart, MaintenanceRecord } from "@prisma/client";
 
-type RecordWithRelations = MaintenanceRecord & {
+type RecordWithRelations = Omit<
+  MaintenanceRecord,
+  "sparePartCost" | "sparePartExchangeRate"
+> & {
+  sparePartCost: number | null;
+  sparePartExchangeRate: number | null;
+  hasMaintenanceForm: boolean;
+  hasInvoice: boolean;
   machine: Machine;
   sparePart: SparePart | null;
 };
 
-export function CostsTable({ records }: { records: RecordWithRelations[] }) {
+export function CostsTable({
+  records,
+  approver,
+}: {
+  records: RecordWithRelations[];
+  approver: boolean;
+}) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
     {
       key: "reportedAt",
@@ -57,6 +73,27 @@ export function CostsTable({ records }: { records: RecordWithRelations[] }) {
         <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
           {formatCostAmount(Number(r.sparePartCost), r.sparePartCostCurrency)}
         </span>
+      ),
+    },
+    {
+      key: "approved",
+      header: "Bütçe Onayı",
+      filterValue: (r) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
+      render: (r) => (
+        <ApprovalControl
+          approved={r.approved}
+          canApprove={approver}
+          action={approver ? setRecordApproval.bind(null, r.id) : undefined}
+        />
+      ),
+    },
+    {
+      key: "documents",
+      header: "Belgeler",
+      filterValue: (r) =>
+        `Form ${r.hasMaintenanceForm ? "✓" : "✗"} Fatura ${r.hasInvoice ? "✓" : "✗"}`,
+      render: (r) => (
+        <AttachmentStatusBadges hasForm={r.hasMaintenanceForm} hasInvoice={r.hasInvoice} />
       ),
     },
   ];

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { canApprove } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
@@ -12,11 +14,17 @@ export const metadata: Metadata = {
 };
 
 export default async function MaintenanceCostsPage() {
+  const session = await auth();
+  const approver = canApprove(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
     where: { machine: { plazaId: plaza.id }, sparePartCost: { not: null } },
-    include: { machine: true, sparePart: true },
+    include: {
+      machine: true,
+      sparePart: true,
+      attachments: { select: { kind: true } },
+    },
     orderBy: { reportedAt: "desc" },
   });
 
@@ -26,6 +34,15 @@ export default async function MaintenanceCostsPage() {
       totals[r.sparePartCostCurrency] += Number(r.sparePartCost);
     }
   }
+
+  // Prisma Decimal alanları Client Component'lere doğrudan aktarılamaz — düz sayıya çeviriyoruz.
+  const recordsWithDocs = records.map((r) => ({
+    ...r,
+    sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
+    sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
+    hasMaintenanceForm: r.attachments.some((a) => a.kind === "MAINTENANCE_FORM"),
+    hasInvoice: r.attachments.some((a) => a.kind === "INVOICE"),
+  }));
 
   return (
     <div>
@@ -48,7 +65,7 @@ export default async function MaintenanceCostsPage() {
       </div>
 
       <div className="mt-6">
-        <CostsTable records={records} />
+        <CostsTable records={recordsWithDocs} approver={approver} />
       </div>
     </div>
   );

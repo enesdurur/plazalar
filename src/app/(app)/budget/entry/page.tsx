@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { canWrite } from "@/lib/permissions";
@@ -95,54 +96,65 @@ export default async function BudgetEntryPage({
         </div>
       )}
 
-      {sections.map((section) => (
-        <SectionMatrix key={section.name} section={section} year={year} />
-      ))}
+      {sections.length > 0 && <BudgetMatrix sections={sections} year={year} />}
     </div>
   );
 }
 
-function SectionMatrix({ section, year }: { section: RawSection; year: number }) {
+// Bölümler (Personel/Yönetim/Diğer Giderler) artık tek bir <table> içinde, birbirinin
+// devamı olan satır grupları olarak render ediliyor — her biri kendi tablosunda/kendi
+// kaydırma alanında ayrı ayrı kaymak yerine, tek bir bütün tablo gibi birlikte kayar.
+function BudgetMatrix({ sections, year }: { sections: RawSection[]; year: number }) {
+  const colCount = MONTHS.length + 1;
   return (
-    <div className="mt-6">
-      <h2 className="text-sm font-semibold text-slate-900">{section.name}</h2>
-      <div className="mt-3 max-h-[60vh] overflow-auto rounded-lg border border-slate-200 bg-white">
-        <table
-          className="divide-y divide-slate-200 text-sm"
-          style={{ tableLayout: "fixed", width: KALEM_W + MONTHS.length * MONTH_W }}
-        >
-          <colgroup>
-            <col style={{ width: KALEM_W }} />
+    <div className="mt-6 max-h-[75vh] overflow-auto rounded-lg border border-slate-200 bg-white">
+      <table
+        className="divide-y divide-slate-200 text-sm"
+        style={{ tableLayout: "fixed", width: KALEM_W + MONTHS.length * MONTH_W }}
+      >
+        <colgroup>
+          <col style={{ width: KALEM_W }} />
+          {MONTHS.map((m) => (
+            <col key={m} style={{ width: MONTH_W }} />
+          ))}
+        </colgroup>
+        <thead className="sticky top-0 z-20 bg-slate-50">
+          <tr>
+            <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left font-medium text-slate-600">
+              Kalem
+            </th>
             {MONTHS.map((m) => (
-              <col key={m} style={{ width: MONTH_W }} />
-            ))}
-          </colgroup>
-          <thead className="sticky top-0 z-20 bg-slate-50">
-            <tr>
-              <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left font-medium text-slate-600">
-                Kalem
+              <th key={m} className="px-2 py-3 text-center font-medium text-slate-600">
+                {m}
               </th>
-              {MONTHS.map((m) => (
-                <th key={m} className="px-2 py-3 text-center font-medium text-slate-600">
-                  {m}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {section.items.map((item) => (
-              <ItemRow key={item.id} item={item} year={year} />
             ))}
-            {section.items.length === 0 && (
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {sections.map((section) => (
+            <Fragment key={section.name}>
               <tr>
-                <td colSpan={13} className="px-4 py-6 text-center text-slate-500">
-                  Bu bölümde henüz kalem yok.
+                <td
+                  colSpan={colCount}
+                  className="sticky left-0 z-10 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-900"
+                >
+                  {section.name}
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              {section.items.map((item) => (
+                <ItemRow key={item.id} item={item} year={year} />
+              ))}
+              {section.items.length === 0 && (
+                <tr>
+                  <td colSpan={colCount} className="px-4 py-6 text-center text-slate-500">
+                    Bu bölümde henüz kalem yok.
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

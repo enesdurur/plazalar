@@ -1,3 +1,6 @@
+import Link from "next/link";
+import type { PlanYearStats } from "@/lib/plan/stats";
+
 export interface FloorBarSegment {
   startPct: number;
   endPct: number;
@@ -15,6 +18,8 @@ export interface BuildingFloorRow {
   /** null = bu satırın bar hücresi bir önceki satırın rowSpan'ı ile kaplı, render edilmez. */
   segments: FloorBarSegment[] | null;
   barRowSpan?: number;
+  /** null = bu kat gerçek bir kiracı kaydı değil (ör. bodrum), bakım takibi yok. */
+  maintenanceStatus: PlanYearStats | null;
 }
 
 const COLOR_HEX: Record<"orange" | "green", string> = {
@@ -80,7 +85,19 @@ export function TenantBuildingView({
                   {r.companyName}
                 </td>
               )}
-              <td className="border-b border-r border-black px-3 py-1" />
+              <td className="whitespace-nowrap border-b border-r border-black px-2 py-1 text-center">
+                {r.maintenanceStatus && r.maintenanceStatus.totalScheduled > 0 ? (
+                  <Link
+                    href="/tenant-maintenance"
+                    title="Kiracı Bakımları sayfasına git"
+                    className="inline-flex gap-1 text-xs font-bold hover:opacity-80"
+                  >
+                    <span className="text-green-700">✓{r.maintenanceStatus.done}</span>
+                    <span className="text-red-700">✕{r.maintenanceStatus.missed}</span>
+                    <span className="text-amber-600">●{r.maintenanceStatus.pending}</span>
+                  </Link>
+                ) : null}
+              </td>
               {r.segments !== null && (
                 <td rowSpan={r.barRowSpan ?? 1} className="relative p-0" style={{ height: 26 }}>
                   <div className="relative h-full w-full">

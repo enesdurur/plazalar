@@ -5,6 +5,7 @@ import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
+import { computePlanYearStats, type PlanYearStats } from "@/lib/plan/stats";
 import { TenantsTable } from "./tenants-table";
 import type { Metadata } from "next";
 
@@ -17,12 +18,45 @@ export default async function TenantsPage() {
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
   const plaza = await getSelectedPlaza();
+  const year = new Date().getFullYear();
 
-  const tenants = await prisma.tenant.findMany({
-    where: { plazaId: plaza.id },
-    include: { _count: { select: { maintenances: true } } },
-    orderBy: { sortOrder: "asc" },
-  });
+  const [tenants, maintenanceItems, maintenanceEntries] = await Promise.all([
+    prisma.tenant.findMany({
+      where: { plazaId: plaza.id },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.tenantMaintenanceItem.findMany({
+      where: { tenant: { plazaId: plaza.id } },
+      select: { id: true, tenantId: true, label: true, scheduledWeeks: true },
+    }),
+    prisma.tenantMaintenanceWeekEntry.findMany({
+      where: { year, item: { tenant: { plazaId: plaza.id } } },
+      select: { itemId: true, week: true, completed: true },
+    }),
+  ]);
+
+  const itemsByTenant = new Map<string, typeof maintenanceItems>();
+  for (const item of maintenanceItems) {
+    const list = itemsByTenant.get(item.tenantId) ?? [];
+    list.push(item);
+    itemsByTenant.set(item.tenantId, list);
+  }
+  const entriesByItemId = new Map<string, typeof maintenanceEntries>();
+  for (const entry of maintenanceEntries) {
+    const list = entriesByItemId.get(entry.itemId) ?? [];
+    list.push(entry);
+    entriesByItemId.set(entry.itemId, list);
+  }
+
+  const maintenanceStatsByTenant = new Map<string, PlanYearStats>();
+  for (const tenant of tenants) {
+    const items = itemsByTenant.get(tenant.id) ?? [];
+    const entries = items.flatMap((i) => entriesByItemId.get(i.id) ?? []);
+    maintenanceStatsByTenant.set(
+      tenant.id,
+      computePlanYearStats(items, entries, year, undefined, "done")
+    );
+  }
 
   const nextSortOrder = tenants.length
     ? Math.max(...tenants.map((t) => t.sortOrder)) + 1
@@ -50,7 +84,13 @@ export default async function TenantsPage() {
       </div>
 
       <div className="mt-6">
-        <TenantsTable tenants={tenants} writable={writable} deletable={deletable} />
+        <TenantsTable
+          tenants={tenants}
+          maintenanceStatsByTenant={maintenanceStatsByTenant}
+          maintenanceYear={year}
+          writable={writable}
+          deletable={deletable}
+        />
       </div>
     </div>
   );

@@ -138,15 +138,20 @@ async function main() {
   let adminId = "";
   for (const u of users) {
     const passwordHash = await bcrypt.hash(u.password, 10);
+    // Kullanıcılar sekmesi (isPlatformAdmin) sadece organizasyonun asıl sahibinde olsun —
+    // ADMIN rolü verilen diğer kişiler (ör. bir müdür yardımcısı) yazma/onay yetkisi alır
+    // ama kullanıcı yönetimini göremez.
+    const isPlatformAdmin = u.email === "admin@plazalar.com";
     const created = await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
+      update: { isPlatformAdmin },
       create: {
         name: u.name,
         email: u.email,
         passwordHash,
         role: u.role,
         organizationId: organization.id,
+        isPlatformAdmin,
       },
     });
     if (u.role === "ADMIN") adminId = created.id;

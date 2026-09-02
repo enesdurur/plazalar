@@ -33,7 +33,7 @@ const updateSchema = z.object({
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || !canManageUsers(session.user.role)) {
+  if (!session?.user || !canManageUsers(session.user)) {
     throw new Error("Bu işlem için yetkiniz yok.");
   }
   return session;

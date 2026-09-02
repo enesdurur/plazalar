@@ -16,7 +16,7 @@ export default async function EditUserPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  if (!session?.user || !canManageUsers(session.user.role)) {
+  if (!session?.user || !canManageUsers(session.user)) {
     redirect("/");
   }
 

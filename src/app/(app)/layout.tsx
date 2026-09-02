@@ -38,7 +38,7 @@ export default async function AppLayout({
               </p>
             </div>
           )}
-          {canManageUsers(user?.role) && (
+          {canManageUsers(user) && (
             <div className="pb-2">
               <NavLink href="/users" label="Kullanıcılar" />
             </div>

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function UsersPage() {
   const session = await auth();
-  if (!session?.user || !canManageUsers(session.user.role)) {
+  if (!session?.user || !canManageUsers(session.user)) {
     redirect("/");
   }
 

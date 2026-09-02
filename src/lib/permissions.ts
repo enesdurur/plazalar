@@ -4,7 +4,7 @@ import type { Role } from "@prisma/client";
 // records & machines. Only ADMIN or MANAGEMENT_DIRECTOR can approve maliyet girişleri so they
 // flow into Gerçekleşen Bütçe. TECHNICIAN uploads the bakım formu, STPU uploads the fatura;
 // TEKNIKER can upload both (and is expected to catch/follow up on missing ones). Only ADMIN
-// can delete or manage users.
+// can delete.
 export function canWrite(role: Role | undefined) {
   return (
     role === "ADMIN" ||
@@ -34,8 +34,13 @@ export function canDelete(role: Role | undefined) {
   return role === "ADMIN";
 }
 
-export function canManageUsers(role: Role | undefined) {
-  return role === "ADMIN";
+// "Yönetici" (ADMIN) rolü, o organizasyonun birden çok kişisine atanabilir (ör. bir müdür
+// yardımcısı) — bunların hepsi Kullanıcılar sekmesini görüp yönetebilirse yönetim kimin
+// hesap açıp kapatabileceğini kontrol edemez. Bu yüzden Kullanıcılar sekmesi role="ADMIN"
+// yerine ayrı bir isPlatformAdmin bayrağına bağlı: bunu sadece organizasyonun gerçek
+// sahibi/baş yöneticisi taşır, veritabanında elle işaretlenir.
+export function canManageUsers(user: { isPlatformAdmin?: boolean } | undefined) {
+  return !!user?.isPlatformAdmin;
 }
 
 export const ROLE_LABELS: Record<Role, string> = {

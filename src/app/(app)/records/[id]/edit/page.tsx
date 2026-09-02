@@ -22,6 +22,7 @@ export default async function EditRecordPage({
   const canInvoice = canAddInvoice(session?.user.role);
   const canForm = canAddMaintenanceForm(session?.user.role);
   const plaza = await getSelectedPlaza();
+  const organizationId = session!.user.organizationId;
 
   const [record, machines, issueTypes, technicians, spareParts] = await Promise.all([
     prisma.maintenanceRecord.findFirst({
@@ -29,9 +30,13 @@ export default async function EditRecordPage({
       include: { attachments: { include: { uploadedBy: true } } },
     }),
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
-    prisma.issueType.findMany({ orderBy: { name: "asc" } }),
-    prisma.technician.findMany({ orderBy: { name: "asc" } }),
-    prisma.sparePart.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.issueType.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
+    prisma.technician.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
+    prisma.sparePart.findMany({
+      where: { organizationId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   if (!record) notFound();

@@ -2,8 +2,6 @@ import { PrismaClient, OperationType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import rawRecords from "./seed-data/veri-tablosu.json";
 import rawPeriodicInspections from "./seed-data/periyodik-muayene.json";
-import rawCalibrations from "./seed-data/kalibrasyon.json";
-import rawVerifications from "./seed-data/dogrulama.json";
 import { LINK_PLAZA_BUDGET_2026 } from "../src/lib/budget/link-plaza-2026";
 import type { BudgetLineItem } from "../src/lib/budget/link-plaza-2026";
 import {
@@ -16,6 +14,8 @@ import {
 } from "../src/lib/plan/tenant-maintenance-types";
 
 const prisma = new PrismaClient();
+
+const DEFAULT_ORGANIZATION_ID = "default-organization";
 
 const PLAZAS = [
   "Square Plaza",
@@ -71,44 +71,23 @@ type RawPeriodicInspection = {
   "Sorumlu Kişinin Adı-Soyadı ve Unvanı": string | null;
 };
 
-type RawCalibration = {
-  "ÖLÇÜM ALETİ KODU": string | number | null;
-  "Cihaz Adı": string;
-  Marka: string | null;
-  Model: string | null;
-  "Seri No": string | number | null;
-  "Kalibrasyon Firması": string | null;
-  "Sertifika No": string | null;
-  "Ölçüm Aralığı": string | number | null;
-  Hassasiyet: string | number | null;
-  "Son Kalibrasyon Tarihi": string | null;
-  "Bir Sonraki Kalibrasyon Tarihi": string | null;
-  "Bulunduğu Yer/Bölüm": string | null;
-  "Sorumlu Kişinin Adı-Soyadı ve Unvanı": string | null;
-};
-
-type RawVerification = {
-  "Cihaz Adı": string;
-  "Seri No": string | number | null;
-  "Kullanım Yeri": string | null;
-  "Teslim Alan": string | null;
-  "DOĞRULAMA PERİYODU": string | null;
-  "REFERANS SERTİFİKA NO": string | null;
-  "Ölçüm Aralığı ": string | number | null;
-  Sonuç: string | null;
-  "DOĞRULAMA TARİHİ": string | null;
-  "GELECEK DOĞRULAMA TARİHİ": string | null;
-};
-
 async function main() {
+  console.log("Seeding organization...");
+
+  const organization = await prisma.organization.upsert({
+    where: { id: DEFAULT_ORGANIZATION_ID },
+    update: {},
+    create: { id: DEFAULT_ORGANIZATION_ID, name: "Plazalar Teknik Hizmetler" },
+  });
+
   console.log("Seeding plazas...");
 
   const plazas = new Map<string, string>();
   for (const name of PLAZAS) {
     const plaza = await prisma.plaza.upsert({
-      where: { name },
+      where: { organizationId_name: { organizationId: organization.id, name } },
       update: {},
-      create: { name },
+      create: { name, organizationId: organization.id },
     });
     plazas.set(name, plaza.id);
   }
@@ -121,9 +100,9 @@ async function main() {
   const issueTypes = new Map<string, string>();
   for (const name of ISSUE_TYPES) {
     const issueType = await prisma.issueType.upsert({
-      where: { name },
+      where: { organizationId_name: { organizationId: organization.id, name } },
       update: {},
-      create: { name },
+      create: { name, organizationId: organization.id },
     });
     issueTypes.set(name, issueType.id);
   }
@@ -131,18 +110,18 @@ async function main() {
   const technicians = new Map<string, string>();
   for (const name of TECHNICIANS) {
     const technician = await prisma.technician.upsert({
-      where: { name },
+      where: { organizationId_name: { organizationId: organization.id, name } },
       update: {},
-      create: { name },
+      create: { name, organizationId: organization.id },
     });
     technicians.set(name, technician.id);
   }
 
   for (const part of SPARE_PARTS) {
     await prisma.sparePart.upsert({
-      where: { name: part.name },
+      where: { organizationId_name: { organizationId: organization.id, name: part.name } },
       update: { defaultCost: part.defaultCost },
-      create: { name: part.name, defaultCost: part.defaultCost },
+      create: { name: part.name, defaultCost: part.defaultCost, organizationId: organization.id },
     });
   }
 
@@ -160,7 +139,13 @@ async function main() {
     const created = await prisma.user.upsert({
       where: { email: u.email },
       update: {},
-      create: { name: u.name, email: u.email, passwordHash, role: u.role },
+      create: {
+        name: u.name,
+        email: u.email,
+        passwordHash,
+        role: u.role,
+        organizationId: organization.id,
+      },
     });
     if (u.role === "ADMIN") adminId = created.id;
   }
@@ -228,57 +213,6 @@ async function main() {
           : undefined,
         location: r["Bulunduğu Yer/Bölüm"] ?? undefined,
         responsiblePerson: r["Sorumlu Kişinin Adı-Soyadı ve Unvanı"] ?? undefined,
-      },
-    });
-  }
-
-  console.log("Seeding calibrations...");
-
-  const calibrations = rawCalibrations as RawCalibration[];
-  for (const r of calibrations) {
-    await prisma.calibration.create({
-      data: {
-        code: r["ÖLÇÜM ALETİ KODU"] != null ? String(r["ÖLÇÜM ALETİ KODU"]) : undefined,
-        deviceName: r["Cihaz Adı"],
-        brand: r["Marka"] ?? undefined,
-        model: r["Model"] ?? undefined,
-        serialNo: r["Seri No"] != null ? String(r["Seri No"]) : undefined,
-        calibrationCompany: r["Kalibrasyon Firması"] ?? undefined,
-        certificateNo: r["Sertifika No"] ?? undefined,
-        measurementRange:
-          r["Ölçüm Aralığı"] != null ? String(r["Ölçüm Aralığı"]) : undefined,
-        precision: r["Hassasiyet"] != null ? String(r["Hassasiyet"]) : undefined,
-        lastCalibrationDate: r["Son Kalibrasyon Tarihi"]
-          ? new Date(r["Son Kalibrasyon Tarihi"])
-          : undefined,
-        nextCalibrationDate: r["Bir Sonraki Kalibrasyon Tarihi"]
-          ? new Date(r["Bir Sonraki Kalibrasyon Tarihi"])
-          : undefined,
-        location: r["Bulunduğu Yer/Bölüm"] ?? undefined,
-        responsiblePerson: r["Sorumlu Kişinin Adı-Soyadı ve Unvanı"] ?? undefined,
-      },
-    });
-  }
-
-  console.log("Seeding verifications...");
-
-  const verifications = rawVerifications as RawVerification[];
-  for (const r of verifications) {
-    await prisma.verification.create({
-      data: {
-        deviceName: r["Cihaz Adı"],
-        deviceSerialNo: r["Seri No"] != null ? String(r["Seri No"]) : undefined,
-        usageLocation: r["Kullanım Yeri"] ?? undefined,
-        receivedBy: r["Teslim Alan"] ?? undefined,
-        verificationPeriod: r["DOĞRULAMA PERİYODU"] ?? undefined,
-        referenceCertificateNo: r["REFERANS SERTİFİKA NO"] ?? undefined,
-        measurementRange:
-          r["Ölçüm Aralığı "] != null ? String(r["Ölçüm Aralığı "]) : undefined,
-        result: r["Sonuç"] ?? undefined,
-        verificationDate: r["DOĞRULAMA TARİHİ"] ? new Date(r["DOĞRULAMA TARİHİ"]) : undefined,
-        nextVerificationDate: r["GELECEK DOĞRULAMA TARİHİ"]
-          ? new Date(r["GELECEK DOĞRULAMA TARİHİ"])
-          : undefined,
       },
     });
   }

@@ -40,7 +40,7 @@ async function requireAdmin() {
 }
 
 export async function createUser(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const data = createSchema.parse({
     name: formData.get("name"),
@@ -54,7 +54,13 @@ export async function createUser(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(data.password, 10);
   await prisma.user.create({
-    data: { name: data.name, email: data.email, passwordHash, role: data.role },
+    data: {
+      name: data.name,
+      email: data.email,
+      passwordHash,
+      role: data.role,
+      organizationId: session.user.organizationId,
+    },
   });
 
   revalidatePath("/users");
@@ -78,8 +84,8 @@ export async function updateUser(id: string, formData: FormData) {
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing && existing.id !== id) throw new Error("Bu e-posta adresi zaten kullanılıyor.");
 
-  await prisma.user.update({
-    where: { id },
+  const { count } = await prisma.user.updateMany({
+    where: { id, organizationId: session.user.organizationId },
     data: {
       name: data.name,
       email: data.email,
@@ -87,6 +93,7 @@ export async function updateUser(id: string, formData: FormData) {
       ...(data.password ? { passwordHash: await bcrypt.hash(data.password, 10) } : {}),
     },
   });
+  if (count === 0) throw new Error("Kullanıcı bulunamadı.");
 
   revalidatePath("/users");
   redirect("/users");
@@ -99,12 +106,20 @@ export async function deleteUser(id: string) {
     throw new Error("Kendi hesabınızı silemezsiniz.");
   }
 
-  const target = await prisma.user.findUnique({ where: { id } });
-  if (target?.role === "ADMIN") {
-    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+  const target = await prisma.user.findFirst({
+    where: { id, organizationId: session.user.organizationId },
+  });
+  if (!target) throw new Error("Kullanıcı bulunamadı.");
+
+  if (target.role === "ADMIN") {
+    const adminCount = await prisma.user.count({
+      where: { role: "ADMIN", organizationId: session.user.organizationId },
+    });
     if (adminCount <= 1) throw new Error("Son yönetici hesabı silinemez.");
   }
 
-  await prisma.user.delete({ where: { id } });
+  await prisma.user.deleteMany({
+    where: { id, organizationId: session.user.organizationId },
+  });
   revalidatePath("/users");
 }

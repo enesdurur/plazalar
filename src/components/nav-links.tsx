@@ -12,8 +12,6 @@ const LINKS = [
   { href: "/machines", label: "Makine / Teçhizat" },
   { href: "/tenants", label: "Kiracılar" },
   { href: "/tenant-maintenance", label: "Kiracı Bakımları" },
-  // Kalibrasyon Planı ve Doğrulama Planı şu anlık menüden gizlendi
-  // (sayfalar hâlâ mevcut: /calibrations, /verifications)
 ];
 
 export function NavLink({ href, label }: { href: string; label: string }) {

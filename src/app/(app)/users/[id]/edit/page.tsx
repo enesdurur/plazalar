@@ -21,7 +21,9 @@ export default async function EditUserPage({
   }
 
   const { id } = await params;
-  const user = await prisma.user.findUnique({ where: { id } });
+  const user = await prisma.user.findFirst({
+    where: { id, organizationId: session.user.organizationId },
+  });
 
   if (!user) notFound();
 

@@ -16,7 +16,10 @@ export default async function UsersPage() {
     redirect("/");
   }
 
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+  const users = await prisma.user.findMany({
+    where: { organizationId: session.user.organizationId },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div>

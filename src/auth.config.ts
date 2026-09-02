@@ -16,17 +16,31 @@ export const authConfig = {
   providers: [Credentials({ credentials: { email: {}, password: {} } })],
   callbacks: {
     jwt: ({ token, user }) => {
-      const t = token as typeof token & { id?: string; role?: Role };
+      const t = token as typeof token & {
+        id?: string;
+        role?: Role;
+        organizationId?: string;
+        isPlatformAdmin?: boolean;
+      };
       if (user) {
         t.id = user.id;
         t.role = user.role;
+        t.organizationId = user.organizationId;
+        t.isPlatformAdmin = user.isPlatformAdmin;
       }
       return t;
     },
     session: ({ session, token }) => {
-      const t = token as typeof token & { id: string; role: Role };
+      const t = token as typeof token & {
+        id: string;
+        role: Role;
+        organizationId?: string;
+        isPlatformAdmin?: boolean;
+      };
       session.user.id = t.id;
       session.user.role = t.role;
+      session.user.organizationId = t.organizationId ?? "";
+      session.user.isPlatformAdmin = t.isPlatformAdmin ?? false;
       return session;
     },
   },

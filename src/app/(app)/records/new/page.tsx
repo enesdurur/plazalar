@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../record-form";
 import { createRecord } from "../actions";
@@ -9,12 +10,18 @@ export const metadata: Metadata = {
 };
 
 export default async function NewRecordPage() {
+  const session = await auth();
   const plaza = await getSelectedPlaza();
+  const organizationId = session!.user.organizationId;
   const [machines, issueTypes, technicians, spareParts] = await Promise.all([
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
-    prisma.issueType.findMany({ orderBy: { name: "asc" } }),
-    prisma.technician.findMany({ orderBy: { name: "asc" } }),
-    prisma.sparePart.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.issueType.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
+    prisma.technician.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
+    prisma.sparePart.findMany({
+      where: { organizationId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (

@@ -34,14 +34,36 @@ enum Currency {
   EUR
 }
 
+// Bir müşteri firma (kiracı sınırı). v1'de her User/Plaza tek bir Organization'a bağlı,
+// çoklu üyelik yok. isPlatformAdmin bu fazda salt veri bayrağı — hiçbir yerde org filtresini
+// bypass etmiyor (platform-admin arayüzü ileriki bir faz).
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String?  @unique
+  createdAt DateTime @default(now())
+
+  users       User[]
+  plazas      Plaza[]
+  issueTypes  IssueType[]
+  technicians Technician[]
+  spareParts  SparePart[]
+
+  @@map("organizations")
+}
+
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(VIEWER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  passwordHash    String
+  role            Role     @default(VIEWER)
+  organizationId  String
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
 
   createdRecords            MaintenanceRecord[]        @relation("RecordCreatedBy")
   approvedRecords           MaintenanceRecord[]        @relation("RecordApprovedBy")
@@ -49,6 +71,7 @@ model User {
   approvedInspectionEntries InspectionPlanWeekEntry[]  @relation("InspectionEntryApprovedBy")
   uploadedAttachments       Attachment[]               @relation("AttachmentUploadedBy")
 
+  @@index([organizationId])
   @@map("users")
 }
 
@@ -82,9 +105,12 @@ model Attachment {
 }
 
 model Plaza {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
 
   machines             Machine[]
   periodicInspections  PeriodicInspection[]
@@ -93,6 +119,8 @@ model Plaza {
   maintenancePlanItems MaintenancePlanItem[]
   inspectionPlanItems  InspectionPlanItem[]
 
+  @@unique([organizationId, name])
+  @@index([organizationId])
   @@map("plazas")
 }
 
@@ -216,30 +244,42 @@ model MaintenancePlanEntry {
 }
 
 model IssueType {
-  id   String @id @default(cuid())
-  name String @unique
+  id             String @id @default(cuid())
+  name           String
+  organizationId String
 
-  records MaintenanceRecord[]
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  records      MaintenanceRecord[]
 
+  @@unique([organizationId, name])
+  @@index([organizationId])
   @@map("issue_types")
 }
 
 model Technician {
-  id   String @id @default(cuid())
-  name String @unique
+  id             String @id @default(cuid())
+  name           String
+  organizationId String
 
-  records MaintenanceRecord[]
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  records      MaintenanceRecord[]
 
+  @@unique([organizationId, name])
+  @@index([organizationId])
   @@map("technicians")
 }
 
 model SparePart {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  defaultCost Decimal? @db.Decimal(12, 2)
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  defaultCost    Decimal? @db.Decimal(12, 2)
 
-  records MaintenanceRecord[]
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  records      MaintenanceRecord[]
 
+  @@unique([organizationId, name])
+  @@index([organizationId])
   @@map("spare_parts")
 }
 
@@ -442,47 +482,6 @@ model InspectionPlanWeekEntry {
   @@unique([itemId, year, week])
   @@index([year, week])
   @@map("inspection_plan_week_entries")
-}
-
-model Calibration {
-  id                  String    @id @default(cuid())
-  code                String?
-  deviceName          String
-  brand               String?
-  model               String?
-  serialNo            String?
-  calibrationCompany  String?
-  certificateNo       String?
-  measurementRange    String?
-  precision           String?
-  lastCalibrationDate DateTime?
-  nextCalibrationDate DateTime?
-  location            String?
-  responsiblePerson   String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  @@index([nextCalibrationDate])
-  @@map("calibrations")
-}
-
-model Verification {
-  id                     String    @id @default(cuid())
-  deviceName             String
-  deviceSerialNo         String?
-  usageLocation          String?
-  receivedBy             String?
-  verificationPeriod     String?
-  referenceCertificateNo String?
-  measurementRange       String?
-  result                 String?
-  verificationDate       DateTime?
-  nextVerificationDate   DateTime?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-
-  @@index([nextVerificationDate])
-  @@map("verifications")
 }
 
 // Gerçekleşen Bütçe: bölüm (A- Personel Giderleri, Yönetim Giderleri, Diğer Giderler gibi)

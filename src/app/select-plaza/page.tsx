@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { selectPlaza } from "./actions";
 import type { Metadata } from "next";
@@ -9,7 +11,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SelectPlazaPage() {
-  const plazas = await prisma.plaza.findMany({ orderBy: { name: "asc" } });
+  const session = await auth();
+  if (!session?.user?.organizationId) redirect("/login");
+
+  const plazas = await prisma.plaza.findMany({
+    where: { organizationId: session.user.organizationId },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">

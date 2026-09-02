@@ -35,10 +35,9 @@ export function TenantBuildingView({
 }) {
   return (
     <div className="overflow-x-auto border-2 border-black bg-white">
-      <div className="border-b-2 border-black py-4 text-center">
+      <div className="border-b-2 border-black py-6 text-center">
         <h2 className="text-2xl font-bold text-slate-900">{plazaName}</h2>
       </div>
-      <div className="h-6" />
       <table
         className="w-full min-w-[900px] border-collapse text-sm"
         style={{ tableLayout: "fixed" }}
@@ -69,19 +68,19 @@ export function TenantBuildingView({
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.key} className="border-b border-black">
-              <td className="overflow-visible whitespace-nowrap border-r border-black px-3 py-1 text-center font-bold text-slate-900">
+            <tr key={r.key}>
+              <td className="overflow-visible whitespace-nowrap border-b border-r border-black px-3 py-1 text-center font-bold text-slate-900">
                 {r.floor}
               </td>
               {r.companyName !== null && (
                 <td
                   rowSpan={r.companyNameRowSpan ?? 1}
-                  className="overflow-visible whitespace-nowrap border-r border-black px-3 py-1 text-center align-middle font-bold text-slate-900"
+                  className="overflow-visible whitespace-nowrap border-b border-r border-black px-3 py-1 text-center align-middle font-bold text-slate-900"
                 >
                   {r.companyName}
                 </td>
               )}
-              <td className="border-r border-black px-3 py-1" />
+              <td className="border-b border-r border-black px-3 py-1" />
               {r.segments !== null && (
                 <td rowSpan={r.barRowSpan ?? 1} className="relative p-0" style={{ height: 26 }}>
                   <div className="relative h-full w-full">
@@ -101,14 +100,13 @@ export function TenantBuildingView({
                   </div>
                 </td>
               )}
-              <td className="whitespace-nowrap border-l border-black px-3 py-1 text-center font-bold text-slate-900">
+              <td className="whitespace-nowrap border-b border-l border-black px-3 py-1 text-center font-bold text-slate-900">
                 {r.areaSqm != null ? formatArea(r.areaSqm) : ""}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="h-6 border-t border-black" />
     </div>
   );
 }

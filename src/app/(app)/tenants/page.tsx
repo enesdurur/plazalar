@@ -6,6 +6,12 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { computePlanYearStats, type PlanYearStats } from "@/lib/plan/stats";
+import { TenantBuildingView, type BuildingFloorRow } from "@/components/tenant-building-view";
+import {
+  LINK_PLAZA_FLOOR_COLORS,
+  LINK_PLAZA_BASEMENT_FLOORS,
+  LINK_PLAZA_DISPLAY_TITLE,
+} from "@/lib/tenants/link-plaza-floor-plan";
 import { TenantsTable } from "./tenants-table";
 import type { Metadata } from "next";
 
@@ -13,7 +19,14 @@ export const metadata: Metadata = {
   title: "Kiracılar",
 };
 
-export default async function TenantsPage() {
+export default async function TenantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const params = await searchParams;
+  const view = params.view === "gorsel" ? "gorsel" : "liste";
+
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
@@ -62,6 +75,28 @@ export default async function TenantsPage() {
     ? Math.max(...tenants.map((t) => t.sortOrder)) + 1
     : 0;
 
+  const isLinkPlaza = plaza.name === "Link Plaza";
+  // Building elevation reads top floor -> ground -> basement, the reverse of the
+  // Kiracılar list's own bottom-up sortOrder (ground floor first, for data entry).
+  const buildingRows: BuildingFloorRow[] = [
+    ...[...tenants].reverse().map((t) => ({
+      key: t.id,
+      floor: t.floor,
+      companyName: t.companyName,
+      areaSqm: t.areaSqm != null ? Number(t.areaSqm) : null,
+      barColor: isLinkPlaza ? (LINK_PLAZA_FLOOR_COLORS[t.floor] ?? null) : null,
+    })),
+    ...(isLinkPlaza
+      ? LINK_PLAZA_BASEMENT_FLOORS.map((b) => ({
+          key: b.floor,
+          floor: b.floor,
+          companyName: "",
+          areaSqm: b.areaSqm,
+          barColor: null,
+        }))
+      : []),
+  ];
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -83,14 +118,44 @@ export default async function TenantsPage() {
         </div>
       </div>
 
+      <div className="mt-4 flex gap-2 print:hidden">
+        <Link
+          href="/tenants?view=liste"
+          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            view === "liste"
+              ? "bg-slate-900 text-white"
+              : "border border-slate-300 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Liste
+        </Link>
+        <Link
+          href="/tenants?view=gorsel"
+          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            view === "gorsel"
+              ? "bg-slate-900 text-white"
+              : "border border-slate-300 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Görsel
+        </Link>
+      </div>
+
       <div className="mt-6">
-        <TenantsTable
-          tenants={tenants}
-          maintenanceStatsByTenant={maintenanceStatsByTenant}
-          maintenanceYear={year}
-          writable={writable}
-          deletable={deletable}
-        />
+        {view === "gorsel" ? (
+          <TenantBuildingView
+            plazaName={isLinkPlaza ? LINK_PLAZA_DISPLAY_TITLE : plaza.name}
+            rows={buildingRows}
+          />
+        ) : (
+          <TenantsTable
+            tenants={tenants}
+            maintenanceStatsByTenant={maintenanceStatsByTenant}
+            maintenanceYear={year}
+            writable={writable}
+            deletable={deletable}
+          />
+        )}
       </div>
     </div>
   );

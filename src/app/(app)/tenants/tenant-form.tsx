@@ -32,6 +32,16 @@ export function TenantForm({
             className="input"
           />
         </Field>
+        <Field label="Gerçek Alan (m²)">
+          <input
+            name="areaSqm"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={tenant?.areaSqm ? Number(tenant.areaSqm) : undefined}
+            className="input"
+          />
+        </Field>
       </div>
 
       <div className="flex gap-3 pt-2">

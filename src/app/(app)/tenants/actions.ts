@@ -11,6 +11,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 const schema = z.object({
   floor: z.string().min(1, "Kat zorunludur"),
   companyName: z.string().min(1, "Kiracı adı zorunludur"),
+  areaSqm: z.coerce.number().positive().optional(),
   sortOrder: z.coerce.number().int().default(0),
 });
 
@@ -23,6 +24,7 @@ function parseForm(formData: FormData) {
   return schema.parse({
     floor: formData.get("floor"),
     companyName: formData.get("companyName"),
+    areaSqm: emptyToUndefined(formData.get("areaSqm")),
     sortOrder: emptyToUndefined(formData.get("sortOrder")) ?? 0,
   });
 }

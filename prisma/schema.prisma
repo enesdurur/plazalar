@@ -129,6 +129,11 @@ model Tenant {
   plazaId     String
   floor       String
   companyName String
+  /**
+   * Katın gerçek alanı (m²) — bina kat şeması görselinde ("Görsel" sekmesi) bar
+   * uzunluğunu ve GERÇEK ALANLAR sütununu besler. Bilinmiyorsa boş kalabilir.
+   */
+  areaSqm     Decimal? @db.Decimal(10, 2)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

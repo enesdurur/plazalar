@@ -8,9 +8,10 @@ import { PrintButton } from "@/components/print-button";
 import { TenantBuildingView, type BuildingFloorRow } from "@/components/tenant-building-view";
 import {
   LINK_PLAZA_FLOOR_BAR_SEGMENTS,
-  LINK_PLAZA_FLOOR_DISPLAY_LABELS,
   LINK_PLAZA_BASEMENT_FLOORS,
   LINK_PLAZA_DISPLAY_TITLE,
+  LINK_PLAZA_MERGE_COMPANY_NAME_DOWN,
+  LINK_PLAZA_MERGE_BAR_DOWN,
 } from "@/lib/tenants/link-plaza-floor-plan";
 import type { Metadata } from "next";
 
@@ -35,14 +36,22 @@ export default async function TenantsPage() {
   const isLinkPlaza = plaza.name === "Link Plaza";
   // Building elevation reads top floor -> ground -> basement, the reverse of the
   // Kiracılar list's own bottom-up sortOrder (ground floor first, for data entry).
+  const reversedTenants = [...tenants].reverse();
   const buildingRows: BuildingFloorRow[] = [
-    ...[...tenants].reverse().map((t) => ({
-      key: t.id,
-      floor: LINK_PLAZA_FLOOR_DISPLAY_LABELS[t.floor] ?? t.floor,
-      companyName: t.companyName,
-      areaSqm: t.areaSqm != null ? Number(t.areaSqm) : null,
-      segments: isLinkPlaza ? (LINK_PLAZA_FLOOR_BAR_SEGMENTS[t.floor] ?? []) : [],
-    })),
+    ...reversedTenants.map((t, i) => {
+      const prev = reversedTenants[i - 1];
+      const companyHidden = isLinkPlaza && !!prev && LINK_PLAZA_MERGE_COMPANY_NAME_DOWN.has(prev.floor);
+      const barHidden = isLinkPlaza && !!prev && LINK_PLAZA_MERGE_BAR_DOWN.has(prev.floor);
+      return {
+        key: t.id,
+        floor: t.floor,
+        companyName: companyHidden ? null : t.companyName,
+        companyNameRowSpan: isLinkPlaza && LINK_PLAZA_MERGE_COMPANY_NAME_DOWN.has(t.floor) ? 2 : 1,
+        areaSqm: t.areaSqm != null ? Number(t.areaSqm) : null,
+        segments: barHidden ? null : isLinkPlaza ? (LINK_PLAZA_FLOOR_BAR_SEGMENTS[t.floor] ?? []) : [],
+        barRowSpan: isLinkPlaza && LINK_PLAZA_MERGE_BAR_DOWN.has(t.floor) ? 2 : 1,
+      };
+    }),
     ...(isLinkPlaza
       ? LINK_PLAZA_BASEMENT_FLOORS.map((b) => ({
           key: b.floor,

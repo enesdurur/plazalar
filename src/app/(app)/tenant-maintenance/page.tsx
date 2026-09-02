@@ -156,22 +156,39 @@ export default async function TenantMaintenancePage({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {items.map((item) => {
+            {items.map((item, itemIdx) => {
               const scheduled = new Set(item.scheduledWeeks);
+              const isFirstForTenant =
+                itemIdx === 0 || items[itemIdx - 1].tenantId !== item.tenantId;
+              let tenantRowSpan = 1;
+              if (isFirstForTenant) {
+                while (
+                  itemIdx + tenantRowSpan < items.length &&
+                  items[itemIdx + tenantRowSpan].tenantId === item.tenantId
+                ) {
+                  tenantRowSpan++;
+                }
+              }
               return (
                 <tr key={item.id} className="hover:bg-slate-50">
-                  <td
-                    style={{ width: KAT_W }}
-                    className="bg-white px-3 py-2 text-slate-600"
-                  >
-                    {item.tenant.floor}
-                  </td>
-                  <td
-                    style={{ width: KIRACI_W }}
-                    className="bg-white px-3 py-2 font-medium text-slate-900"
-                  >
-                    {item.tenant.companyName}
-                  </td>
+                  {isFirstForTenant && (
+                    <>
+                      <td
+                        rowSpan={tenantRowSpan}
+                        style={{ width: KAT_W }}
+                        className="overflow-visible whitespace-nowrap border-r border-slate-100 bg-white px-3 py-2 align-middle text-slate-600"
+                      >
+                        {item.tenant.floor}
+                      </td>
+                      <td
+                        rowSpan={tenantRowSpan}
+                        style={{ width: KIRACI_W }}
+                        className="overflow-visible whitespace-nowrap border-r border-slate-100 bg-white px-3 py-2 align-middle font-medium text-slate-900"
+                      >
+                        {item.tenant.companyName}
+                      </td>
+                    </>
+                  )}
                   <td
                     style={{ width: TUR_W }}
                     className="border-r border-slate-200 bg-white px-3 py-2 text-slate-600"

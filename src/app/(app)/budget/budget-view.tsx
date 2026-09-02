@@ -56,6 +56,23 @@ export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
         <table className="w-full divide-y divide-slate-200 text-sm" style={{ minWidth: 900 + 12 * 130 }}>
           <thead className="bg-slate-100">
             <tr>
+              <th
+                colSpan={2 + MONTH_NAMES.length + 2}
+                className="border-b border-slate-200 px-3 py-2 text-center text-sm font-extrabold text-slate-900"
+              >
+                LINK PLAZA GERÇEKLEŞEN BÜTÇE ({budget.year})
+              </th>
+              <GapTh />
+              <th
+                colSpan={3}
+                className="border-b border-slate-200 px-3 py-2 text-center text-sm font-extrabold text-slate-900"
+              >
+                {budget.year} YILI TASLAK BÜTÇE
+              </th>
+              <GapTh />
+              <th className="border-b border-slate-200" />
+            </tr>
+            <tr>
               <Th>HİZMET TÜRÜ</Th>
               <Th>HİZMET KADROSU</Th>
               {MONTH_NAMES.map((m, i) => (
@@ -74,9 +91,11 @@ export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
               ))}
               <Th>GERÇEKLEŞEN TOPLAM</Th>
               <Th>AYLIK ORTALAMA GERÇEKLEŞEN</Th>
+              <GapTh />
               <Th>TASLAK BÜTÇE (AYLIK)</Th>
               <Th>TASLAK BÜTÇE ({budget.monthsElapsed} AYLIK)</Th>
               <Th>TOPLAM MALİYET {budget.year} (YILLIK)</Th>
+              <GapTh />
               <Th>SAPMA</Th>
             </tr>
           </thead>
@@ -274,7 +293,7 @@ function SubRow({
           </td>
         );
       })}
-      <td colSpan={6} />
+      <td colSpan={8} />
     </tr>
   );
 }
@@ -322,9 +341,11 @@ function DataCells({
       })}
       <Num value={row.realizedTotal} bold={bold} />
       <Num value={row.realizedAvg} bold={bold} />
+      <GapTd />
       <Num value={row.monthlyBudget} bold={bold} />
       <Num value={row.budgetForPeriod} bold={bold} />
       <Num value={row.budgetYearly} bold={bold} />
+      <GapTd />
       <td
         className={`whitespace-nowrap px-3 py-2 text-right tabular-nums ${bold ? "font-bold" : ""}`}
         style={{
@@ -334,6 +355,27 @@ function DataCells({
         {formatPercent(row.deviation)}
       </td>
     </>
+  );
+}
+
+// Gerçekleşen bütçe / Taslak bütçe / Sapma bölümlerini görsel olarak ayırmak için aralarına
+// konan ince, beyaz "boşluk" sütunları — bir başlık taşımazlar, sadece kesik gösterirler.
+// table-layout: auto + border-collapse (Tailwind preflight) tamamen boş bir <td>'nin genişlik
+// hint'ini (className="w-3") yok sayıp sütunu 0px'e çöktürüyor; genişliği hücrenin kendi
+// "width" stilinden değil, içindeki gerçek bir elemanın min-content genişliğinden almalıyız.
+function GapTh() {
+  return (
+    <th data-gap className="border-0 bg-white p-0">
+      <div style={{ width: 12 }} />
+    </th>
+  );
+}
+
+function GapTd() {
+  return (
+    <td data-gap className="border-0 bg-white p-0">
+      <div style={{ width: 12 }} />
+    </td>
   );
 }
 

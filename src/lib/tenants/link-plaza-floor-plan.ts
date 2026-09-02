@@ -31,13 +31,14 @@ export const LINK_PLAZA_FLOOR_BAR_SEGMENTS: Record<string, FloorBarSegment[]> = 
   "4.KAT": [{ startPct: 16.84, endPct: 90.24, color: "green" }],
   "3.KAT": [{ startPct: 16.84, endPct: 90.24, color: "green" }],
   "2.KAT": [{ startPct: 16.84, endPct: 90.24, color: "orange" }],
-  "1.KAT": [{ startPct: 16.84, endPct: 75.07, color: "orange" }],
-  "ZEMİN ASMA KAT": [{ startPct: 16.84, endPct: 75.07, color: "orange" }],
+  // Boş (BOŞ) olmayan, kiracısı olan katlar yeşil; sadece gerçekten boş katlar turuncu kalır.
+  "1.KAT": [{ startPct: 16.84, endPct: 75.07, color: "green" }],
+  "ZEMİN ASMA KAT": [{ startPct: 16.84, endPct: 75.07, color: "green" }],
   // İki satırlı (ZEMİN KAT CAFE + ZEMİN KAT OFİS) birleşik bar: E:L + M:N ayrı birleştirmeler,
   // aynı renk ama aralarında ince bir çizgi bırakacak şekilde iki bitişik parça.
   "ZEMİN KAT CAFE": [
-    { startPct: 0, endPct: 59.9, color: "orange" },
-    { startPct: 59.9, endPct: 75.07, color: "orange" },
+    { startPct: 0, endPct: 59.9, color: "green" },
+    { startPct: 59.9, endPct: 75.07, color: "green" },
   ],
 };
 

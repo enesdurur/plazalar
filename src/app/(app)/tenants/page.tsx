@@ -67,6 +67,7 @@ export default async function TenantsPage() {
     ? Math.max(...tenants.map((t) => t.sortOrder)) + 1
     : 0;
 
+  const emptyMaintenanceStatus = computePlanYearStats([], [], year);
   const isLinkPlaza = plaza.name === "Link Plaza";
   // Building elevation reads top floor -> ground -> basement, the reverse of the
   // Kiracılar list's own bottom-up sortOrder (ground floor first, for data entry).
@@ -74,8 +75,25 @@ export default async function TenantsPage() {
   const buildingRows: BuildingFloorRow[] = [
     ...reversedTenants.map((t, i) => {
       const prev = reversedTenants[i - 1];
+      const next = reversedTenants[i + 1];
       const companyHidden = isLinkPlaza && !!prev && LINK_PLAZA_MERGE_COMPANY_NAME_DOWN.has(prev.floor);
       const barHidden = isLinkPlaza && !!prev && LINK_PLAZA_MERGE_BAR_DOWN.has(prev.floor);
+      const mergesMaintenanceDown =
+        isLinkPlaza && LINK_PLAZA_MERGE_COMPANY_NAME_DOWN.has(t.floor) && !!next;
+      const maintenanceHidden =
+        isLinkPlaza && !!prev && LINK_PLAZA_MERGE_COMPANY_NAME_DOWN.has(prev.floor);
+
+      let maintenanceStatus = maintenanceStatsByTenant.get(t.id) ?? null;
+      if (mergesMaintenanceDown) {
+        const nextStatus = maintenanceStatsByTenant.get(next.id);
+        if (nextStatus) {
+          maintenanceStatus = {
+            ...nextStatus,
+            totalScheduled: (maintenanceStatus?.totalScheduled ?? 0) + nextStatus.totalScheduled,
+          };
+        }
+      }
+
       return {
         key: t.id,
         floor: t.floor,
@@ -84,7 +102,8 @@ export default async function TenantsPage() {
         areaSqm: t.areaSqm != null ? Number(t.areaSqm) : null,
         segments: barHidden ? null : isLinkPlaza ? (LINK_PLAZA_FLOOR_BAR_SEGMENTS[t.floor] ?? []) : [],
         barRowSpan: isLinkPlaza && LINK_PLAZA_MERGE_BAR_DOWN.has(t.floor) ? 2 : 1,
-        maintenanceStatus: maintenanceStatsByTenant.get(t.id) ?? null,
+        maintenanceStatus: maintenanceHidden ? null : maintenanceStatus,
+        maintenanceStatusRowSpan: mergesMaintenanceDown ? 2 : 1,
       };
     }),
     ...(isLinkPlaza
@@ -94,7 +113,7 @@ export default async function TenantsPage() {
           companyName: "",
           areaSqm: b.areaSqm,
           segments: b.segments,
-          maintenanceStatus: null,
+          maintenanceStatus: emptyMaintenanceStatus,
         }))
       : []),
   ];

@@ -23,7 +23,9 @@ const PLAZAS = [
   "Olive Plaza",
   "DLP No.1 Plaza",
   "Uso Center",
-  "No.23 Plaza",
+  "Maslak No.19",
+  "Maslak No.23-25 Plaza",
+  "Fındıklı Abisa Plaza",
 ];
 
 const ISSUE_TYPES = [

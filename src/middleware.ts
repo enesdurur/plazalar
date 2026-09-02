@@ -15,7 +15,7 @@ const { auth } = NextAuth(authConfig);
 const PLAZA_COOKIE_NAME = "selectedPlazaId";
 
 const PUBLIC_PATHS = ["/login"];
-const PLAZA_EXEMPT_PATHS = ["/login", "/select-plaza"];
+const PLAZA_EXEMPT_PATHS = ["/login", "/select-company", "/select-plaza"];
 
 export default auth((req) => {
   const isPublic = PUBLIC_PATHS.some((path) =>
@@ -36,7 +36,7 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith(path)
   );
   if (req.auth && !isPlazaExempt && !req.cookies.get(PLAZA_COOKIE_NAME)) {
-    return NextResponse.redirect(new URL("/select-plaza", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/select-company", req.nextUrl.origin));
   }
 
   return NextResponse.next();

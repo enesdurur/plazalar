@@ -8,7 +8,8 @@ import { PrintButton } from "@/components/print-button";
 import { computePlanYearStats, type PlanYearStats } from "@/lib/plan/stats";
 import { TenantBuildingView, type BuildingFloorRow } from "@/components/tenant-building-view";
 import {
-  LINK_PLAZA_FLOOR_COLORS,
+  LINK_PLAZA_FLOOR_BAR_SEGMENTS,
+  LINK_PLAZA_FLOOR_DISPLAY_LABELS,
   LINK_PLAZA_BASEMENT_FLOORS,
   LINK_PLAZA_DISPLAY_TITLE,
 } from "@/lib/tenants/link-plaza-floor-plan";
@@ -81,10 +82,12 @@ export default async function TenantsPage({
   const buildingRows: BuildingFloorRow[] = [
     ...[...tenants].reverse().map((t) => ({
       key: t.id,
-      floor: t.floor,
+      floor: LINK_PLAZA_FLOOR_DISPLAY_LABELS[t.floor] ?? t.floor,
       companyName: t.companyName,
       areaSqm: t.areaSqm != null ? Number(t.areaSqm) : null,
-      barColor: isLinkPlaza ? (LINK_PLAZA_FLOOR_COLORS[t.floor] ?? null) : null,
+      segments: isLinkPlaza
+        ? (LINK_PLAZA_FLOOR_BAR_SEGMENTS[t.floor] ?? [])
+        : [],
     })),
     ...(isLinkPlaza
       ? LINK_PLAZA_BASEMENT_FLOORS.map((b) => ({
@@ -92,7 +95,7 @@ export default async function TenantsPage({
           floor: b.floor,
           companyName: "",
           areaSqm: b.areaSqm,
-          barColor: null,
+          segments: b.segments,
         }))
       : []),
   ];

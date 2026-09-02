@@ -1,14 +1,20 @@
+export interface FloorBarSegment {
+  startPct: number;
+  endPct: number;
+  color: "orange" | "green" | null;
+}
+
 export interface BuildingFloorRow {
   key: string;
   floor: string;
   companyName: string;
   areaSqm: number | null;
-  barColor: "orange" | "green" | null;
+  segments: FloorBarSegment[];
 }
 
-const BAR_COLOR_STYLES = {
-  orange: "border-orange-400 bg-orange-200",
-  green: "border-emerald-400 bg-emerald-200",
+const COLOR_HEX: Record<"orange" | "green", string> = {
+  orange: "#FFCC99",
+  green: "#C6EFCE",
 };
 
 function formatArea(n: number) {
@@ -22,54 +28,55 @@ export function TenantBuildingView({
   plazaName: string;
   rows: BuildingFloorRow[];
 }) {
-  const maxArea = Math.max(1, ...rows.map((r) => r.areaSqm ?? 0));
-
   return (
-    <div className="overflow-x-auto rounded-lg border-2 border-slate-900 bg-white">
-      <div className="border-b-2 border-slate-900 py-3 text-center">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-slate-900">{plazaName}</h2>
+    <div className="overflow-x-auto rounded-none border-2 border-black bg-white">
+      <div className="border-b-2 border-black py-3 text-center">
+        <h2 className="text-2xl font-bold text-slate-900">{plazaName}</h2>
       </div>
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[900px] border-collapse text-sm">
         <thead>
-          <tr className="border-b-2 border-slate-900">
-            <th className="w-36 border-r border-slate-300 px-3 py-2 text-left text-xs font-semibold uppercase italic text-slate-700">
+          <tr className="border-b-2 border-black">
+            <th className="w-32 border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Kat No
             </th>
-            <th className="w-48 border-r border-slate-300 px-3 py-2 text-center text-xs font-semibold uppercase italic text-slate-700">
+            <th className="w-44 border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Kiracılar
             </th>
-            <th className="w-28 border-r border-slate-300 px-3 py-2 text-center text-xs font-semibold uppercase italic text-slate-700">
+            <th className="w-32 border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Bakım Kaydı
             </th>
             <th className="px-3 py-2" />
-            <th className="w-28 border-l border-slate-300 px-3 py-2 text-right text-xs font-semibold uppercase italic text-slate-700">
+            <th className="w-28 border-l border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Gerçek Alanlar
             </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.key} className="border-b border-slate-200">
-              <td className="border-r border-slate-200 px-3 py-1.5 font-medium text-slate-900">
+            <tr key={r.key} className="border-b border-slate-400">
+              <td className="border-r border-slate-400 px-3 py-1 text-center font-bold text-slate-900">
                 {r.floor}
               </td>
-              <td className="border-r border-slate-200 px-3 py-1.5 text-center text-slate-700">
+              <td className="border-r border-slate-400 px-3 py-1 text-center font-bold text-slate-900">
                 {r.companyName}
               </td>
-              <td className="border-r border-slate-200 px-3 py-1.5" />
-              <td className="px-3 py-1.5">
-                {r.areaSqm != null && (
-                  <div className="flex justify-end">
+              <td className="border-r border-slate-400 px-3 py-1" />
+              <td className="relative p-0" style={{ height: 26 }}>
+                <div className="relative h-full w-full">
+                  {r.segments.map((seg, i) => (
                     <div
-                      className={`h-5 border ${
-                        r.barColor ? BAR_COLOR_STYLES[r.barColor] : "border-slate-300 bg-white"
-                      }`}
-                      style={{ width: `${Math.max((r.areaSqm / maxArea) * 100, 6)}%` }}
+                      key={i}
+                      className="absolute top-0.5 bottom-0.5 border border-slate-600"
+                      style={{
+                        left: `${seg.startPct}%`,
+                        width: `${seg.endPct - seg.startPct}%`,
+                        backgroundColor: seg.color ? COLOR_HEX[seg.color] : "#ffffff",
+                      }}
                     />
-                  </div>
-                )}
+                  ))}
+                </div>
               </td>
-              <td className="border-l border-slate-200 px-3 py-1.5 text-right text-slate-700">
+              <td className="border-l border-slate-400 px-3 py-1 text-center font-bold text-slate-900">
                 {r.areaSqm != null ? formatArea(r.areaSqm) : ""}
               </td>
             </tr>

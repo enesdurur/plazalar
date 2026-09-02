@@ -39,6 +39,13 @@ const MONTHS = [
   "Ara",
 ];
 
+// Her bölüm (Personel/Yönetim/Diğer Giderler) kendi <table>'ında ayrı ayrı otomatik sütun
+// genişliği hesaplarsa, aylar bölümden bölüme kayar (Ocak sütunu bir altta farklı x'te başlar).
+// Sabit ve ortak sütun genişlikleriyle (tableLayout: fixed + aynı colgroup) tüm bölümlerdeki
+// ay sütunları sayfa boyunca aynı hizada, alt alta gelir.
+const KALEM_W = 240;
+const MONTH_W = 128;
+
 export default async function BudgetEntryPage({
   searchParams,
 }: {
@@ -100,10 +107,19 @@ function SectionMatrix({ section, year }: { section: RawSection; year: number })
     <div className="mt-6">
       <h2 className="text-sm font-semibold text-slate-900">{section.name}</h2>
       <div className="mt-3 max-h-[60vh] overflow-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <table
+          className="divide-y divide-slate-200 text-sm"
+          style={{ tableLayout: "fixed", width: KALEM_W + MONTHS.length * MONTH_W }}
+        >
+          <colgroup>
+            <col style={{ width: KALEM_W }} />
+            {MONTHS.map((m) => (
+              <col key={m} style={{ width: MONTH_W }} />
+            ))}
+          </colgroup>
           <thead className="sticky top-0 z-20 bg-slate-50">
             <tr>
-              <th className="sticky left-0 z-10 min-w-[220px] bg-slate-50 px-4 py-3 text-left font-medium text-slate-600">
+              <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left font-medium text-slate-600">
                 Kalem
               </th>
               {MONTHS.map((m) => (
@@ -206,7 +222,7 @@ function AdjustmentLink({
     return (
       <Link
         href={`/budget/entry/adjustments/${itemId}/${month}`}
-        className="mt-0.5 block text-[10px] text-slate-300 hover:text-slate-600"
+        className="mt-0.5 block whitespace-nowrap text-[10px] text-slate-300 hover:text-slate-600"
       >
         + kırılım
       </Link>
@@ -220,7 +236,7 @@ function AdjustmentLink({
   return (
     <Link
       href={`/budget/entry/adjustments/${itemId}/${month}`}
-      className={`mt-0.5 block text-[10px] font-medium hover:underline ${
+      className={`mt-0.5 block whitespace-nowrap text-[10px] font-medium hover:underline ${
         net >= 0 ? "text-blue-600" : "text-red-600"
       }`}
     >

@@ -53,13 +53,17 @@ export default async function InspectionsPage({
 
   const monthlyDone = Array(12).fill(0);
   const monthlyMissed = Array(12).fill(0);
-  for (const e of entries) {
-    const monthIdx = MONTH_WEEK_RANGES.findIndex(
-      (r) => e.week >= r.startWeek && e.week <= r.endWeek
-    );
-    if (monthIdx === -1) continue;
-    if (e.completed === true) monthlyDone[monthIdx]++;
-    if (e.completed === false) monthlyMissed[monthIdx]++;
+  for (const item of items) {
+    for (const week of item.scheduledWeeks) {
+      const entry = entryMap.get(`${item.id}-${week}`);
+      const completed = entry?.completed ?? (isPastWeek(year, week, now) ? false : null);
+      const monthIdx = MONTH_WEEK_RANGES.findIndex(
+        (r) => week >= r.startWeek && week <= r.endWeek
+      );
+      if (monthIdx === -1) continue;
+      if (completed === true) monthlyDone[monthIdx]++;
+      if (completed === false) monthlyMissed[monthIdx]++;
+    }
   }
 
   return (
@@ -69,7 +73,8 @@ export default async function InspectionsPage({
           <h1 className="text-xl font-semibold text-slate-900">Periyodik (Fenni) Muayene</h1>
           <p className="mt-1 text-sm text-slate-500">
             Excel&apos;de işaretli haftalarda tıklayarak durumu değiştirin: bekliyor → yapıldı →
-            yapılmadı → bekliyor. Geçmiş aylardaki işaretli haftalar otomatik yapıldı kabul edilir.
+            yapılmadı → bekliyor. Geçmiş aylardaki işaretli haftalar elle işaretlenmemişse
+            otomatik yapılmadı kabul edilir.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -199,7 +204,7 @@ export default async function InspectionsPage({
 
                     const entry = entryMap.get(`${item.id}-${week}`);
                     const completed =
-                      entry?.completed ?? (isPastWeek(year, week, now) ? true : null);
+                      entry?.completed ?? (isPastWeek(year, week, now) ? false : null);
                     const style =
                       completed === true
                         ? CELL_STYLES.DONE

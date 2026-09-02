@@ -112,7 +112,8 @@ export default async function DashboardPage() {
     tenantMaintenanceLabeledItems,
     tenantMaintenanceWeekEntriesThisYear,
     currentYear,
-    now
+    now,
+    "done"
   );
 
   const completedRecordCount = records.filter((r) => r.finishedAt).length;

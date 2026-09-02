@@ -10,6 +10,17 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+const PLAZA_ORDER = [
+  "Square Plaza",
+  "Link Plaza",
+  "Olive Plaza",
+  "DLP No.1 Plaza",
+  "Maslak No.19",
+  "Maslak No.23-25 Plaza",
+  "Uso Center",
+  "Fındıklı Abisa Plaza",
+];
+
 export default async function SelectPlazaPage() {
   const session = await auth();
   if (!session?.user?.organizationId) redirect("/login");
@@ -17,6 +28,15 @@ export default async function SelectPlazaPage() {
   const plazas = await prisma.plaza.findMany({
     where: { organizationId: session.user.organizationId },
     orderBy: { name: "asc" },
+  });
+
+  plazas.sort((a, b) => {
+    const ai = PLAZA_ORDER.indexOf(a.name);
+    const bi = PLAZA_ORDER.indexOf(b.name);
+    if (ai === -1 && bi === -1) return a.name.localeCompare(b.name);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
   });
 
   return (

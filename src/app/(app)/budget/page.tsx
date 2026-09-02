@@ -5,24 +5,42 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { fetchBudgetSections, hasBudgetData } from "@/lib/budget/fetch";
 import { computeLinkPlazaBudget } from "@/lib/budget/calc";
 import { BudgetView } from "./budget-view";
+import { MonthFilter } from "./month-filter";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Gerçekleşen Bütçe",
 };
 
+/** "?months=1&months=3&months=4" gibi tekrar eden query param'ları 1-12 arası, tekilleştirilmiş
+ * ve sıralı bir ay listesine çevirir. Geçersiz/boşsa undefined döner (filtre yok demektir). */
+function parseSelectedMonths(raw: string | string[] | undefined): number[] | undefined {
+  if (!raw) return undefined;
+  const values = Array.isArray(raw) ? raw : [raw];
+  const months = values
+    .map((v) => parseInt(v, 10))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 12);
+  const unique = Array.from(new Set(months)).sort((a, b) => a - b);
+  return unique.length > 0 ? unique : undefined;
+}
+
 export default async function BudgetPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>;
+  searchParams: Promise<{ year?: string; months?: string | string[] }>;
 }) {
   const params = await searchParams;
   const year = params.year ? parseInt(params.year, 10) : new Date().getFullYear();
+  const requestedMonths = parseSelectedMonths(params.months);
+  const isFiltered = requestedMonths !== undefined;
 
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const plaza = await getSelectedPlaza();
   const hasData = await hasBudgetData(plaza.id, year);
+  const budget = hasData
+    ? computeLinkPlazaBudget(await fetchBudgetSections(plaza.id, year), year, undefined, requestedMonths)
+    : null;
 
   return (
     <div>
@@ -70,9 +88,12 @@ export default async function BudgetPage({
         </div>
       </div>
 
-      {hasData ? (
+      {hasData && budget ? (
         <div className="mt-6">
-          <BudgetView budget={computeLinkPlazaBudget(await fetchBudgetSections(plaza.id, year), year)} />
+          <MonthFilter year={year} selectedMonths={budget.selectedMonths} isFiltered={isFiltered} />
+          <div className="mt-4">
+            <BudgetView budget={budget} />
+          </div>
         </div>
       ) : (
         writable && (

@@ -110,6 +110,10 @@ function monthBreakdown(
   return { base, overtime, absence };
 }
 
+// "months" = toplama dahil edilecek 1-12 arası ay numaraları (kullanıcının Gerçekleşen
+// Bütçe'de gizlemediği aylar). Ardışık bir "ilk N ay" olmak zorunda değil — kullanıcı hangi
+// ayları görünür bıraktıysa GERÇEKLEŞEN TOPLAM/ORTALAMA ve TASLAK BÜTÇE (N AYLIK) sadece o
+// ayların toplamına göre hesaplanır. TASLAK BÜTÇE (AYLIK) ve (YILLIK) bundan etkilenmez.
 function computeRow(
   id: string | undefined,
   category: string | null | undefined,
@@ -117,11 +121,11 @@ function computeRow(
   fill: string | null,
   monthlyBudget: number,
   actuals: number[],
-  monthsElapsed: number
+  months: number[]
 ): ComputedRow {
-  const counted = actuals.slice(0, monthsElapsed);
-  const realizedTotal = counted.reduce((a, b) => a + b, 0);
-  const budgetForPeriod = monthlyBudget * monthsElapsed;
+  const realizedTotal = months.reduce((sum, m) => sum + actuals[m - 1], 0);
+  const periodCount = months.length;
+  const budgetForPeriod = monthlyBudget * periodCount;
   return {
     id,
     category,
@@ -129,7 +133,7 @@ function computeRow(
     fill,
     actuals,
     realizedTotal,
-    realizedAvg: monthsElapsed > 0 ? realizedTotal / monthsElapsed : 0,
+    realizedAvg: periodCount > 0 ? realizedTotal / periodCount : 0,
     monthlyBudget,
     budgetForPeriod,
     budgetYearly: monthlyBudget * 12,
@@ -141,18 +145,18 @@ function sumRows(
   rows: ComputedRow[],
   label: string,
   fill: string | null,
-  monthsElapsed: number
+  months: number[]
 ): ComputedRow {
   const actuals = Array.from({ length: 12 }, (_, i) =>
     rows.reduce((sum, r) => sum + r.actuals[i], 0)
   );
   const monthlyBudget = rows.reduce((sum, r) => sum + r.monthlyBudget, 0);
-  return computeRow(undefined, undefined, label, fill, monthlyBudget, actuals, monthsElapsed);
+  return computeRow(undefined, undefined, label, fill, monthlyBudget, actuals, months);
 }
 
 function mapLineItems(
   items: RawLineItem[],
-  monthsElapsed: number,
+  months: number[],
   forcedCategory?: string
 ): ComputedRow[] {
   return items.map((item) => {
@@ -185,7 +189,7 @@ function mapLineItems(
       item.fill,
       item.monthlyBudget,
       actuals,
-      monthsElapsed
+      months
     );
     if (overtimeByMonth.some((v) => v !== 0)) {
       row.overtimeByMonth = overtimeByMonth;
@@ -206,6 +210,8 @@ const MANAGEMENT_PROFIT_LABEL = "YÖNETİM KARI";
 export interface ComputedLinkPlazaBudget {
   year: number;
   monthsElapsed: number;
+  /** Gerçekleşen Bütçe tablosunda görünür/toplama dahil olan aylar (1-12, artan sırada). */
+  selectedMonths: number[];
   personnelRows: ComputedRow[];
   personnelTotal: ComputedRow;
   managementRows: ComputedRow[];
@@ -229,20 +235,25 @@ const SECTION_NAMES = {
 export function computeLinkPlazaBudget(
   sections: RawSection[],
   year: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  selectedMonths?: number[]
 ): ComputedLinkPlazaBudget {
   const monthsElapsed = elapsedMonths(year, now);
+  // Kullanıcı Gerçekleşen Bütçe'de belirli ayları gizlemiş olabilir — bu durumda GERÇEKLEŞEN
+  // TOPLAM/ORTALAMA ve TASLAK BÜTÇE (N AYLIK) sadece görünür bıraktığı aylara göre hesaplanır.
+  // Hiçbir seçim yapılmamışsa eski davranış korunur: geçen aylara (Ocak..bugünkü ay) göre.
+  const months =
+    selectedMonths && selectedMonths.length > 0
+      ? [...new Set(selectedMonths)].sort((a, b) => a - b)
+      : Array.from({ length: monthsElapsed }, (_, i) => i + 1);
   const byName = new Map(sections.map((s) => [s.name, s]));
 
-  const personnelRows = mapLineItems(
-    byName.get(SECTION_NAMES.personnel)?.items ?? [],
-    monthsElapsed
-  );
+  const personnelRows = mapLineItems(byName.get(SECTION_NAMES.personnel)?.items ?? [], months);
   const personnelTotal = sumRows(
     personnelRows,
     "A- PERSONEL GİDERLERİ TOPLAM MALİYETİ",
     "#F8CBAD",
-    monthsElapsed
+    months
   );
 
   // "YÖNETİM KARI" artık (varsa) Bütçe Kalemleri'nde elle tanımlanmış gerçek bir kalem —
@@ -254,16 +265,16 @@ export function computeLinkPlazaBudget(
     (i) => i.label !== MANAGEMENT_PROFIT_LABEL
   );
 
-  const managementRows = mapLineItems(regularManagementItems, monthsElapsed, "YÖNETİM GİDERLERİ");
+  const managementRows = mapLineItems(regularManagementItems, months, "YÖNETİM GİDERLERİ");
   const managementTotal = sumRows(
     managementRows,
     "YÖNETİM GİDERLERİ TOPLAM MALİYETİ",
     null,
-    monthsElapsed
+    months
   );
 
   const managementProfit = profitItem
-    ? mapLineItems([profitItem], monthsElapsed)[0]
+    ? mapLineItems([profitItem], months)[0]
     : (() => {
         const profitBudget =
           Math.round(personnelTotal.monthlyBudget * MANAGEMENT_PROFIT_RATE * 100) / 100;
@@ -273,8 +284,10 @@ export function computeLinkPlazaBudget(
           MANAGEMENT_PROFIT_LABEL,
           null,
           profitBudget,
+          // Bu satırın "gerçekleşen" değeri sentetik: gerçekten geçmiş her ay için tahakkuk
+          // etmiş sayılır — kullanıcının görünürlük filtresinden bağımsız, gerçek takvime göre.
           Array.from({ length: 12 }, (_, i) => (i < monthsElapsed ? profitBudget : 0)),
-          monthsElapsed
+          months
         );
       })();
 
@@ -282,33 +295,33 @@ export function computeLinkPlazaBudget(
     [managementTotal, managementProfit],
     "B- YÖNETİM FİRMASI HİZMET BEDELİ + GENEL GİDER + YÖNETİM KARI",
     "#D9D9D9",
-    monthsElapsed
+    months
   );
 
   const personnelAndManagementTotal = sumRows(
     [personnelTotal, managementGrandTotal],
     "A+B TOPLAM",
     "#FFC000",
-    monthsElapsed
+    months
   );
 
   const otherRows = mapLineItems(
     byName.get(SECTION_NAMES.other)?.items ?? [],
-    monthsElapsed,
+    months,
     "DİĞER GİDERLER (Aylık Ortalama KDV Hariç Tutar)"
   );
   const otherTotal = sumRows(
     otherRows,
     "C- BİNA DİĞER GİDERLER TOPLAM MALİYETİ (KDV HARİÇ)",
     "#BFBFBF",
-    monthsElapsed
+    months
   );
 
   const grandTotal = sumRows(
     [personnelAndManagementTotal, otherTotal],
     "A+B+C AİDATA ESAS ORTALAMA TOPLAM TUTAR (KDV HARİÇ)",
     "#FFC000",
-    monthsElapsed
+    months
   );
 
   const periodSurplus = grandTotal.budgetForPeriod - grandTotal.realizedTotal;
@@ -316,6 +329,7 @@ export function computeLinkPlazaBudget(
   return {
     year,
     monthsElapsed,
+    selectedMonths: months,
     personnelRows,
     personnelTotal,
     managementRows,
@@ -327,7 +341,7 @@ export function computeLinkPlazaBudget(
     otherTotal,
     grandTotal,
     periodSurplus,
-    monthlyAvgSurplus: monthsElapsed > 0 ? periodSurplus / monthsElapsed : 0,
+    monthlyAvgSurplus: months.length > 0 ? periodSurplus / months.length : 0,
   };
 }
 

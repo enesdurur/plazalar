@@ -49,15 +49,19 @@ function computeRowSpans(rows: ComputedRow[]): number[] {
 
 export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
   const currentMonthIndex = budget.monthsElapsed - 1;
+  const selectedMonths = budget.selectedMonths;
+  const visibleMonths = MONTH_NAMES.map((m, i) => ({ name: m, index: i })).filter(({ index }) =>
+    selectedMonths.includes(index + 1)
+  );
 
   return (
     <div>
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full divide-y divide-slate-200 text-sm" style={{ minWidth: 900 + 12 * 130 }}>
+        <table className="w-full divide-y divide-slate-200 text-sm" style={{ minWidth: 900 + visibleMonths.length * 130 }}>
           <thead className="bg-slate-100">
             <tr>
               <th
-                colSpan={2 + MONTH_NAMES.length + 2}
+                colSpan={2 + visibleMonths.length + 2}
                 className="border-b border-slate-200 px-3 py-2 text-center text-sm font-extrabold text-slate-900"
               >
                 LINK PLAZA GERÇEKLEŞEN BÜTÇE ({budget.year})
@@ -75,14 +79,14 @@ export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
             <tr>
               <Th>HİZMET TÜRÜ</Th>
               <Th>HİZMET KADROSU</Th>
-              {MONTH_NAMES.map((m, i) => (
+              {visibleMonths.map(({ name, index }) => (
                 <Th
-                  key={m}
-                  highlight={i === currentMonthIndex}
-                  muted={i > currentMonthIndex}
+                  key={name}
+                  highlight={index === currentMonthIndex}
+                  muted={index > currentMonthIndex}
                 >
-                  {m}
-                  {i === currentMonthIndex && (
+                  {name}
+                  {index === currentMonthIndex && (
                     <span className="ml-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                       bu ay
                     </span>
@@ -93,28 +97,29 @@ export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
               <Th>AYLIK ORTALAMA GERÇEKLEŞEN</Th>
               <GapTh />
               <Th>TASLAK BÜTÇE (AYLIK)</Th>
-              <Th>TASLAK BÜTÇE ({budget.monthsElapsed} AYLIK)</Th>
+              <Th>TASLAK BÜTÇE ({selectedMonths.length} AYLIK)</Th>
               <Th>TOPLAM MALİYET {budget.year} (YILLIK)</Th>
               <GapTh />
               <Th>SAPMA</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            <GroupedRows rows={budget.personnelRows} currentMonthIndex={currentMonthIndex} />
-            <TotalRow row={budget.personnelTotal} currentMonthIndex={currentMonthIndex} />
+            <GroupedRows rows={budget.personnelRows} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
+            <TotalRow row={budget.personnelTotal} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
 
-            <GroupedRows rows={budget.managementRows} currentMonthIndex={currentMonthIndex} />
-            <TotalRow row={budget.managementTotal} currentMonthIndex={currentMonthIndex} />
-            <TotalRow row={budget.managementProfit} currentMonthIndex={currentMonthIndex} />
-            <TotalRow row={budget.managementGrandTotal} currentMonthIndex={currentMonthIndex} />
+            <GroupedRows rows={budget.managementRows} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
+            <TotalRow row={budget.managementTotal} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
+            <TotalRow row={budget.managementProfit} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
+            <TotalRow row={budget.managementGrandTotal} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
             <TotalRow
               row={budget.personnelAndManagementTotal}
               currentMonthIndex={currentMonthIndex}
+              selectedMonths={selectedMonths}
             />
 
-            <GroupedRows rows={budget.otherRows} currentMonthIndex={currentMonthIndex} />
-            <TotalRow row={budget.otherTotal} currentMonthIndex={currentMonthIndex} />
-            <TotalRow row={budget.grandTotal} currentMonthIndex={currentMonthIndex} />
+            <GroupedRows rows={budget.otherRows} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
+            <TotalRow row={budget.otherTotal} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
+            <TotalRow row={budget.grandTotal} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
           </tbody>
         </table>
       </div>
@@ -124,7 +129,7 @@ export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <p className="text-sm font-medium text-slate-500">
-              Dönem Bütçe Fazlası ({budget.monthsElapsed} ay)
+              Dönem Bütçe Fazlası ({selectedMonths.length} ay)
             </p>
             <p
               className="mt-1 text-xl font-semibold tabular-nums"
@@ -181,9 +186,11 @@ function Th({
 function GroupedRows({
   rows,
   currentMonthIndex,
+  selectedMonths,
 }: {
   rows: ComputedRow[];
   currentMonthIndex: number;
+  selectedMonths: number[];
 }) {
   const spans = computeRowSpans(rows);
   return (
@@ -203,7 +210,7 @@ function GroupedRows({
               </td>
             )}
             <td className="whitespace-nowrap px-3 py-2 text-left text-slate-700">{r.label}</td>
-            <DataCells row={r} currentMonthIndex={currentMonthIndex} />
+            <DataCells row={r} currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
           </tr>
           {r.overtimeByMonth && (
             <SubRow
@@ -212,6 +219,7 @@ function GroupedRows({
               details={r.overtimeDetails}
               positive
               currentMonthIndex={currentMonthIndex}
+              selectedMonths={selectedMonths}
             />
           )}
           {r.absenceByMonth && (
@@ -221,6 +229,7 @@ function GroupedRows({
               details={r.absenceDetails}
               positive={false}
               currentMonthIndex={currentMonthIndex}
+              selectedMonths={selectedMonths}
             />
           )}
         </Fragment>
@@ -235,12 +244,14 @@ function SubRow({
   details,
   positive,
   currentMonthIndex,
+  selectedMonths,
 }: {
   label: string;
   values: number[];
   details?: AdjustmentDetail[][];
   positive: boolean;
   currentMonthIndex: number;
+  selectedMonths: number[];
 }) {
   return (
     <tr className="bg-slate-50/40">
@@ -249,7 +260,9 @@ function SubRow({
       <td colSpan={1} className="px-3 py-1 pl-8 text-left text-xs text-slate-500">
         {label}
       </td>
-      {values.map((v, i) => {
+      {selectedMonths.map((month) => {
+        const i = month - 1;
+        const v = values[i];
         const future = i > currentMonthIndex;
         const text = future && v === 0 ? "-" : v === 0 ? "-" : `${positive ? "+" : "-"}${formatTL(v)}`;
         const monthDetails = details?.[i];
@@ -301,16 +314,18 @@ function SubRow({
 function TotalRow({
   row,
   currentMonthIndex,
+  selectedMonths,
 }: {
   row: ComputedRow;
   currentMonthIndex: number;
+  selectedMonths: number[];
 }) {
   return (
     <tr style={row.fill ? { backgroundColor: row.fill } : undefined}>
       <td colSpan={2} className="whitespace-pre-wrap px-3 py-2 text-left font-bold text-slate-900">
         {row.label}
       </td>
-      <DataCells row={row} bold currentMonthIndex={currentMonthIndex} />
+      <DataCells row={row} bold currentMonthIndex={currentMonthIndex} selectedMonths={selectedMonths} />
     </tr>
   );
 }
@@ -319,14 +334,18 @@ function DataCells({
   row,
   bold = false,
   currentMonthIndex,
+  selectedMonths,
 }: {
   row: ComputedRow;
   bold?: boolean;
   currentMonthIndex: number;
+  selectedMonths: number[];
 }) {
   return (
     <>
-      {row.actuals.map((m, i) => {
+      {selectedMonths.map((month) => {
+        const i = month - 1;
+        const m = row.actuals[i];
         const future = i > currentMonthIndex;
         return (
           <td

@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { canWrite } from "@/lib/permissions";
 import { auth } from "@/auth";
-import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
-import { computePlanYearStats, type PlanYearStats } from "@/lib/plan/stats";
 import { TenantBuildingView, type BuildingFloorRow } from "@/components/tenant-building-view";
 import {
   LINK_PLAZA_FLOOR_BAR_SEGMENTS,
@@ -13,64 +12,21 @@ import {
   LINK_PLAZA_BASEMENT_FLOORS,
   LINK_PLAZA_DISPLAY_TITLE,
 } from "@/lib/tenants/link-plaza-floor-plan";
-import { TenantsTable } from "./tenants-table";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Kiracılar",
 };
 
-export default async function TenantsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ view?: string }>;
-}) {
-  const params = await searchParams;
-  const view = params.view === "gorsel" ? "gorsel" : "liste";
-
+export default async function TenantsPage() {
   const session = await auth();
   const writable = canWrite(session?.user.role);
-  const deletable = canDelete(session?.user.role);
   const plaza = await getSelectedPlaza();
-  const year = new Date().getFullYear();
 
-  const [tenants, maintenanceItems, maintenanceEntries] = await Promise.all([
-    prisma.tenant.findMany({
-      where: { plazaId: plaza.id },
-      orderBy: { sortOrder: "asc" },
-    }),
-    prisma.tenantMaintenanceItem.findMany({
-      where: { tenant: { plazaId: plaza.id } },
-      select: { id: true, tenantId: true, label: true, scheduledWeeks: true },
-    }),
-    prisma.tenantMaintenanceWeekEntry.findMany({
-      where: { year, item: { tenant: { plazaId: plaza.id } } },
-      select: { itemId: true, week: true, completed: true },
-    }),
-  ]);
-
-  const itemsByTenant = new Map<string, typeof maintenanceItems>();
-  for (const item of maintenanceItems) {
-    const list = itemsByTenant.get(item.tenantId) ?? [];
-    list.push(item);
-    itemsByTenant.set(item.tenantId, list);
-  }
-  const entriesByItemId = new Map<string, typeof maintenanceEntries>();
-  for (const entry of maintenanceEntries) {
-    const list = entriesByItemId.get(entry.itemId) ?? [];
-    list.push(entry);
-    entriesByItemId.set(entry.itemId, list);
-  }
-
-  const maintenanceStatsByTenant = new Map<string, PlanYearStats>();
-  for (const tenant of tenants) {
-    const items = itemsByTenant.get(tenant.id) ?? [];
-    const entries = items.flatMap((i) => entriesByItemId.get(i.id) ?? []);
-    maintenanceStatsByTenant.set(
-      tenant.id,
-      computePlanYearStats(items, entries, year, undefined, "done")
-    );
-  }
+  const tenants = await prisma.tenant.findMany({
+    where: { plazaId: plaza.id },
+    orderBy: { sortOrder: "asc" },
+  });
 
   const nextSortOrder = tenants.length
     ? Math.max(...tenants.map((t) => t.sortOrder)) + 1
@@ -85,9 +41,7 @@ export default async function TenantsPage({
       floor: LINK_PLAZA_FLOOR_DISPLAY_LABELS[t.floor] ?? t.floor,
       companyName: t.companyName,
       areaSqm: t.areaSqm != null ? Number(t.areaSqm) : null,
-      segments: isLinkPlaza
-        ? (LINK_PLAZA_FLOOR_BAR_SEGMENTS[t.floor] ?? [])
-        : [],
+      segments: isLinkPlaza ? (LINK_PLAZA_FLOOR_BAR_SEGMENTS[t.floor] ?? []) : [],
     })),
     ...(isLinkPlaza
       ? LINK_PLAZA_BASEMENT_FLOORS.map((b) => ({
@@ -121,44 +75,11 @@ export default async function TenantsPage({
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2 print:hidden">
-        <Link
-          href="/tenants?view=liste"
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-            view === "liste"
-              ? "bg-slate-900 text-white"
-              : "border border-slate-300 text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          Liste
-        </Link>
-        <Link
-          href="/tenants?view=gorsel"
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-            view === "gorsel"
-              ? "bg-slate-900 text-white"
-              : "border border-slate-300 text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          Görsel
-        </Link>
-      </div>
-
       <div className="mt-6">
-        {view === "gorsel" ? (
-          <TenantBuildingView
-            plazaName={isLinkPlaza ? LINK_PLAZA_DISPLAY_TITLE : plaza.name}
-            rows={buildingRows}
-          />
-        ) : (
-          <TenantsTable
-            tenants={tenants}
-            maintenanceStatsByTenant={maintenanceStatsByTenant}
-            maintenanceYear={year}
-            writable={writable}
-            deletable={deletable}
-          />
-        )}
+        <TenantBuildingView
+          plazaName={isLinkPlaza ? LINK_PLAZA_DISPLAY_TITLE : plaza.name}
+          rows={buildingRows}
+        />
       </div>
     </div>
   );

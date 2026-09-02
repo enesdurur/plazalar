@@ -33,20 +33,30 @@ export function TenantBuildingView({
       <div className="border-b-2 border-black py-3 text-center">
         <h2 className="text-2xl font-bold text-slate-900">{plazaName}</h2>
       </div>
-      <table className="w-full min-w-[900px] border-collapse text-sm">
+      <table
+        className="w-full min-w-[900px] border-collapse text-sm"
+        style={{ tableLayout: "fixed" }}
+      >
+        <colgroup>
+          <col style={{ width: 128 }} />
+          <col style={{ width: 176 }} />
+          <col style={{ width: 128 }} />
+          <col />
+          <col style={{ width: 112 }} />
+        </colgroup>
         <thead>
           <tr className="border-b-2 border-black">
-            <th className="w-32 border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
+            <th className="border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Kat No
             </th>
-            <th className="w-44 border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
+            <th className="border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Kiracılar
             </th>
-            <th className="w-32 border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
+            <th className="border-r border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Bakım Kaydı
             </th>
             <th className="px-3 py-2" />
-            <th className="w-28 border-l border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
+            <th className="border-l border-slate-400 px-3 py-2 text-center text-sm font-bold italic text-slate-900 underline">
               Gerçek Alanlar
             </th>
           </tr>
@@ -57,7 +67,7 @@ export function TenantBuildingView({
               <td className="border-r border-slate-400 px-3 py-1 text-center font-bold text-slate-900">
                 {r.floor}
               </td>
-              <td className="border-r border-slate-400 px-3 py-1 text-center font-bold text-slate-900">
+              <td className="relative z-10 overflow-visible whitespace-nowrap border-r border-slate-400 px-3 py-1 text-center font-bold text-slate-900">
                 {r.companyName}
               </td>
               <td className="border-r border-slate-400 px-3 py-1" />

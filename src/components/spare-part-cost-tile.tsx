@@ -65,7 +65,7 @@ export function FaultCostTile({
   return (
     <Link
       href="/records/costs"
-      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+      className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 hover:bg-slate-50"
     >
       <p className="text-sm font-medium text-slate-500">Arıza Maliyetleri</p>
       <CostLines totals={totals} />

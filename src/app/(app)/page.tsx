@@ -194,7 +194,7 @@ export default async function DashboardPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/records"
-          className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300"
+          className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 hover:bg-slate-50"
         >
           <p className="text-sm font-medium text-slate-500">Toplam Kayıt</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">

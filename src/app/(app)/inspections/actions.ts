@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete, canApprove, canAddAttachmentKind } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
+import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
+import { monthOfWeek } from "@/lib/plan/weeks";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
 import type { AttachmentKind } from "@prisma/client";
 
@@ -185,9 +187,14 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
     },
   });
 
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+
   revalidatePath("/inspections");
   revalidatePath("/");
   revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath("/other-expenses");
   redirect("/inspections");
 }
 
@@ -214,9 +221,14 @@ export async function setInspectionWeekEntryApproval(id: string, formData: FormD
     },
   });
 
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+
   revalidatePath("/inspections");
   revalidatePath("/");
   revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath("/other-expenses");
   revalidatePath(`/inspections/entries/${id}/edit`);
 }
 
@@ -251,6 +263,7 @@ export async function uploadInspectionWeekEntryAttachment(
 
     revalidatePath(`/inspections/entries/${id}/edit`);
     revalidatePath("/maintenance-costs");
+    revalidatePath("/other-expenses");
     return { error: null };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Yükleme başarısız oldu." };
@@ -280,6 +293,7 @@ export async function deleteInspectionWeekEntryAttachment(
 
     revalidatePath(`/inspections/entries/${entryId}/edit`);
     revalidatePath("/maintenance-costs");
+    revalidatePath("/other-expenses");
     return { error: null };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Silme başarısız oldu." };

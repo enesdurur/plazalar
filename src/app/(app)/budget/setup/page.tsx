@@ -19,6 +19,12 @@ const SECTIONS = [
   "DİĞER GİDERLER",
 ] as const;
 
+const AUTO_SOURCE_LABELS: Record<string, string> = {
+  MAINTENANCE_PLAN: "3. Firma Bakım Planı",
+  INSPECTION: "Periyodik (Fenni) Muayene",
+  FAULT_RECORDS: "Arıza Kayıtları",
+};
+
 export default async function BudgetSetupPage({
   searchParams,
 }: {
@@ -116,7 +122,11 @@ function SectionBlock({
                   TL
                 </td>
                 <td className="px-4 py-3 text-slate-600">
-                  {item.isFixedContract ? (
+                  {item.autoSource ? (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                      Otomatik: {AUTO_SOURCE_LABELS[item.autoSource]}
+                    </span>
+                  ) : item.isFixedContract ? (
                     <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                       Sabit sözleşme
                     </span>

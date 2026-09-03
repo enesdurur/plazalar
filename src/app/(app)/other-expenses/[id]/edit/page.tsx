@@ -33,7 +33,13 @@ export default async function EditOtherExpensePage({
 
   const section = await prisma.budgetSection.findFirst({
     where: { plazaId: plaza.id, year: entry.lineItem.section.year, name: SECTION_NAMES.other },
-    include: { items: { orderBy: { sortOrder: "asc" }, select: { id: true, label: true } } },
+    include: {
+      items: {
+        where: { autoSource: null },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, label: true },
+      },
+    },
   });
   const lineItems = section?.items ?? [];
 

@@ -47,6 +47,7 @@ const lineItemSchema = z.object({
   isFixedContract: z.coerce.boolean(),
   fixedAmount: z.coerce.number().min(0).optional(),
   fill: z.string().optional(),
+  autoSource: z.enum(["MAINTENANCE_PLAN", "INSPECTION", "FAULT_RECORDS"]).optional(),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -62,6 +63,25 @@ function parseLineItemForm(formData: FormData) {
     isFixedContract: formData.get("isFixedContract") === "on",
     fixedAmount: emptyToUndefined(formData.get("fixedAmount")),
     fill: emptyToUndefined(formData.get("fill")),
+    autoSource: emptyToUndefined(formData.get("autoSource")),
+  });
+}
+
+// Plaza+yıl başına her otomatik kaynak için en fazla tek kalem aktif olabilir — yeni bir
+// kalemde seçilirse, aynı plaza+yıldaki başka bir kalemden otomatik kaldırılır.
+async function releaseAutoSourceFromOtherItems(
+  plazaId: string,
+  year: number,
+  source: "MAINTENANCE_PLAN" | "INSPECTION" | "FAULT_RECORDS",
+  exceptItemId?: string
+) {
+  await prisma.budgetLineItem.updateMany({
+    where: {
+      autoSource: source,
+      section: { plazaId, year },
+      ...(exceptItemId ? { id: { not: exceptItemId } } : {}),
+    },
+    data: { autoSource: null },
   });
 }
 
@@ -73,6 +93,10 @@ export async function createLineItem(sectionName: SectionName, year: number, for
   const section = await getOrCreateSection(plaza.id, year, sectionName);
   const count = await prisma.budgetLineItem.count({ where: { sectionId: section.id } });
 
+  if (data.autoSource) {
+    await releaseAutoSourceFromOtherItems(plaza.id, year, data.autoSource);
+  }
+
   await prisma.budgetLineItem.create({
     data: {
       sectionId: section.id,
@@ -81,12 +105,14 @@ export async function createLineItem(sectionName: SectionName, year: number, for
       monthlyBudget: data.monthlyBudget,
       isFixedContract: data.isFixedContract,
       fixedAmount: data.isFixedContract ? (data.fixedAmount ?? data.monthlyBudget) : undefined,
+      autoSource: data.autoSource ?? null,
       sortOrder: count,
     },
   });
 
   revalidatePath("/budget");
   revalidatePath("/budget/setup");
+  revalidatePath("/other-expenses");
   redirect(`/budget/setup?year=${year}`);
 }
 
@@ -100,6 +126,10 @@ export async function updateLineItem(id: string, year: number, formData: FormDat
   });
   if (!item) notFound();
 
+  if (data.autoSource) {
+    await releaseAutoSourceFromOtherItems(plaza.id, year, data.autoSource, id);
+  }
+
   await prisma.budgetLineItem.update({
     where: { id },
     data: {
@@ -108,11 +138,13 @@ export async function updateLineItem(id: string, year: number, formData: FormDat
       monthlyBudget: data.monthlyBudget,
       isFixedContract: data.isFixedContract,
       fixedAmount: data.isFixedContract ? (data.fixedAmount ?? data.monthlyBudget) : null,
+      autoSource: data.autoSource ?? null,
     },
   });
 
   revalidatePath("/budget");
   revalidatePath("/budget/setup");
+  revalidatePath("/other-expenses");
   redirect(`/budget/setup?year=${year}`);
 }
 

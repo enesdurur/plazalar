@@ -28,7 +28,15 @@ export default async function NewOtherExpensePage({
 
   const section = await prisma.budgetSection.findFirst({
     where: { plazaId: plaza.id, year, name: SECTION_NAMES.other },
-    include: { items: { orderBy: { sortOrder: "asc" }, select: { id: true, label: true } } },
+    include: {
+      items: {
+        // autoSource'lu kalemler (Arıza Kayıtları/3. Firma Bakım Planı/Periyodik Muayene'den
+        // otomatik gelenler) burada elle kayıt açılamaz — tutarları kendi modülünden gelir.
+        where: { autoSource: null },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, label: true },
+      },
+    },
   });
   const lineItems = section?.items ?? [];
 

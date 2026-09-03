@@ -26,11 +26,13 @@ async function requireDeleteAccess() {
   }
 }
 
-// Bir kalemin gerçekten bu plazanın "DİĞER GİDERLER" bölümüne ait olduğunu doğrular — başka
-// bir bölümdeki (Personel/Yönetim) veya başka bir plazanın kalemine kayıt eklenemez.
+// Bir kalemin gerçekten bu plazanın "DİĞER GİDERLER" bölümüne ait olduğunu ve autoSource'u
+// olmadığını doğrular — başka bir bölümdeki, başka bir plazanın, veya otomatik kaynaklı
+// (Arıza Kayıtları/3. Firma Bakım Planı/Periyodik Muayene'den gelen) bir kaleme elle kayıt
+// eklenemez, o kalemlerin tutarı kendi modülünden gelir.
 async function assertOtherExpenseLineItem(plazaId: string, lineItemId: string) {
   const item = await prisma.budgetLineItem.findFirst({
-    where: { id: lineItemId, section: { plazaId, name: SECTION_NAMES.other } },
+    where: { id: lineItemId, section: { plazaId, name: SECTION_NAMES.other }, autoSource: null },
   });
   if (!item) throw new Error("Geçersiz kalem.");
   return item;

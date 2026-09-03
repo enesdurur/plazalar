@@ -23,6 +23,7 @@ export async function fetchBudgetSections(plazaId: string, year: number): Promis
       isFixedContract: item.isFixedContract,
       fixedAmount: item.fixedAmount != null ? Number(item.fixedAmount) : null,
       fill: item.fill,
+      autoSource: item.autoSource,
       entries: item.entries.map((e) => ({
         month: e.month,
         confirmed: e.confirmed,

@@ -524,6 +524,15 @@ model BudgetLineItem {
   fixedAmount     Decimal?          @db.Decimal(12, 2)
   fill            String?
   sortOrder       Int               @default(0)
+  /**
+   * Doluysa bu kalemin aylık tutarı 3. Firma Bakım Planı / Periyodik Muayene / Arıza
+   * Kayıtları'na girilen (ve onaylanan) maliyetlerden otomatik hesaplanır (bkz.
+   * src/lib/budget/auto-sync.ts). Bu 3 modülün fatura/form yükleme ve bina yöneticisi onayı
+   * hem kendi sayfalarından hem de Diğer Giderler sayfasının alt kısmından yapılabilir — ikisi
+   * de aynı alttaki kayıtları gösterip düzenler. Plaza+yıl başına her kaynak için tek kalem
+   * olabilir.
+   */
+  autoSource      BudgetAutoSource?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -535,12 +544,18 @@ model BudgetLineItem {
   @@map("budget_line_items")
 }
 
-// "DİĞER GİDERLER" bölümündeki kalemlerin (Ortak Alan Elektrik, Mekanik/Elektrik Yedek Parça,
-// 3.Firma Bakım Anlaşmaları, Fenni Muayeneler, vb.) tüm veri girişi buradan yapılır: her fatura/
-// gider kaydı kendi tutarı + destekleyici belgesiyle (fatura/form) girilir ve bina yöneticisi
-// (canApprove) onayından geçmeden Gerçekleşen Bütçe'ye yansımaz (bkz.
-// src/lib/budget/other-expense-sync.ts). Bir kalem+ay için birden fazla kayıt olabilir (aynı ay
-// içinde birden fazla fatura) — onaylı olanların toplamı o ayın tutarını oluşturur.
+enum BudgetAutoSource {
+  MAINTENANCE_PLAN
+  INSPECTION
+  FAULT_RECORDS
+}
+
+// "DİĞER GİDERLER" bölümündeki, autoSource'u olmayan (Ortak Alan Elektrik, Peyzaj vb. gibi
+// gerçekten elle girilen) kalemlerin veri girişi buradan yapılır: her fatura/gider kaydı kendi
+// tutarı + destekleyici belgesiyle (fatura/form) girilir ve bina yöneticisi (canApprove)
+// onayından geçmeden Gerçekleşen Bütçe'ye yansımaz (bkz. src/lib/budget/other-expense-sync.ts).
+// Bir kalem+ay için birden fazla kayıt olabilir (aynı ay içinde birden fazla fatura) — onaylı
+// olanların toplamı o ayın tutarını oluşturur.
 model OtherExpenseEntry {
   id           String         @id @default(cuid())
   lineItemId   String

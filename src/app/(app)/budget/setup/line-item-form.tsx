@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 
+const AUTO_SOURCE_OPTIONS = [
+  { value: "", label: "Yok — Diğer Giderler sayfasından elle giriyorum" },
+  { value: "MAINTENANCE_PLAN", label: "3. Firma Bakım Planı" },
+  { value: "INSPECTION", label: "Periyodik (Fenni) Muayene" },
+  { value: "FAULT_RECORDS", label: "Arıza Kayıtları (yedek parça)" },
+];
+
 export function LineItemForm({
   action,
   defaults,
@@ -14,6 +21,7 @@ export function LineItemForm({
     monthlyBudget: number;
     isFixedContract: boolean;
     fixedAmount?: number | null;
+    autoSource?: string | null;
   };
 }) {
   const [isFixed, setIsFixed] = useState(defaults?.isFixedContract ?? false);
@@ -61,6 +69,23 @@ export function LineItemForm({
           />
         </Field>
       )}
+
+      <Field label="Otomatik Kaynak">
+        <select name="autoSource" defaultValue={defaults?.autoSource ?? ""} className="input">
+          {AUTO_SOURCE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-slate-500">
+          Seçilirse bu kalemin aylık tutarı ilgili modüldeki (onaylı) maliyet kayıtlarından
+          otomatik hesaplanır — form/fatura yükleme ve bina yöneticisi onayı hem ilgili modülün
+          kendi sayfasından hem de Diğer Giderler sayfasından yapılabilir. Plaza+yıl başına her
+          kaynak için tek kalem aktif olabilir — başka bir kalemde seçiliyse oradan otomatik
+          kaldırılır.
+        </span>
+      </Field>
 
       <div className="flex gap-3 pt-2">
         <SubmitButton />

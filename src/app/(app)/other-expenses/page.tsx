@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { canWrite, canDelete, canApprove, canAddInvoice, canAddMaintenanceForm } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { SECTION_NAMES } from "@/lib/budget/calc";
+import { toTRY } from "@/lib/budget/auto-sync";
+import { monthOfWeek } from "@/lib/plan/weeks";
 import { toAttachmentInfo } from "@/lib/attachments/service";
 import { OtherExpensesTable } from "./other-expenses-table";
 import { CostsTable } from "../records/costs/costs-table";
@@ -59,16 +61,6 @@ export default async function OtherExpensesPage({
   const lineItems = section?.items ?? [];
   const manualItems = lineItems.filter((i) => !i.autoSource);
   const autoItems = lineItems.filter((i) => i.autoSource);
-
-  const monthEntries = lineItems.length
-    ? await prisma.budgetMonthEntry.findMany({
-        where: { lineItemId: { in: lineItems.map((i) => i.id) } },
-        select: { lineItemId: true, month: true, manualAmount: true },
-      })
-    : [];
-  const monthEntryMap = new Map(
-    monthEntries.map((e) => [`${e.lineItemId}-${e.month}`, e.manualAmount != null ? Number(e.manualAmount) : null])
-  );
 
   const otherExpenses = manualItems.length
     ? await prisma.otherExpenseEntry.findMany({
@@ -142,6 +134,75 @@ export default async function OtherExpensesPage({
         })
       : Promise.resolve([]),
   ]);
+
+  // "Aylık Özet" tablosu, onay durumundan bağımsız olarak GİRİLEN tüm tutarları gösterir
+  // (bina yöneticisi onayı yalnızca Gerçekleşen Bütçe'ye yansımayı belirler — bkz. üstteki not).
+  const enteredMonthMap = new Map<string, number>();
+  function addEntered(lineItemId: string, month: number, amount: number) {
+    const key = `${lineItemId}-${month}`;
+    enteredMonthMap.set(key, (enteredMonthMap.get(key) ?? 0) + amount);
+  }
+
+  for (const e of otherExpenses) {
+    addEntered(e.lineItemId, e.month, Number(e.amount));
+  }
+
+  const faultLineItem = autoItems.find((i) => i.autoSource === "FAULT_RECORDS");
+  if (faultLineItem) {
+    for (const r of faultRecords) {
+      if (r.sparePartCost == null) continue;
+      const tl = toTRY(
+        Number(r.sparePartCost),
+        r.sparePartCostCurrency,
+        r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null
+      );
+      if (tl != null) addEntered(faultLineItem.id, r.reportedAt.getUTCMonth() + 1, tl);
+    }
+  }
+
+  const planLineItem = autoItems.find((i) => i.autoSource === "MAINTENANCE_PLAN");
+  if (planLineItem) {
+    for (const e of planEntries) {
+      const month = monthOfWeek(e.week);
+      if (e.cost != null) {
+        const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
+        if (tl != null) addEntered(planLineItem.id, month, tl);
+      }
+      if (e.sparePartCost != null) {
+        const tl = toTRY(
+          Number(e.sparePartCost),
+          e.sparePartCostCurrency,
+          e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
+        );
+        if (tl != null) addEntered(planLineItem.id, month, tl);
+      }
+    }
+  }
+
+  const inspectionLineItem = autoItems.find((i) => i.autoSource === "INSPECTION");
+  if (inspectionLineItem) {
+    for (const e of inspectionEntries) {
+      const month = monthOfWeek(e.week);
+      if (e.cost != null) {
+        const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
+        if (tl != null) addEntered(inspectionLineItem.id, month, tl);
+      }
+      if (e.sparePartCost != null) {
+        const tl = toTRY(
+          Number(e.sparePartCost),
+          e.sparePartCostCurrency,
+          e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
+        );
+        if (tl != null) addEntered(inspectionLineItem.id, month, tl);
+      }
+    }
+  }
+
+  const monthTotals = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    return lineItems.reduce((sum, item) => sum + (enteredMonthMap.get(`${item.id}-${month}`) ?? 0), 0);
+  });
+  const grandTotal = monthTotals.reduce((a, b) => a + b, 0);
 
   const faultRecordsSerialized = faultRecords.map((r) => ({
     ...r,
@@ -223,11 +284,15 @@ export default async function OtherExpensesPage({
           <h2 className="mt-6 text-sm font-semibold text-slate-900">
             Aylık Özet — Ay Ay Girilen Tutarlar
           </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Kayıt girilir girilmez (onaydan bağımsız) burada görünür. Gerçekleşen Bütçe&apos;ye
+            yalnızca bina yöneticisinin onayladığı tutarlar yansır.
+          </p>
           <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <table className="w-full table-fixed divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="sticky left-0 z-10 bg-slate-50 px-4 py-2 text-left font-medium text-slate-600">
+                  <th className="sticky left-0 z-10 w-[220px] bg-slate-50 px-4 py-2 text-left font-medium text-slate-600">
                     Kalem
                   </th>
                   {MONTH_NAMES.map((m) => (
@@ -235,35 +300,62 @@ export default async function OtherExpensesPage({
                       {m}
                     </th>
                   ))}
+                  <th className="px-3 py-2 text-right font-semibold text-slate-700">Toplam</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {lineItems.map((item) => (
-                  <tr key={item.id} className="odd:bg-white even:bg-slate-50/60">
-                    <td className="sticky left-0 z-10 bg-white px-4 py-2">
-                      <p className="font-medium text-slate-900">{item.label}</p>
-                      {item.autoSource && (
-                        <p className="text-xs text-slate-400">
-                          Otomatik: {AUTO_SOURCE_LABELS[item.autoSource]}
-                        </p>
-                      )}
-                    </td>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
-                      const amount = monthEntryMap.get(`${item.id}-${month}`) ?? null;
-                      return (
-                        <td
-                          key={month}
-                          className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-slate-600"
-                        >
-                          {amount != null
-                            ? amount.toLocaleString("tr-TR", { maximumFractionDigits: 0 })
-                            : "-"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {lineItems.map((item) => {
+                  const itemTotal = Array.from({ length: 12 }, (_, i) => i + 1).reduce(
+                    (sum, month) => sum + (enteredMonthMap.get(`${item.id}-${month}`) ?? 0),
+                    0
+                  );
+                  return (
+                    <tr key={item.id} className="odd:bg-white even:bg-slate-50/60">
+                      <td className="sticky left-0 z-10 bg-inherit px-4 py-2 align-top">
+                        <p className="font-medium text-slate-900">{item.label}</p>
+                        {item.autoSource && (
+                          <p className="text-xs text-slate-400">
+                            Otomatik: {AUTO_SOURCE_LABELS[item.autoSource]}
+                          </p>
+                        )}
+                      </td>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
+                        const amount = enteredMonthMap.get(`${item.id}-${month}`) ?? null;
+                        return (
+                          <td key={month} className="px-2 py-2 text-right tabular-nums text-slate-600">
+                            {amount != null
+                              ? amount.toLocaleString("tr-TR", { maximumFractionDigits: 0 })
+                              : "-"}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                        {itemTotal > 0
+                          ? itemTotal.toLocaleString("tr-TR", { maximumFractionDigits: 0 })
+                          : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-300 bg-slate-100">
+                  <td className="sticky left-0 z-10 bg-slate-100 px-4 py-2 font-semibold text-slate-900">
+                    TOPLAM
+                  </td>
+                  {monthTotals.map((total, i) => (
+                    <td
+                      key={i}
+                      className="px-2 py-2 text-right font-semibold tabular-nums text-slate-900"
+                    >
+                      {total > 0 ? total.toLocaleString("tr-TR", { maximumFractionDigits: 0 }) : "-"}
+                    </td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                    {grandTotal.toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 

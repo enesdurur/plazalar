@@ -7,7 +7,7 @@ import type { BudgetAutoSource } from "@prisma/client";
  * TL olmayan bir tutarı TL'ye çevirir. Kur girilmemişse null döner — bu durumda tutar
  * otomatik bütçe toplamına dahil edilmez (kur girilene kadar bekletilir).
  */
-function toTRY(amount: number, currency: string, exchangeRate: number | null): number | null {
+export function toTRY(amount: number, currency: string, exchangeRate: number | null): number | null {
   if (currency === "TRY") return amount;
   if (exchangeRate == null) return null;
   return amount * exchangeRate;

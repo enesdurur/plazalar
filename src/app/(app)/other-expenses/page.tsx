@@ -313,18 +313,23 @@ export default async function OtherExpensesPage({
             yalnızca bina yöneticisinin onayladığı tutarlar yansır.
           </p>
           <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-            <table className="w-full table-fixed divide-y divide-slate-200 text-sm">
+            <table className="w-full table-fixed divide-y divide-slate-200 text-xs">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="sticky left-0 z-10 w-[240px] bg-slate-50 px-4 py-2 text-left font-medium text-slate-600">
                     Kalem
                   </th>
                   {MONTH_NAMES.map((m) => (
-                    <th key={m} className="px-2 py-2 text-right font-medium text-slate-600">
+                    <th
+                      key={m}
+                      className="w-[108px] border-l border-slate-200 px-3 py-2 text-center font-medium text-slate-600"
+                    >
                       {m}
                     </th>
                   ))}
-                  <th className="px-3 py-2 text-right font-semibold text-slate-700">Toplam</th>
+                  <th className="w-[130px] border-l border-slate-200 px-3 py-2 text-center font-semibold text-slate-700">
+                    Toplam
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -351,12 +356,15 @@ export default async function OtherExpensesPage({
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
                         const amount = enteredMonthMap.get(`${item.id}-${month}`) ?? null;
                         return (
-                          <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-slate-600" key={month}>
+                          <td
+                            className="w-[108px] whitespace-nowrap border-l border-slate-200 px-3 py-2 text-center tabular-nums text-slate-600"
+                            key={month}
+                          >
                             {amount != null ? formatTL(amount) : "-"}
                           </td>
                         );
                       })}
-                      <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                      <td className="w-[130px] whitespace-nowrap border-l border-slate-200 px-3 py-2 text-center font-semibold tabular-nums text-slate-900">
                         {itemTotal > 0 ? formatTL(itemTotal) : "-"}
                       </td>
                     </tr>
@@ -371,12 +379,12 @@ export default async function OtherExpensesPage({
                   {monthTotals.map((total, i) => (
                     <td
                       key={i}
-                      className="whitespace-nowrap px-2 py-2 text-right font-semibold tabular-nums text-slate-900"
+                      className="w-[108px] whitespace-nowrap border-l border-slate-200 px-3 py-2 text-center font-semibold tabular-nums text-slate-900"
                     >
                       {total > 0 ? formatTL(total) : "-"}
                     </td>
                   ))}
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                  <td className="w-[130px] whitespace-nowrap border-l border-slate-200 px-3 py-2 text-center font-semibold tabular-nums text-slate-900">
                     {formatTL(grandTotal)}
                   </td>
                 </tr>

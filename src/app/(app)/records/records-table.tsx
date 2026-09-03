@@ -3,15 +3,8 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteButton } from "@/components/delete-button";
-import { ApprovalControl } from "@/components/approval-control";
-import { AttachmentQuickPanel, type AttachmentInfo } from "@/components/attachment-upload";
 import { mtta, mttr, formatMinutes } from "@/lib/kpi";
-import {
-  deleteRecord,
-  setRecordApproval,
-  uploadRecordAttachment,
-  deleteRecordAttachment,
-} from "./actions";
+import { deleteRecord } from "./actions";
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
 
 const OPERATION_LABELS: Record<string, string> = {
@@ -25,8 +18,6 @@ type RecordWithRelations = Omit<
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
-  formAttachment: AttachmentInfo | null;
-  invoiceAttachment: AttachmentInfo | null;
   machine: Machine;
   issueType: IssueType | null;
   technician: Technician | null;
@@ -36,17 +27,11 @@ export function RecordsTable({
   records,
   writable,
   deletable,
-  approver,
-  canForm,
-  canInvoice,
   emptyMessage,
 }: {
   records: RecordWithRelations[];
   writable: boolean;
   deletable: boolean;
-  approver: boolean;
-  canForm: boolean;
-  canInvoice: boolean;
   emptyMessage: string;
 }) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
@@ -137,60 +122,6 @@ export function RecordsTable({
           <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
             Devam Ediyor
           </span>
-        ),
-    },
-    {
-      key: "approved",
-      header: "Bütçe Onayı",
-      width: "130px",
-      filterValue: (r) =>
-        r.operationType === "ARIZA" && r.sparePartCost != null
-          ? r.approved
-            ? "Onaylandı"
-            : "Onay Bekliyor"
-          : "-",
-      render: (r) =>
-        r.operationType === "ARIZA" && r.sparePartCost != null ? (
-          <ApprovalControl
-            approved={r.approved}
-            canApprove={approver}
-            action={approver ? setRecordApproval.bind(null, r.id) : undefined}
-          />
-        ) : (
-          <span className="text-slate-300">-</span>
-        ),
-    },
-    {
-      key: "documents",
-      header: "Belgeler",
-      width: "160px",
-      filterValue: (r) =>
-        r.operationType === "ARIZA"
-          ? `Form ${r.formAttachment ? "✓" : "✗"} Fatura ${r.invoiceAttachment ? "✓" : "✗"}`
-          : "-",
-      render: (r) =>
-        r.operationType === "ARIZA" ? (
-          <AttachmentQuickPanel
-            title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
-            form={r.formAttachment}
-            invoice={r.invoiceAttachment}
-            canForm={canForm}
-            canInvoice={canInvoice}
-            uploadFormAction={uploadRecordAttachment.bind(null, r.id)}
-            uploadInvoiceAction={uploadRecordAttachment.bind(null, r.id)}
-            deleteFormAction={
-              r.formAttachment
-                ? deleteRecordAttachment.bind(null, r.id, r.formAttachment.id)
-                : undefined
-            }
-            deleteInvoiceAction={
-              r.invoiceAttachment
-                ? deleteRecordAttachment.bind(null, r.id, r.invoiceAttachment.id)
-                : undefined
-            }
-          />
-        ) : (
-          <span className="text-slate-300">-</span>
         ),
     },
   ];

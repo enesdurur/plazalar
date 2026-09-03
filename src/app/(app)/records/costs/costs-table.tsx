@@ -18,22 +18,27 @@ type RecordWithRelations = Omit<
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
-  formAttachment: AttachmentInfo | null;
-  invoiceAttachment: AttachmentInfo | null;
+  formAttachment?: AttachmentInfo | null;
+  invoiceAttachment?: AttachmentInfo | null;
   machine: Machine;
   sparePart: SparePart | null;
 };
 
 export function CostsTable({
   records,
-  approver,
-  canForm,
-  canInvoice,
+  showApproval,
+  approver = false,
+  canForm = false,
+  canInvoice = false,
 }: {
   records: RecordWithRelations[];
-  approver: boolean;
-  canForm: boolean;
-  canInvoice: boolean;
+  /** Bütçe Onayı ve Belgeler sütunlarını gösterir. Bu yönetim artık Diğer Giderler
+   * sayfasından da yapılabildiği için, bu tablonun bağımsız maliyet inceleme sayfalarındaki
+   * (Arıza Maliyetleri vb.) kullanımında false geçilir. */
+  showApproval: boolean;
+  approver?: boolean;
+  canForm?: boolean;
+  canInvoice?: boolean;
 }) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
     {
@@ -83,45 +88,49 @@ export function CostsTable({
         </span>
       ),
     },
-    {
-      key: "approved",
-      header: "Bütçe Onayı",
-      filterValue: (r) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
-      render: (r) => (
-        <ApprovalControl
-          approved={r.approved}
-          canApprove={approver}
-          action={approver ? setRecordApproval.bind(null, r.id) : undefined}
-        />
-      ),
-    },
-    {
-      key: "documents",
-      header: "Belgeler",
-      filterValue: (r) =>
-        `Form ${r.formAttachment ? "✓" : "✗"} Fatura ${r.invoiceAttachment ? "✓" : "✗"}`,
-      render: (r) => (
-        <AttachmentQuickPanel
-          title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
-          form={r.formAttachment}
-          invoice={r.invoiceAttachment}
-          canForm={canForm}
-          canInvoice={canInvoice}
-          uploadFormAction={uploadRecordAttachment.bind(null, r.id)}
-          uploadInvoiceAction={uploadRecordAttachment.bind(null, r.id)}
-          deleteFormAction={
-            r.formAttachment
-              ? deleteRecordAttachment.bind(null, r.id, r.formAttachment.id)
-              : undefined
-          }
-          deleteInvoiceAction={
-            r.invoiceAttachment
-              ? deleteRecordAttachment.bind(null, r.id, r.invoiceAttachment.id)
-              : undefined
-          }
-        />
-      ),
-    },
+    ...(showApproval
+      ? [
+          {
+            key: "approved",
+            header: "Bütçe Onayı",
+            filterValue: (r: RecordWithRelations) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
+            render: (r: RecordWithRelations) => (
+              <ApprovalControl
+                approved={r.approved}
+                canApprove={approver}
+                action={approver ? setRecordApproval.bind(null, r.id) : undefined}
+              />
+            ),
+          },
+          {
+            key: "documents",
+            header: "Belgeler",
+            filterValue: (r: RecordWithRelations) =>
+              `Form ${r.formAttachment ? "✓" : "✗"} Fatura ${r.invoiceAttachment ? "✓" : "✗"}`,
+            render: (r: RecordWithRelations) => (
+              <AttachmentQuickPanel
+                title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
+                form={r.formAttachment ?? null}
+                invoice={r.invoiceAttachment ?? null}
+                canForm={canForm}
+                canInvoice={canInvoice}
+                uploadFormAction={uploadRecordAttachment.bind(null, r.id)}
+                uploadInvoiceAction={uploadRecordAttachment.bind(null, r.id)}
+                deleteFormAction={
+                  r.formAttachment
+                    ? deleteRecordAttachment.bind(null, r.id, r.formAttachment.id)
+                    : undefined
+                }
+                deleteInvoiceAction={
+                  r.invoiceAttachment
+                    ? deleteRecordAttachment.bind(null, r.id, r.invoiceAttachment.id)
+                    : undefined
+                }
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

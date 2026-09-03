@@ -16,21 +16,25 @@ import type { InspectionPlanWeekEntry, InspectionPlanItem } from "@prisma/client
 type WeekEntryWithItem = Omit<InspectionPlanWeekEntry, "cost" | "sparePartCost"> & {
   cost: number | null;
   sparePartCost: number | null;
-  formAttachment: AttachmentInfo | null;
-  invoiceAttachment: AttachmentInfo | null;
+  formAttachment?: AttachmentInfo | null;
+  invoiceAttachment?: AttachmentInfo | null;
   item: InspectionPlanItem;
 };
 
 export function InspectionsCostTable({
   entries,
-  approver,
-  canForm,
-  canInvoice,
+  showApproval,
+  approver = false,
+  canForm = false,
+  canInvoice = false,
 }: {
   entries: WeekEntryWithItem[];
-  approver: boolean;
-  canForm: boolean;
-  canInvoice: boolean;
+  /** Bütçe Onayı ve Belgeler sütunlarını gösterir — bu yönetim artık Diğer Giderler
+   * sayfasından da yapılabildiği için, bağımsız Bakım Maliyetleri sayfasında false geçilir. */
+  showApproval: boolean;
+  approver?: boolean;
+  canForm?: boolean;
+  canInvoice?: boolean;
 }) {
   const columns: DataTableColumn<WeekEntryWithItem>[] = [
     {
@@ -85,47 +89,51 @@ export function InspectionsCostTable({
           <span className="text-slate-300">-</span>
         ),
     },
-    {
-      key: "approved",
-      header: "Bütçe Onayı",
-      width: "150px",
-      filterValue: (e) => (e.approved ? "Onaylandı" : "Onay Bekliyor"),
-      render: (e) => (
-        <ApprovalControl
-          approved={e.approved}
-          canApprove={approver}
-          action={approver ? setInspectionWeekEntryApproval.bind(null, e.id) : undefined}
-        />
-      ),
-    },
-    {
-      key: "documents",
-      header: "Belgeler",
-      width: "160px",
-      filterValue: (e) =>
-        `Form ${e.formAttachment ? "✓" : "✗"} Fatura ${e.invoiceAttachment ? "✓" : "✗"}`,
-      render: (e) => (
-        <AttachmentQuickPanel
-          title={`${e.item.label} · ${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`}
-          form={e.formAttachment}
-          invoice={e.invoiceAttachment}
-          canForm={canForm}
-          canInvoice={canInvoice}
-          uploadFormAction={uploadInspectionWeekEntryAttachment.bind(null, e.id)}
-          uploadInvoiceAction={uploadInspectionWeekEntryAttachment.bind(null, e.id)}
-          deleteFormAction={
-            e.formAttachment
-              ? deleteInspectionWeekEntryAttachment.bind(null, e.id, e.formAttachment.id)
-              : undefined
-          }
-          deleteInvoiceAction={
-            e.invoiceAttachment
-              ? deleteInspectionWeekEntryAttachment.bind(null, e.id, e.invoiceAttachment.id)
-              : undefined
-          }
-        />
-      ),
-    },
+    ...(showApproval
+      ? [
+          {
+            key: "approved",
+            header: "Bütçe Onayı",
+            width: "150px",
+            filterValue: (e: WeekEntryWithItem) => (e.approved ? "Onaylandı" : "Onay Bekliyor"),
+            render: (e: WeekEntryWithItem) => (
+              <ApprovalControl
+                approved={e.approved}
+                canApprove={approver}
+                action={approver ? setInspectionWeekEntryApproval.bind(null, e.id) : undefined}
+              />
+            ),
+          },
+          {
+            key: "documents",
+            header: "Belgeler",
+            width: "160px",
+            filterValue: (e: WeekEntryWithItem) =>
+              `Form ${e.formAttachment ? "✓" : "✗"} Fatura ${e.invoiceAttachment ? "✓" : "✗"}`,
+            render: (e: WeekEntryWithItem) => (
+              <AttachmentQuickPanel
+                title={`${e.item.label} · ${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`}
+                form={e.formAttachment ?? null}
+                invoice={e.invoiceAttachment ?? null}
+                canForm={canForm}
+                canInvoice={canInvoice}
+                uploadFormAction={uploadInspectionWeekEntryAttachment.bind(null, e.id)}
+                uploadInvoiceAction={uploadInspectionWeekEntryAttachment.bind(null, e.id)}
+                deleteFormAction={
+                  e.formAttachment
+                    ? deleteInspectionWeekEntryAttachment.bind(null, e.id, e.formAttachment.id)
+                    : undefined
+                }
+                deleteInvoiceAction={
+                  e.invoiceAttachment
+                    ? deleteInspectionWeekEntryAttachment.bind(null, e.id, e.invoiceAttachment.id)
+                    : undefined
+                }
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canDelete, canApprove, canAddInvoice, canAddMaintenanceForm } from "@/lib/permissions";
+import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { toAttachmentInfo } from "@/lib/attachments/service";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { RecordsTable } from "./records-table";
@@ -17,9 +16,6 @@ export default async function RecordsPage() {
   const session = await auth();
   const writable = canWrite(session?.user.role);
   const deletable = canDelete(session?.user.role);
-  const approver = canApprove(session?.user.role);
-  const canForm = canAddMaintenanceForm(session?.user.role);
-  const canInvoice = canAddInvoice(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
@@ -28,7 +24,6 @@ export default async function RecordsPage() {
       machine: true,
       issueType: true,
       technician: true,
-      attachments: { include: { uploadedBy: true } },
     },
     orderBy: { reportedAt: "desc" },
     take: 200,
@@ -39,8 +34,6 @@ export default async function RecordsPage() {
     ...r,
     sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
     sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
-    formAttachment: toAttachmentInfo(r.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
-    invoiceAttachment: toAttachmentInfo(r.attachments.find((a) => a.kind === "INVOICE")),
   }));
 
   const ongoing = serialized.filter((r) => !r.finishedAt);
@@ -79,9 +72,6 @@ export default async function RecordsPage() {
           records={ongoing}
           writable={writable}
           deletable={deletable}
-          approver={approver}
-          canForm={canForm}
-          canInvoice={canInvoice}
           emptyMessage="Devam eden kayıt yok."
         />
       </div>
@@ -94,9 +84,6 @@ export default async function RecordsPage() {
           records={completed}
           writable={writable}
           deletable={deletable}
-          approver={approver}
-          canForm={canForm}
-          canInvoice={canInvoice}
           emptyMessage="Tamamlanan kayıt yok."
         />
       </div>

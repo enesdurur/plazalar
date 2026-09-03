@@ -389,6 +389,7 @@ export default async function OtherExpensesPage({
                   <div className="mt-2">
                     <CostsTable
                       records={faultRecordsSerialized}
+                      showApproval
                       approver={approver}
                       canForm={canForm}
                       canInvoice={canInvoice}
@@ -403,6 +404,7 @@ export default async function OtherExpensesPage({
                   <div className="mt-2">
                     <PlanEntriesTable
                       entries={planEntriesSerialized}
+                      showApproval
                       approver={approver}
                       canForm={canForm}
                       canInvoice={canInvoice}
@@ -419,6 +421,7 @@ export default async function OtherExpensesPage({
                   <div className="mt-2">
                     <InspectionsCostTable
                       entries={inspectionEntriesSerialized}
+                      showApproval
                       approver={approver}
                       canForm={canForm}
                       canInvoice={canInvoice}

@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
-import { canApprove, canAddInvoice, canAddMaintenanceForm } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { toAttachmentInfo } from "@/lib/attachments/service";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
@@ -15,10 +12,6 @@ export const metadata: Metadata = {
 };
 
 export default async function MaintenanceCostsPage() {
-  const session = await auth();
-  const approver = canApprove(session?.user.role);
-  const canForm = canAddMaintenanceForm(session?.user.role);
-  const canInvoice = canAddInvoice(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
@@ -26,7 +19,6 @@ export default async function MaintenanceCostsPage() {
     include: {
       machine: true,
       sparePart: true,
-      attachments: { include: { uploadedBy: true } },
     },
     orderBy: { reportedAt: "desc" },
   });
@@ -39,12 +31,10 @@ export default async function MaintenanceCostsPage() {
   }
 
   // Prisma Decimal alanları Client Component'lere doğrudan aktarılamaz — düz sayıya çeviriyoruz.
-  const recordsWithDocs = records.map((r) => ({
+  const recordsSerialized = records.map((r) => ({
     ...r,
     sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
     sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
-    formAttachment: toAttachmentInfo(r.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
-    invoiceAttachment: toAttachmentInfo(r.attachments.find((a) => a.kind === "INVOICE")),
   }));
 
   return (
@@ -68,12 +58,7 @@ export default async function MaintenanceCostsPage() {
       </div>
 
       <div className="mt-6">
-        <CostsTable
-          records={recordsWithDocs}
-          approver={approver}
-          canForm={canForm}
-          canInvoice={canInvoice}
-        />
+        <CostsTable records={recordsSerialized} showApproval={false} />
       </div>
     </div>
   );

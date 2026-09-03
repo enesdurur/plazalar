@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
-import { canApprove, canAddInvoice, canAddMaintenanceForm } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { toAttachmentInfo } from "@/lib/attachments/service";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
@@ -16,10 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default async function MaintenanceCostsPage() {
-  const session = await auth();
-  const approver = canApprove(session?.user.role);
-  const canForm = canAddMaintenanceForm(session?.user.role);
-  const canInvoice = canAddInvoice(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const [planEntries, inspectionEntries] = await Promise.all([
@@ -28,7 +21,7 @@ export default async function MaintenanceCostsPage() {
         item: { plazaId: plaza.id },
         OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
       },
-      include: { item: true, attachments: { include: { uploadedBy: true } } },
+      include: { item: true },
       orderBy: [{ year: "desc" }, { week: "desc" }],
     }),
     prisma.inspectionPlanWeekEntry.findMany({
@@ -36,7 +29,7 @@ export default async function MaintenanceCostsPage() {
         item: { plazaId: plaza.id },
         OR: [{ cost: { not: null } }, { sparePartCost: { not: null } }],
       },
-      include: { item: true, attachments: { include: { uploadedBy: true } } },
+      include: { item: true },
       orderBy: [{ year: "desc" }, { week: "desc" }],
     }),
   ]);
@@ -55,15 +48,11 @@ export default async function MaintenanceCostsPage() {
     ...e,
     cost: e.cost != null ? Number(e.cost) : null,
     sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
-    formAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
-    invoiceAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
   }));
   const inspectionEntriesSerialized = inspectionEntries.map((e) => ({
     ...e,
     cost: e.cost != null ? Number(e.cost) : null,
     sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
-    formAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
-    invoiceAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
   }));
 
   return (
@@ -97,22 +86,12 @@ export default async function MaintenanceCostsPage() {
 
       <h2 className="mt-6 text-sm font-semibold text-slate-900">3. Firma Bakım Planı</h2>
       <div className="mt-3">
-        <PlanEntriesTable
-          entries={planEntriesSerialized}
-          approver={approver}
-          canForm={canForm}
-          canInvoice={canInvoice}
-        />
+        <PlanEntriesTable entries={planEntriesSerialized} showApproval={false} />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Periyodik (Fenni) Muayene</h2>
       <div className="mt-3">
-        <InspectionsCostTable
-          entries={inspectionEntriesSerialized}
-          approver={approver}
-          canForm={canForm}
-          canInvoice={canInvoice}
-        />
+        <InspectionsCostTable entries={inspectionEntriesSerialized} showApproval={false} />
       </div>
     </div>
   );

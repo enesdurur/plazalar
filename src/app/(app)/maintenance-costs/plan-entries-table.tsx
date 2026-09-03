@@ -77,7 +77,7 @@ export function PlanEntriesTable({
     {
       key: "sparePart",
       header: "Yedek Parça",
-      width: "200px",
+      width: "440px",
       align: "right",
       money: (e) =>
         e.sparePartCost != null

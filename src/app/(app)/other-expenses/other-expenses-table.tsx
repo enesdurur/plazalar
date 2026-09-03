@@ -81,9 +81,9 @@ export function OtherExpensesTable({
     {
       key: "note",
       header: "Not",
-      width: "220px",
+      width: "260px",
       render: (r) => (
-        <span className="block max-w-[220px] truncate text-slate-500" title={r.note ?? ""}>
+        <span className="block max-w-[260px] truncate text-slate-500" title={r.note ?? ""}>
           {r.note ?? "-"}
         </span>
       ),
@@ -91,7 +91,7 @@ export function OtherExpensesTable({
     {
       key: "createdBy",
       header: "Giren",
-      width: "140px",
+      width: "180px",
       filterValue: (r) => r.createdByName ?? "-",
       render: (r) => <span className="text-slate-500">{r.createdByName ?? "-"}</span>,
     },

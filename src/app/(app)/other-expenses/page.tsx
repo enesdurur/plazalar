@@ -390,6 +390,7 @@ export default async function OtherExpensesPage({
                     <CostsTable
                       records={faultRecordsSerialized}
                       showApproval
+                      deletable={deletable}
                       approver={approver}
                       canForm={canForm}
                       canInvoice={canInvoice}

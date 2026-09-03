@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { DeleteButton } from "@/components/delete-button";
 import { ApprovalControl } from "@/components/approval-control";
 import { AttachmentQuickPanel, type AttachmentInfo } from "@/components/attachment-upload";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import {
+  deleteRecord,
   setRecordApproval,
   uploadRecordAttachment,
   deleteRecordAttachment,
@@ -27,6 +29,7 @@ type RecordWithRelations = Omit<
 export function CostsTable({
   records,
   showApproval,
+  deletable,
   approver = false,
   canForm = false,
   canInvoice = false,
@@ -36,6 +39,7 @@ export function CostsTable({
    * sayfasından da yapılabildiği için, bu tablonun bağımsız maliyet inceleme sayfalarındaki
    * (Arıza Maliyetleri vb.) kullanımında false geçilir. */
   showApproval: boolean;
+  deletable: boolean;
   approver?: boolean;
   canForm?: boolean;
   canInvoice?: boolean;
@@ -141,12 +145,15 @@ export function CostsTable({
       emptyMessage="Henüz maliyetli bir bakım kaydı yok."
       maxHeight="70vh"
       renderActions={(r) => (
-        <Link
-          href={`/records/${r.id}/edit`}
-          className="text-sm font-medium text-slate-600 hover:text-slate-900"
-        >
-          Düzenle
-        </Link>
+        <>
+          <Link
+            href={`/records/${r.id}/edit`}
+            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+          >
+            Düzenle
+          </Link>
+          {deletable && <DeleteButton action={deleteRecord.bind(null, r.id)} />}
+        </>
       )}
     />
   );

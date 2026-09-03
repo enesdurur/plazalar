@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
@@ -12,6 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default async function MaintenanceCostsPage() {
+  const session = await auth();
+  const deletable = canDelete(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
@@ -58,7 +62,7 @@ export default async function MaintenanceCostsPage() {
       </div>
 
       <div className="mt-6">
-        <CostsTable records={recordsSerialized} showApproval={false} />
+        <CostsTable records={recordsSerialized} showApproval={false} deletable={deletable} />
       </div>
     </div>
   );

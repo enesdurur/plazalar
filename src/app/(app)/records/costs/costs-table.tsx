@@ -100,44 +100,37 @@ export function CostsTable({
     ...(showApproval
       ? [
           {
-            key: "approved",
-            header: "Bütçe Onayı",
-            width: "150px",
+            key: "approvalDocs",
+            header: "Bütçe Onayı / Belgeler",
+            width: "190px",
             filterValue: (r: RecordWithRelations) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
             render: (r: RecordWithRelations) => (
-              <ApprovalControl
-                approved={r.approved}
-                canApprove={approver}
-                action={approver ? setRecordApproval.bind(null, r.id) : undefined}
-              />
-            ),
-          },
-          {
-            key: "documents",
-            header: "Belgeler",
-            width: "160px",
-            filterValue: (r: RecordWithRelations) =>
-              `Form ${r.formAttachment ? "✓" : "✗"} Fatura ${r.invoiceAttachment ? "✓" : "✗"}`,
-            render: (r: RecordWithRelations) => (
-              <AttachmentQuickPanel
-                title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
-                form={r.formAttachment ?? null}
-                invoice={r.invoiceAttachment ?? null}
-                canForm={canForm}
-                canInvoice={canInvoice}
-                uploadFormAction={uploadRecordAttachment.bind(null, r.id)}
-                uploadInvoiceAction={uploadRecordAttachment.bind(null, r.id)}
-                deleteFormAction={
-                  r.formAttachment
-                    ? deleteRecordAttachment.bind(null, r.id, r.formAttachment.id)
-                    : undefined
-                }
-                deleteInvoiceAction={
-                  r.invoiceAttachment
-                    ? deleteRecordAttachment.bind(null, r.id, r.invoiceAttachment.id)
-                    : undefined
-                }
-              />
+              <div className="flex flex-col items-start gap-1">
+                <ApprovalControl
+                  approved={r.approved}
+                  canApprove={approver}
+                  action={approver ? setRecordApproval.bind(null, r.id) : undefined}
+                />
+                <AttachmentQuickPanel
+                  title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
+                  form={r.formAttachment ?? null}
+                  invoice={r.invoiceAttachment ?? null}
+                  canForm={canForm}
+                  canInvoice={canInvoice}
+                  uploadFormAction={uploadRecordAttachment.bind(null, r.id)}
+                  uploadInvoiceAction={uploadRecordAttachment.bind(null, r.id)}
+                  deleteFormAction={
+                    r.formAttachment
+                      ? deleteRecordAttachment.bind(null, r.id, r.formAttachment.id)
+                      : undefined
+                  }
+                  deleteInvoiceAction={
+                    r.invoiceAttachment
+                      ? deleteRecordAttachment.bind(null, r.id, r.invoiceAttachment.id)
+                      : undefined
+                  }
+                />
+              </div>
             ),
           },
         ]

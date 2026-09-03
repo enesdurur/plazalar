@@ -292,7 +292,7 @@ export default async function OtherExpensesPage({
             <table className="w-full table-fixed divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="sticky left-0 z-10 w-[220px] bg-slate-50 px-4 py-2 text-left font-medium text-slate-600">
+                  <th className="sticky left-0 z-10 w-[240px] bg-slate-50 px-4 py-2 text-left font-medium text-slate-600">
                     Kalem
                   </th>
                   {MONTH_NAMES.map((m) => (
@@ -311,10 +311,15 @@ export default async function OtherExpensesPage({
                   );
                   return (
                     <tr key={item.id} className="odd:bg-white even:bg-slate-50/60">
-                      <td className="sticky left-0 z-10 bg-inherit px-4 py-2 align-top">
-                        <p className="font-medium text-slate-900">{item.label}</p>
+                      <td className="sticky left-0 z-10 w-[240px] overflow-hidden bg-inherit px-4 py-2 align-top">
+                        <p className="truncate font-medium text-slate-900" title={item.label}>
+                          {item.label}
+                        </p>
                         {item.autoSource && (
-                          <p className="text-xs text-slate-400">
+                          <p
+                            className="truncate whitespace-nowrap text-[10px] text-slate-400"
+                            title={`Otomatik: ${AUTO_SOURCE_LABELS[item.autoSource]}`}
+                          >
                             Otomatik: {AUTO_SOURCE_LABELS[item.autoSource]}
                           </p>
                         )}
@@ -406,6 +411,7 @@ export default async function OtherExpensesPage({
                     <PlanEntriesTable
                       entries={planEntriesSerialized}
                       showApproval
+                      deletable={deletable}
                       approver={approver}
                       canForm={canForm}
                       canInvoice={canInvoice}
@@ -423,6 +429,7 @@ export default async function OtherExpensesPage({
                     <InspectionsCostTable
                       entries={inspectionEntriesSerialized}
                       showApproval
+                      deletable={deletable}
                       approver={approver}
                       canForm={canForm}
                       canInvoice={canInvoice}

@@ -96,34 +96,28 @@ export function OtherExpensesTable({
       render: (r) => <span className="text-slate-500">{r.createdByName ?? "-"}</span>,
     },
     {
-      key: "approved",
-      header: "Bütçe Onayı",
-      width: "150px",
+      key: "approvalDocs",
+      header: "Bütçe Onayı / Belgeler",
+      width: "190px",
       filterValue: (r) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
       render: (r) => (
-        <ApprovalControl
-          approved={r.approved}
-          canApprove={approver}
-          action={approver ? setOtherExpenseApproval.bind(null, r.id) : undefined}
-        />
-      ),
-    },
-    {
-      key: "document",
-      header: "Belgeler",
-      width: "160px",
-      filterValue: (r) => (r.attachment ? "Belge ✓" : "Belge ✗"),
-      render: (r) => (
-        <DocumentCell
-          attachment={r.attachment}
-          canManage={writable}
-          uploadAction={uploadOtherExpenseAttachment.bind(null, r.id)}
-          deleteAction={
-            r.attachment
-              ? deleteOtherExpenseAttachment.bind(null, r.id, r.attachment.id)
-              : undefined
-          }
-        />
+        <div className="flex flex-col items-start gap-1">
+          <ApprovalControl
+            approved={r.approved}
+            canApprove={approver}
+            action={approver ? setOtherExpenseApproval.bind(null, r.id) : undefined}
+          />
+          <DocumentCell
+            attachment={r.attachment}
+            canManage={writable}
+            uploadAction={uploadOtherExpenseAttachment.bind(null, r.id)}
+            deleteAction={
+              r.attachment
+                ? deleteOtherExpenseAttachment.bind(null, r.id, r.attachment.id)
+                : undefined
+            }
+          />
+        </div>
       ),
     },
   ];

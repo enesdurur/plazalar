@@ -198,6 +198,30 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
   redirect("/inspections");
 }
 
+export async function deleteInspectionWeekEntry(id: string) {
+  const session = await auth();
+  if (!session?.user || !canDelete(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+
+  const existing = await prisma.inspectionPlanWeekEntry.findFirst({
+    where: { id, item: { plazaId: plaza.id } },
+  });
+  if (!existing) return;
+
+  await prisma.inspectionPlanWeekEntry.delete({ where: { id: existing.id } });
+
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+
+  revalidatePath("/inspections");
+  revalidatePath("/");
+  revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath("/other-expenses");
+}
+
 export async function setInspectionWeekEntryApproval(id: string, formData: FormData) {
   const session = await auth();
   if (!session?.user || !canApprove(session.user.role)) {

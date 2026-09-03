@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canApprove, canAddAttachmentKind } from "@/lib/permissions";
+import { canWrite, canDelete, canApprove, canAddAttachmentKind } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 import { monthOfWeek } from "@/lib/plan/weeks";
@@ -116,6 +116,30 @@ export async function updatePlanWeekEntryCost(id: string, formData: FormData) {
   revalidatePath("/budget/entry");
   revalidatePath("/other-expenses");
   redirect("/annual-plan");
+}
+
+export async function deletePlanWeekEntry(id: string) {
+  const session = await auth();
+  if (!session?.user || !canDelete(session.user.role)) {
+    throw new Error("Bu işlem için yetkiniz yok.");
+  }
+  const plaza = await getSelectedPlaza();
+
+  const existing = await prisma.maintenancePlanWeekEntry.findFirst({
+    where: { id, item: { plazaId: plaza.id } },
+  });
+  if (!existing) return;
+
+  await prisma.maintenancePlanWeekEntry.delete({ where: { id: existing.id } });
+
+  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "MAINTENANCE_PLAN");
+
+  revalidatePath("/annual-plan");
+  revalidatePath("/");
+  revalidatePath("/maintenance-costs");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath("/other-expenses");
 }
 
 export async function setPlanWeekEntryApproval(id: string, formData: FormData) {

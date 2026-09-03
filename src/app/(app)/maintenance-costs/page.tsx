@@ -8,7 +8,8 @@ import { PrintButton } from "@/components/print-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import { CostRecordsTable, type CostRecordRow } from "./cost-records-table";
 import { deleteMaintenancePlanEntry } from "./actions";
-import { deleteInspection } from "../inspections/actions";
+import { deletePlanWeekEntry } from "../annual-plan/actions";
+import { deleteInspection, deleteInspectionWeekEntry } from "../inspections/actions";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
@@ -80,6 +81,7 @@ export default async function MaintenanceCostsPage() {
         sparePartCostCurrency: e.sparePartCostCurrency,
         sparePartNote: e.sparePartNote,
         editHref: `/annual-plan/entries/${e.id}/edit`,
+        deleteAction: deletePlanWeekEntry.bind(null, e.id),
       },
       sortKey: e.year * 100 + monthOfWeek(e.week),
     })),
@@ -114,6 +116,7 @@ export default async function MaintenanceCostsPage() {
         sparePartCostCurrency: e.sparePartCostCurrency,
         sparePartNote: e.sparePartNote,
         editHref: `/inspections/entries/${e.id}/edit`,
+        deleteAction: deleteInspectionWeekEntry.bind(null, e.id),
       },
       sortKey: e.year * 100 + monthOfWeek(e.week),
     })),

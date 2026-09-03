@@ -7,29 +7,32 @@ export function CompanySelector() {
   const [showKapitalNotice, setShowKapitalNotice] = useState(false);
 
   return (
-    <div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => setShowKapitalNotice((v) => !v)}
-          className="flex h-48 items-center justify-center rounded-xl border-2 border-slate-200 bg-white px-4 text-center text-xl font-bold uppercase text-slate-900 shadow-sm transition hover:border-slate-400 hover:shadow-md sm:h-56"
-        >
+    <div className="flex min-h-screen flex-col sm:flex-row">
+      <button
+        type="button"
+        onClick={() => setShowKapitalNotice((v) => !v)}
+        className="relative flex flex-1 items-center justify-center bg-white px-4 text-center transition hover:bg-slate-50"
+      >
+        <span className="text-2xl font-bold uppercase tracking-wide text-slate-900 sm:text-4xl">
           Kapital Gayrimenkul
-        </button>
+        </span>
+        {showKapitalNotice && (
+          <p className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+            Bu bölüm yapım aşamasındadır.
+          </p>
+        )}
+      </button>
 
-        <Link
-          href="/select-plaza"
-          className="flex h-48 items-center justify-center rounded-xl border-2 border-slate-200 bg-white px-4 text-center text-xl font-bold uppercase text-slate-900 shadow-sm transition hover:border-slate-400 hover:shadow-md sm:h-56"
-        >
+      <div className="h-px bg-slate-200 sm:h-auto sm:w-px" />
+
+      <Link
+        href="/select-plaza"
+        className="flex flex-1 items-center justify-center bg-slate-50 px-4 text-center transition hover:bg-slate-100"
+      >
+        <span className="text-2xl font-bold uppercase tracking-wide text-slate-900 sm:text-4xl">
           Burgaz Yönetim
-        </Link>
-      </div>
-
-      {showKapitalNotice && (
-        <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-center text-sm font-medium text-amber-700">
-          Bu bölüm yapım aşamasındadır.
-        </p>
-      )}
+        </span>
+      </Link>
     </div>
   );
 }

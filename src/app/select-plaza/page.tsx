@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -42,7 +43,13 @@ export default async function SelectPlazaPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">Hangi plazaya girmek istiyorsunuz?</h1>
+        <Link
+          href="/select-company"
+          className="text-xs text-slate-400 underline hover:text-slate-600"
+        >
+          ← Şirket seçimine dön
+        </Link>
+        <h1 className="mt-3 text-xl font-semibold text-slate-900">Hangi plazaya girmek istiyorsunuz?</h1>
         <p className="mt-1 text-sm text-slate-500">
           Devam etmek için bir plaza seçin.
         </p>

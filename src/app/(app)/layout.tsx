@@ -21,12 +21,20 @@ export default async function AppLayout({
         <div className="mb-4 rounded-md bg-slate-800 px-3 py-2">
           <p className="text-[11px] uppercase tracking-wide text-slate-400">Plaza</p>
           <p className="truncate text-sm font-medium text-white">{plaza.name}</p>
-          <Link
-            href="/select-plaza"
-            className="text-xs text-slate-400 underline hover:text-slate-200"
-          >
-            Değiştir
-          </Link>
+          <div className="mt-1 flex gap-3">
+            <Link
+              href="/select-plaza"
+              className="text-xs text-slate-400 underline hover:text-slate-200"
+            >
+              Plaza Değiştir
+            </Link>
+            <Link
+              href="/select-company"
+              className="text-xs text-slate-400 underline hover:text-slate-200"
+            >
+              Şirket Değiştir
+            </Link>
+          </div>
         </div>
         <NavLinks />
         <div className="mt-auto border-t border-slate-800 pt-4">

@@ -80,8 +80,8 @@ export function isLockedMonth(year: number, month: number): boolean {
 }
 
 /** Fazla Mesai / Eksik Çalışma kırılımları yalnızca vardiyalı personel kadrolarında
- * (Güvenlik, Teknik, Temizlik, Bahçıvan) anlamlıdır — diğer kalemlerde gösterilmez. */
-const ADJUSTMENT_CATEGORIES = new Set(["GÜVENLİK", "TEKNİK", "TEMİZLİK", "BAHÇE"]);
+ * (Güvenlik, Teknik, Temizlik, Bahçıvan, Vale) anlamlıdır — diğer kalemlerde gösterilmez. */
+const ADJUSTMENT_CATEGORIES = new Set(["GÜVENLİK", "TEKNİK", "TEMİZLİK", "BAHÇE", "VALE"]);
 
 export function allowsAdjustments(category: string | null | undefined): boolean {
   if (!category) return false;

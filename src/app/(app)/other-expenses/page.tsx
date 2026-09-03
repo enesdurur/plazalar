@@ -7,7 +7,6 @@ import { SECTION_NAMES, isLockedMonth } from "@/lib/budget/calc";
 import { toTRY } from "@/lib/budget/auto-sync";
 import { monthOfWeek } from "@/lib/plan/weeks";
 import { toAttachmentInfo } from "@/lib/attachments/service";
-import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import { OtherExpensesTable } from "./other-expenses-table";
 import { CostsTable } from "../records/costs/costs-table";
 import { PlanEntriesTable } from "../maintenance-costs/plan-entries-table";
@@ -32,6 +31,11 @@ const MONTH_NAMES = [
   "Kas",
   "Ara",
 ];
+
+// Gerçekleşen Bütçe'nin kendi tablosuyla (budget-view.tsx'teki formatTL) aynı biçim — kuruşlar dahil.
+function formatTL(amount: number) {
+  return `${amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`;
+}
 
 const AUTO_SOURCE_LABELS: Record<string, string> = {
   MAINTENANCE_PLAN: "3. Firma Bakım Planı",
@@ -348,12 +352,12 @@ export default async function OtherExpensesPage({
                         const amount = enteredMonthMap.get(`${item.id}-${month}`) ?? null;
                         return (
                           <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-slate-600" key={month}>
-                            {amount != null ? formatCostAmount(amount, "TRY") : "-"}
+                            {amount != null ? formatTL(amount) : "-"}
                           </td>
                         );
                       })}
                       <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
-                        {itemTotal > 0 ? formatCostAmount(itemTotal, "TRY") : "-"}
+                        {itemTotal > 0 ? formatTL(itemTotal) : "-"}
                       </td>
                     </tr>
                   );
@@ -369,11 +373,11 @@ export default async function OtherExpensesPage({
                       key={i}
                       className="whitespace-nowrap px-2 py-2 text-right font-semibold tabular-nums text-slate-900"
                     >
-                      {total > 0 ? formatCostAmount(total, "TRY") : "-"}
+                      {total > 0 ? formatTL(total) : "-"}
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
-                    {formatCostAmount(grandTotal, "TRY")}
+                    {formatTL(grandTotal)}
                   </td>
                 </tr>
               </tfoot>

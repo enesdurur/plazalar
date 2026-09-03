@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { canWrite, canDelete } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import { CostRecordsTable, type CostRecordRow } from "./cost-records-table";
+import { deleteMaintenancePlanEntry } from "./actions";
+import { deleteInspection } from "../inspections/actions";
 import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
@@ -13,6 +17,9 @@ export const metadata: Metadata = {
 };
 
 export default async function MaintenanceCostsPage() {
+  const session = await auth();
+  const writable = canWrite(session?.user.role);
+  const deletable = canDelete(session?.user.role);
   const plaza = await getSelectedPlaza();
 
   const [planEntries, inspectionEntries, legacyInspections, legacyPlanEntries] =
@@ -86,7 +93,8 @@ export default async function MaintenanceCostsPage() {
         sparePartCost: null,
         sparePartCostCurrency: "TRY" as const,
         sparePartNote: null,
-        editHref: null,
+        editHref: `/maintenance-costs/plan-entries/${e.id}/edit`,
+        deleteAction: deleteMaintenancePlanEntry.bind(null, e.id),
       },
       sortKey: e.year * 100 + e.month,
     })),
@@ -122,6 +130,7 @@ export default async function MaintenanceCostsPage() {
         sparePartCostCurrency: "TRY" as const,
         sparePartNote: null,
         editHref: `/inspections/${r.id}/edit`,
+        deleteAction: deleteInspection.bind(null, r.id),
       },
       sortKey: r.inspectionDate
         ? r.inspectionDate.getFullYear() * 100 + (r.inspectionDate.getMonth() + 1)
@@ -166,6 +175,8 @@ export default async function MaintenanceCostsPage() {
           rows={planRows}
           itemColumnHeader="Bakım Kalemi"
           emptyMessage="Henüz maliyetli bir yıllık bakım kaydı yok."
+          writable={writable}
+          deletable={deletable}
         />
       </div>
 
@@ -175,6 +186,8 @@ export default async function MaintenanceCostsPage() {
           rows={inspectionRows}
           itemColumnHeader="Fenni Muayene Kalemi"
           emptyMessage="Henüz maliyetli bir fenni muayene kaydı yok."
+          writable={writable}
+          deletable={deletable}
         />
       </div>
     </div>

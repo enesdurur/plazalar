@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { DeleteButton } from "@/components/delete-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import type { Currency } from "@prisma/client";
 
@@ -16,18 +17,24 @@ export type CostRecordRow = {
   sparePartCost: number | null;
   sparePartCostCurrency: Currency;
   sparePartNote: string | null;
-  /** null: bu kaydın düzenlenebileceği bir ekran yok (yalnızca eski MaintenancePlanEntry kayıtlarında). */
+  /** null: bu kaydın düzenlenebileceği bir ekran yok. */
   editHref: string | null;
+  /** yalnızca freestanding eski kayıtlarda (haftalık matris slotları silinemez, yalnızca düzenlenir). */
+  deleteAction?: () => Promise<void>;
 };
 
 export function CostRecordsTable({
   rows,
   itemColumnHeader,
   emptyMessage,
+  writable,
+  deletable,
 }: {
   rows: CostRecordRow[];
   itemColumnHeader: string;
   emptyMessage: string;
+  writable: boolean;
+  deletable: boolean;
 }) {
   const columns: DataTableColumn<CostRecordRow>[] = [
     {
@@ -90,16 +97,19 @@ export function CostRecordsTable({
       emptyMessage={emptyMessage}
       maxHeight="50vh"
       actionsWidth="90px"
-      renderActions={(r) =>
-        r.editHref ? (
-          <Link
-            href={r.editHref}
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            Düzenle
-          </Link>
-        ) : null
-      }
+      renderActions={(r) => (
+        <>
+          {writable && r.editHref && (
+            <Link
+              href={r.editHref}
+              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            >
+              Düzenle
+            </Link>
+          )}
+          {deletable && r.deleteAction && <DeleteButton action={r.deleteAction} />}
+        </>
+      )}
     />
   );
 }

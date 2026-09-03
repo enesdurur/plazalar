@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete, canApprove, canAddInvoice, canAddMaintenanceForm } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { SECTION_NAMES } from "@/lib/budget/calc";
+import { SECTION_NAMES, isLockedMonth } from "@/lib/budget/calc";
 import { toTRY } from "@/lib/budget/auto-sync";
 import { monthOfWeek } from "@/lib/plan/weeks";
 import { toAttachmentInfo } from "@/lib/attachments/service";
+import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import { OtherExpensesTable } from "./other-expenses-table";
 import { CostsTable } from "../records/costs/costs-table";
 import { PlanEntriesTable } from "../maintenance-costs/plan-entries-table";
@@ -142,6 +143,24 @@ export default async function OtherExpensesPage({
   function addEntered(lineItemId: string, month: number, amount: number) {
     const key = `${lineItemId}-${month}`;
     enteredMonthMap.set(key, (enteredMonthMap.get(key) ?? 0) + amount);
+  }
+
+  // Ocak-Haziran 2026 "kilitli" aylar — bu aylarda hiçbir modülden canlı kayıt akmaz (Excel'den
+  // içe aktarılan tarihsel veri dondurulmuştur), o yüzden bu ayların tek kaynağı doğrudan
+  // Gerçekleşen Bütçe'deki (BudgetMonthEntry) zaten girilmiş rakamlardır.
+  const lockedMonths = Array.from({ length: 6 }, (_, i) => i + 1).filter((m) =>
+    isLockedMonth(year, m)
+  );
+  if (lockedMonths.length > 0 && lineItems.length > 0) {
+    const lockedEntries = await prisma.budgetMonthEntry.findMany({
+      where: { lineItemId: { in: lineItems.map((i) => i.id) }, month: { in: lockedMonths } },
+      select: { lineItemId: true, month: true, manualAmount: true },
+    });
+    for (const e of lockedEntries) {
+      if (e.manualAmount != null) {
+        enteredMonthMap.set(`${e.lineItemId}-${e.month}`, Number(e.manualAmount));
+      }
+    }
   }
 
   for (const e of otherExpenses) {
@@ -328,17 +347,13 @@ export default async function OtherExpensesPage({
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
                         const amount = enteredMonthMap.get(`${item.id}-${month}`) ?? null;
                         return (
-                          <td key={month} className="px-2 py-2 text-right tabular-nums text-slate-600">
-                            {amount != null
-                              ? amount.toLocaleString("tr-TR", { maximumFractionDigits: 0 })
-                              : "-"}
+                          <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-slate-600" key={month}>
+                            {amount != null ? formatCostAmount(amount, "TRY") : "-"}
                           </td>
                         );
                       })}
-                      <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
-                        {itemTotal > 0
-                          ? itemTotal.toLocaleString("tr-TR", { maximumFractionDigits: 0 })
-                          : "-"}
+                      <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                        {itemTotal > 0 ? formatCostAmount(itemTotal, "TRY") : "-"}
                       </td>
                     </tr>
                   );
@@ -352,13 +367,13 @@ export default async function OtherExpensesPage({
                   {monthTotals.map((total, i) => (
                     <td
                       key={i}
-                      className="px-2 py-2 text-right font-semibold tabular-nums text-slate-900"
+                      className="whitespace-nowrap px-2 py-2 text-right font-semibold tabular-nums text-slate-900"
                     >
-                      {total > 0 ? total.toLocaleString("tr-TR", { maximumFractionDigits: 0 }) : "-"}
+                      {total > 0 ? formatCostAmount(total, "TRY") : "-"}
                     </td>
                   ))}
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
-                    {grandTotal.toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                    {formatCostAmount(grandTotal, "TRY")}
                   </td>
                 </tr>
               </tfoot>

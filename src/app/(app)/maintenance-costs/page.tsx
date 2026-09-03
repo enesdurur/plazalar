@@ -4,10 +4,8 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { ExportLink } from "@/components/export-link";
 import { PrintButton } from "@/components/print-button";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import { PlanEntriesTable } from "./plan-entries-table";
-import { InspectionsCostTable } from "./inspections-table";
-import { LegacyInspectionsTable } from "./legacy-inspections-table";
-import { LegacyPlanEntriesTable } from "./legacy-plan-entries-table";
+import { CostRecordsTable, type CostRecordRow } from "./cost-records-table";
+import { monthOfWeek, MONTH_NAMES } from "@/lib/plan/weeks";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -35,10 +33,10 @@ export default async function MaintenanceCostsPage() {
         include: { item: true },
         orderBy: [{ year: "desc" }, { week: "desc" }],
       }),
-      // Haftalık matrise geçmeden önceki eski kayıtlar — artık ayrı bir düzenleme akışları yok
-      // (PeriodicInspection hariç, o /inspections/[id]/edit üzerinden hâlâ düzenlenebiliyor)
-      // ama maliyetleri Panel'deki "Bakım Maliyetleri" toplamına dahil, o yüzden burada da
-      // gösterilmeleri gerekiyor — aksi halde Panel'de görülen toplamla bu sayfa uyuşmaz.
+      // Haftalık matrise geçmeden önceki eski kayıtlar. Panel'deki "Bakım Maliyetleri"
+      // toplamına dahil oldukları için, aşağıda normal kayıtlarla aynı listeye (ayrı bir
+      // "eski kayıtlar" başlığı açmadan) karıştırılıyorlar — aksi halde Panel'de görülen
+      // toplamla bu sayfa uyuşmaz.
       prisma.periodicInspection.findMany({
         where: { plazaId: plaza.id, cost: { not: null } },
         orderBy: { inspectionDate: "desc" },
@@ -63,25 +61,75 @@ export default async function MaintenanceCostsPage() {
   const totalCount =
     planEntries.length + inspectionEntries.length + legacyInspections.length + legacyPlanEntries.length;
 
-  // Prisma Decimal alanları Client Component'lere doğrudan aktarılamaz — düz sayıya çeviriyoruz.
-  const planEntriesSerialized = planEntries.map((e) => ({
-    ...e,
-    cost: e.cost != null ? Number(e.cost) : null,
-    sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
-  }));
-  const inspectionEntriesSerialized = inspectionEntries.map((e) => ({
-    ...e,
-    cost: e.cost != null ? Number(e.cost) : null,
-    sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
-  }));
-  const legacyInspectionsSerialized = legacyInspections.map((r) => ({
-    ...r,
-    cost: r.cost != null ? Number(r.cost) : null,
-  }));
-  const legacyPlanEntriesSerialized = legacyPlanEntries.map((e) => ({
-    ...e,
-    cost: e.cost != null ? Number(e.cost) : null,
-  }));
+  const planRows: CostRecordRow[] = [
+    ...planEntries.map((e) => ({
+      row: {
+        id: e.id,
+        label: e.item.label,
+        monthYearLabel: `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year} (${e.week}. hafta)`,
+        cost: e.cost != null ? Number(e.cost) : null,
+        costCurrency: e.costCurrency,
+        sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+        sparePartCostCurrency: e.sparePartCostCurrency,
+        sparePartNote: e.sparePartNote,
+        editHref: `/annual-plan/entries/${e.id}/edit`,
+      },
+      sortKey: e.year * 100 + monthOfWeek(e.week),
+    })),
+    ...legacyPlanEntries.map((e) => ({
+      row: {
+        id: e.id,
+        label: e.machine.name,
+        monthYearLabel: `${MONTH_NAMES[e.month - 1]} ${e.year}`,
+        cost: e.cost != null ? Number(e.cost) : null,
+        costCurrency: e.costCurrency,
+        sparePartCost: null,
+        sparePartCostCurrency: "TRY" as const,
+        sparePartNote: null,
+        editHref: null,
+      },
+      sortKey: e.year * 100 + e.month,
+    })),
+  ]
+    .sort((a, b) => b.sortKey - a.sortKey)
+    .map((x) => x.row);
+
+  const inspectionRows: CostRecordRow[] = [
+    ...inspectionEntries.map((e) => ({
+      row: {
+        id: e.id,
+        label: e.item.label,
+        monthYearLabel: `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year} (${e.week}. hafta)`,
+        cost: e.cost != null ? Number(e.cost) : null,
+        costCurrency: e.costCurrency,
+        sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+        sparePartCostCurrency: e.sparePartCostCurrency,
+        sparePartNote: e.sparePartNote,
+        editHref: `/inspections/entries/${e.id}/edit`,
+      },
+      sortKey: e.year * 100 + monthOfWeek(e.week),
+    })),
+    ...legacyInspections.map((r) => ({
+      row: {
+        id: r.id,
+        label: r.name,
+        monthYearLabel: r.inspectionDate
+          ? `${MONTH_NAMES[r.inspectionDate.getMonth()]} ${r.inspectionDate.getFullYear()}`
+          : "-",
+        cost: r.cost != null ? Number(r.cost) : null,
+        costCurrency: r.costCurrency,
+        sparePartCost: null,
+        sparePartCostCurrency: "TRY" as const,
+        sparePartNote: null,
+        editHref: `/inspections/${r.id}/edit`,
+      },
+      sortKey: r.inspectionDate
+        ? r.inspectionDate.getFullYear() * 100 + (r.inspectionDate.getMonth() + 1)
+        : 0,
+    })),
+  ]
+    .sort((a, b) => b.sortKey - a.sortKey)
+    .map((x) => x.row);
 
   return (
     <div>
@@ -92,8 +140,8 @@ export default async function MaintenanceCostsPage() {
           </Link>
           <h1 className="mt-1 text-xl font-semibold text-slate-900">Bakım Maliyetleri</h1>
           <p className="mt-1 text-sm text-slate-500">
-            3. Firma Bakım Planı ve Periyodik (Fenni) Muayene&apos;ye girilen maliyetler (eski
-            kayıtlar dahil) · Toplam {totalCount} kayıt · Bakım: {formatCostAmount(totals.TRY, "TRY")}
+            3. Firma Bakım Planı ve Periyodik (Fenni) Muayene&apos;ye girilen maliyetler · Toplam{" "}
+            {totalCount} kayıt · Bakım: {formatCostAmount(totals.TRY, "TRY")}
             {totals.USD > 0 && ` · ${formatCostAmount(totals.USD, "USD")}`}
             {totals.EUR > 0 && ` · ${formatCostAmount(totals.EUR, "EUR")}`}
             {(sparePartTotals.TRY > 0 || sparePartTotals.USD > 0 || sparePartTotals.EUR > 0) && (
@@ -114,32 +162,20 @@ export default async function MaintenanceCostsPage() {
 
       <h2 className="mt-6 text-sm font-semibold text-slate-900">3. Firma Bakım Planı</h2>
       <div className="mt-3">
-        <PlanEntriesTable entries={planEntriesSerialized} showApproval={false} />
+        <CostRecordsTable
+          rows={planRows}
+          itemColumnHeader="Bakım Kalemi"
+          emptyMessage="Henüz maliyetli bir yıllık bakım kaydı yok."
+        />
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-slate-900">Periyodik (Fenni) Muayene</h2>
       <div className="mt-3">
-        <InspectionsCostTable entries={inspectionEntriesSerialized} showApproval={false} />
-      </div>
-
-      <h2 className="mt-10 text-sm font-semibold text-slate-900">
-        Periyodik Muayene — Eski Kayıtlar
-      </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Haftalık matrise geçilmeden önce girilmiş, ekipman bazlı eski muayene kayıtları.
-      </p>
-      <div className="mt-3">
-        <LegacyInspectionsTable items={legacyInspectionsSerialized} />
-      </div>
-
-      <h2 className="mt-10 text-sm font-semibold text-slate-900">
-        3. Firma Bakım Planı — Eski Kayıtlar
-      </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Haftalık matrise geçilmeden önce girilmiş, makine bazlı aylık eski bakım kayıtları.
-      </p>
-      <div className="mt-3">
-        <LegacyPlanEntriesTable entries={legacyPlanEntriesSerialized} />
+        <CostRecordsTable
+          rows={inspectionRows}
+          itemColumnHeader="Fenni Muayene Kalemi"
+          emptyMessage="Henüz maliyetli bir fenni muayene kaydı yok."
+        />
       </div>
     </div>
   );

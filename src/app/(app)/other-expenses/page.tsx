@@ -85,7 +85,8 @@ export default async function OtherExpensesPage({
     approved: e.approved,
     approvedByName: e.approvedBy?.name ?? null,
     createdByName: e.createdBy?.name ?? null,
-    attachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
+    invoiceAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
+    formAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
   }));
 
   // Otomatik kaynaklı kalemler (varsa): ilgili modülün gerçek verisi + onay/belge yönetimi
@@ -388,9 +389,7 @@ export default async function OtherExpensesPage({
 
               {wantsFaultRecords && (
                 <>
-                  <h3 className="mt-6 text-sm font-medium text-slate-700">
-                    Arıza Kayıtları (yedek parça)
-                  </h3>
+                  <h3 className="mt-6 text-sm font-medium text-slate-700">Arıza Kayıtları</h3>
                   <div className="mt-2">
                     <CostsTable
                       records={faultRecordsSerialized}

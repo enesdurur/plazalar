@@ -10,6 +10,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { SECTION_NAMES } from "@/lib/budget/calc";
 import { recomputeOtherExpenseMonth } from "@/lib/budget/other-expense-sync";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
+import type { AttachmentKind } from "@prisma/client";
 
 async function requireWriteAccess() {
   const session = await auth();
@@ -188,9 +189,10 @@ export async function uploadOtherExpenseAttachment(
     if (!(file instanceof File) || file.size === 0) {
       return { error: "Lütfen bir dosya seçin." };
     }
+    const kind = formData.get("kind") as AttachmentKind;
 
     await saveAttachment({
-      kind: "INVOICE",
+      kind,
       file,
       target: { otherExpenseEntryId: id },
       uploaderId: session.user.id,

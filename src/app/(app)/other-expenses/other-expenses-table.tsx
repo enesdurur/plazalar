@@ -28,6 +28,16 @@ const MONTH_NAMES = [
   "Aralık",
 ];
 
+// Bu kalemlerde tek bir fatura yeterli — bakım formu vb. ayrı bir belge söz konusu değil.
+// Listelenmeyen tüm kalemlerde (Wc sarf malzeme giderleri, Peyzaj Giderleri gibi — alınan
+// malzemenin belgesi de eklenebilsin diye) hem Fatura hem Belge için ayrı yükleme alanı açılır.
+const INVOICE_ONLY_LABELS = [
+  "Ortak Alan Elektrik",
+  "Ortak Alan Su Kullanımı",
+  "İlaçlama Hizmetleri",
+  "Dış Cephe Temizliği",
+];
+
 export interface OtherExpenseRow {
   id: string;
   lineItemId: string;
@@ -38,7 +48,8 @@ export interface OtherExpenseRow {
   approved: boolean;
   approvedByName: string | null;
   createdByName: string | null;
-  attachment: AttachmentInfo | null;
+  invoiceAttachment: AttachmentInfo | null;
+  formAttachment: AttachmentInfo | null;
 }
 
 export function OtherExpensesTable({
@@ -107,16 +118,35 @@ export function OtherExpensesTable({
             canApprove={approver}
             action={approver ? setOtherExpenseApproval.bind(null, r.id) : undefined}
           />
-          <DocumentCell
-            attachment={r.attachment}
-            canManage={writable}
-            uploadAction={uploadOtherExpenseAttachment.bind(null, r.id)}
-            deleteAction={
-              r.attachment
-                ? deleteOtherExpenseAttachment.bind(null, r.id, r.attachment.id)
-                : undefined
-            }
-          />
+          {INVOICE_ONLY_LABELS.includes(r.lineItemLabel) ? (
+            <DocumentCell
+              attachment={r.invoiceAttachment}
+              canManage={writable}
+              uploadAction={uploadOtherExpenseAttachment.bind(null, r.id)}
+              deleteAction={
+                r.invoiceAttachment
+                  ? deleteOtherExpenseAttachment.bind(null, r.id, r.invoiceAttachment.id)
+                  : undefined
+              }
+            />
+          ) : (
+            <DualDocumentCell
+              invoiceAttachment={r.invoiceAttachment}
+              formAttachment={r.formAttachment}
+              canManage={writable}
+              uploadAction={uploadOtherExpenseAttachment.bind(null, r.id)}
+              deleteInvoiceAction={
+                r.invoiceAttachment
+                  ? deleteOtherExpenseAttachment.bind(null, r.id, r.invoiceAttachment.id)
+                  : undefined
+              }
+              deleteFormAction={
+                r.formAttachment
+                  ? deleteOtherExpenseAttachment.bind(null, r.id, r.formAttachment.id)
+                  : undefined
+              }
+            />
+          )}
         </div>
       ),
     },
@@ -149,8 +179,8 @@ export function OtherExpensesTable({
 
 type AttachmentActionFn = (formData: FormData) => Promise<{ error: string | null }>;
 
-/** "Belge" hücresi: tek bir rozet, tıklanınca yükleme/görüntüleme paneli açılır — kayıt
- * başına tek destekleyici belge (fatura/form) yeterli, ayrı form+fatura ayrımına gerek yok. */
+/** "Fatura" hücresi: tek bir rozet, tıklanınca yükleme/görüntüleme paneli açılır — bu
+ * kalemlerde (ör. Ortak Alan Elektrik) yalnızca fatura yeterli, ayrı bir belge gerekmez. */
 function DocumentCell({
   attachment,
   canManage,
@@ -169,12 +199,12 @@ function DocumentCell({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Belgeyi görüntüle / yükle"
+        title="Faturayı görüntüle / yükle"
         className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 ${
           attachment ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
         }`}
       >
-        Belge {attachment ? "✓" : "✗"}
+        Fatura {attachment ? "✓" : "✗"}
       </button>
 
       {open && (
@@ -187,7 +217,7 @@ function DocumentCell({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-slate-900">Destekleyici Belge</h3>
+              <h3 className="text-sm font-semibold text-slate-900">Fatura</h3>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -199,12 +229,100 @@ function DocumentCell({
             </div>
             <div className="mt-4">
               <AttachmentUpload
-                label="Fatura / Belge"
+                label="Fatura"
                 kind="INVOICE"
                 attachment={attachment}
                 canManage={canManage}
                 uploadAction={uploadAction}
                 deleteAction={deleteAction}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** "Fatura / Belge" hücresi: bu kalemlerde faturanın yanında ayrı bir destekleyici belge de
+ * (ör. alınan malzemenin listesi) yüklenebilsin diye iki ayrı yükleme alanı olan rozet çifti. */
+function DualDocumentCell({
+  invoiceAttachment,
+  formAttachment,
+  canManage,
+  uploadAction,
+  deleteInvoiceAction,
+  deleteFormAction,
+}: {
+  invoiceAttachment: AttachmentInfo | null;
+  formAttachment: AttachmentInfo | null;
+  canManage: boolean;
+  uploadAction: AttachmentActionFn;
+  deleteInvoiceAction?: AttachmentActionFn;
+  deleteFormAction?: AttachmentActionFn;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Belgeleri görüntüle / yükle"
+        className="flex flex-wrap gap-1 rounded hover:opacity-80"
+      >
+        <span
+          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+            invoiceAttachment ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}
+        >
+          Fatura {invoiceAttachment ? "✓" : "✗"}
+        </span>
+        <span
+          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+            formAttachment ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}
+        >
+          Belge {formAttachment ? "✓" : "✗"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:hidden"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl rounded-lg bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-slate-900">Fatura / Belge</h3>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Kapat"
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <AttachmentUpload
+                label="Fatura"
+                kind="INVOICE"
+                attachment={invoiceAttachment}
+                canManage={canManage}
+                uploadAction={uploadAction}
+                deleteAction={deleteInvoiceAction}
+              />
+              <AttachmentUpload
+                label="Belge"
+                kind="MAINTENANCE_FORM"
+                attachment={formAttachment}
+                canManage={canManage}
+                uploadAction={uploadAction}
+                deleteAction={deleteFormAction}
               />
             </div>
           </div>

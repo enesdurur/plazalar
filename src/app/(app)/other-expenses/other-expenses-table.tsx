@@ -56,18 +56,21 @@ export function OtherExpensesTable({
     {
       key: "lineItem",
       header: "Kalem",
+      width: "240px",
       filterValue: (r) => r.lineItemLabel,
       render: (r) => <span className="font-medium text-slate-900">{r.lineItemLabel}</span>,
     },
     {
       key: "month",
       header: "Ay",
+      width: "150px",
       filterValue: (r) => MONTH_NAMES[r.month - 1],
       render: (r) => <span className="text-slate-600">{MONTH_NAMES[r.month - 1]}</span>,
     },
     {
       key: "amount",
       header: "Tutar",
+      width: "150px",
       render: (r) => (
         <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
           {r.amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
@@ -78,6 +81,7 @@ export function OtherExpensesTable({
     {
       key: "note",
       header: "Not",
+      width: "220px",
       render: (r) => (
         <span className="block max-w-[220px] truncate text-slate-500" title={r.note ?? ""}>
           {r.note ?? "-"}
@@ -87,12 +91,27 @@ export function OtherExpensesTable({
     {
       key: "createdBy",
       header: "Giren",
+      width: "140px",
       filterValue: (r) => r.createdByName ?? "-",
       render: (r) => <span className="text-slate-500">{r.createdByName ?? "-"}</span>,
     },
     {
+      key: "approved",
+      header: "Bütçe Onayı",
+      width: "150px",
+      filterValue: (r) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
+      render: (r) => (
+        <ApprovalControl
+          approved={r.approved}
+          canApprove={approver}
+          action={approver ? setOtherExpenseApproval.bind(null, r.id) : undefined}
+        />
+      ),
+    },
+    {
       key: "document",
-      header: "Belge",
+      header: "Belgeler",
+      width: "160px",
       filterValue: (r) => (r.attachment ? "Belge ✓" : "Belge ✗"),
       render: (r) => (
         <DocumentCell
@@ -104,18 +123,6 @@ export function OtherExpensesTable({
               ? deleteOtherExpenseAttachment.bind(null, r.id, r.attachment.id)
               : undefined
           }
-        />
-      ),
-    },
-    {
-      key: "approved",
-      header: "Bina Yöneticisi Onayı",
-      filterValue: (r) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
-      render: (r) => (
-        <ApprovalControl
-          approved={r.approved}
-          canApprove={approver}
-          action={approver ? setOtherExpenseApproval.bind(null, r.id) : undefined}
         />
       ),
     },

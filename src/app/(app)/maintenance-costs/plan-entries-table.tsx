@@ -40,14 +40,14 @@ export function PlanEntriesTable({
     {
       key: "item",
       header: "Bakım Kalemi",
-      width: "260px",
+      width: "240px",
       filterValue: (e) => e.item.label,
       render: (e) => <span className="font-medium text-slate-900">{e.item.label}</span>,
     },
     {
       key: "monthYear",
       header: "Ay / Yıl",
-      width: "170px",
+      width: "150px",
       filterValue: (e) => `${MONTH_NAMES[monthOfWeek(e.week) - 1]} ${e.year}`,
       render: (e) => (
         <span className="whitespace-nowrap text-slate-600">
@@ -73,7 +73,7 @@ export function PlanEntriesTable({
     {
       key: "sparePart",
       header: "Yedek Parça",
-      width: "220px",
+      width: "200px",
       align: "right",
       money: (e) =>
         e.sparePartCost != null

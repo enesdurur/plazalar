@@ -46,8 +46,16 @@ export function CostsTable({
 }) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
     {
+      key: "machine",
+      header: "Makine",
+      width: "240px",
+      filterValue: (r) => r.machine.name,
+      render: (r) => <span className="font-medium text-slate-900">{r.machine.name}</span>,
+    },
+    {
       key: "reportedAt",
       header: "Tarih",
+      width: "150px",
       filterValue: (r) => r.reportedAt.toLocaleDateString("tr-TR"),
       render: (r) => (
         <span className="whitespace-nowrap text-slate-600">
@@ -56,23 +64,21 @@ export function CostsTable({
       ),
     },
     {
-      key: "machine",
-      header: "Makine",
-      filterValue: (r) => r.machine.name,
-      render: (r) => <span className="font-medium text-slate-900">{r.machine.name}</span>,
-    },
-    {
-      key: "description",
-      header: "Açıklama",
+      key: "amount",
+      header: "Tutar",
+      width: "150px",
+      align: "right",
+      money: (r) => ({ amount: Number(r.sparePartCost), currency: r.sparePartCostCurrency }),
       render: (r) => (
-        <span className="block max-w-xs truncate text-slate-600" title={r.description}>
-          {r.description}
+        <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
+          {formatCostAmount(Number(r.sparePartCost), r.sparePartCostCurrency)}
         </span>
       ),
     },
     {
       key: "sparePart",
       header: "Yedek Parça",
+      width: "200px",
       filterValue: (r) => r.sparePart?.name ?? r.sparePartOther ?? "-",
       render: (r) => (
         <span className="text-slate-600">
@@ -82,13 +88,12 @@ export function CostsTable({
       ),
     },
     {
-      key: "amount",
-      header: "Tutar",
-      align: "right",
-      money: (r) => ({ amount: Number(r.sparePartCost), currency: r.sparePartCostCurrency }),
+      key: "description",
+      header: "Açıklama",
+      width: "240px",
       render: (r) => (
-        <span className="whitespace-nowrap font-medium tabular-nums text-slate-900">
-          {formatCostAmount(Number(r.sparePartCost), r.sparePartCostCurrency)}
+        <span className="block max-w-xs truncate text-slate-600" title={r.description}>
+          {r.description}
         </span>
       ),
     },
@@ -97,6 +102,7 @@ export function CostsTable({
           {
             key: "approved",
             header: "Bütçe Onayı",
+            width: "150px",
             filterValue: (r: RecordWithRelations) => (r.approved ? "Onaylandı" : "Onay Bekliyor"),
             render: (r: RecordWithRelations) => (
               <ApprovalControl
@@ -109,6 +115,7 @@ export function CostsTable({
           {
             key: "documents",
             header: "Belgeler",
+            width: "160px",
             filterValue: (r: RecordWithRelations) =>
               `Form ${r.formAttachment ? "✓" : "✗"} Fatura ${r.invoiceAttachment ? "✓" : "✗"}`,
             render: (r: RecordWithRelations) => (
@@ -144,6 +151,7 @@ export function CostsTable({
       rowKey={(r) => r.id}
       emptyMessage="Henüz maliyetli bir bakım kaydı yok."
       maxHeight="70vh"
+      actionsWidth="130px"
       renderActions={(r) => (
         <>
           <Link

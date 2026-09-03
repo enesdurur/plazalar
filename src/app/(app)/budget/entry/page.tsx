@@ -6,23 +6,17 @@ import { canWrite } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { fetchBudgetSections } from "@/lib/budget/fetch";
 import { toggleConfirmed, setManualAmount } from "../actions";
-import { allowsAdjustments, isLockedMonth, type RawLineItem, type RawSection } from "@/lib/budget/calc";
+import {
+  allowsAdjustments,
+  isLockedMonth,
+  SECTION_NAMES,
+  type RawLineItem,
+  type RawSection,
+} from "@/lib/budget/calc";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Bütçe Veri Girişi",
-};
-
-const AUTO_SOURCE_LABELS: Record<string, string> = {
-  MAINTENANCE_PLAN: "3. Firma Bakım Planı",
-  INSPECTION: "Periyodik (Fenni) Muayene",
-  FAULT_RECORDS: "Arıza Kayıtları",
-};
-
-const AUTO_SOURCE_HREFS: Record<string, string> = {
-  MAINTENANCE_PLAN: "/annual-plan",
-  INSPECTION: "/inspections",
-  FAULT_RECORDS: "/records",
 };
 
 const MONTHS = [
@@ -60,7 +54,10 @@ export default async function BudgetEntryPage({
   if (!writable) redirect("/budget");
 
   const plaza = await getSelectedPlaza();
-  const sections = await fetchBudgetSections(plaza.id, year);
+  const allSections = await fetchBudgetSections(plaza.id, year);
+  // Diğer Giderler kalemlerinin tüm veri girişi artık /other-expenses üzerinden, fatura/belge +
+  // bina yöneticisi onayıyla yapılıyor — bu sayfada Personel/Yönetim Giderleri kalır.
+  const sections = allSections.filter((s) => s.name !== SECTION_NAMES.other);
 
   return (
     <div>
@@ -73,7 +70,11 @@ export default async function BudgetEntryPage({
           <p className="mt-1 text-sm text-slate-500">
             Sabit sözleşmeli kalemlerde ayı işaretleyin, tutar otomatik gelir. Diğer kalemlerde
             tutarı elle girin. Ocak-Haziran 2026 Excel&apos;den aktarılan geçmiş veridir, artık
-            düzenlenemez.
+            düzenlenemez. Diğer Giderler kalemleri artık{" "}
+            <Link href="/other-expenses" className="underline">
+              Diğer Giderler
+            </Link>{" "}
+            sayfasından yönetiliyor.
           </p>
         </div>
         <Link
@@ -167,11 +168,9 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
       <td className="sticky left-0 z-10 bg-white px-4 py-2">
         <p className="font-medium text-slate-900">{item.label}</p>
         <p className="text-xs text-slate-400">
-          {item.autoSource
-            ? `Otomatik: ${AUTO_SOURCE_LABELS[item.autoSource]}`
-            : item.isFixedContract
-              ? `Sabit: ${Number(item.fixedAmount ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`
-              : "Elle girilir"}
+          {item.isFixedContract
+            ? `Sabit: ${Number(item.fixedAmount ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`
+            : "Elle girilir"}
         </p>
       </td>
       {MONTHS.map((_, i) => {
@@ -183,14 +182,6 @@ function ItemRow({ item, year }: { item: RawLineItem; year: number }) {
           return (
             <td key={month} className="px-2 py-2 text-center">
               <LockedCell amount={entry?.manualAmount ?? null} />
-            </td>
-          );
-        }
-
-        if (item.autoSource) {
-          return (
-            <td key={month} className="px-2 py-2 text-center">
-              <AutoCell amount={entry?.manualAmount ?? null} href={AUTO_SOURCE_HREFS[item.autoSource]} />
             </td>
           );
         }
@@ -265,20 +256,6 @@ function LockedCell({ amount }: { amount: number | null }) {
         ? amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : "-"}
     </span>
-  );
-}
-
-function AutoCell({ amount, href }: { amount: number | null; href: string }) {
-  return (
-    <Link
-      href={href}
-      title="Otomatik hesaplanır, kaynağı görmek için tıklayın"
-      className="inline-block w-20 text-right text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline"
-    >
-      {amount != null
-        ? amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : "-"}
-    </Link>
   );
 }
 

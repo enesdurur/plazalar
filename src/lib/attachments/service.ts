@@ -16,7 +16,8 @@ export const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 type AttachmentTarget =
   | { planWeekEntryId: string }
   | { inspectionWeekEntryId: string }
-  | { maintenanceRecordId: string };
+  | { maintenanceRecordId: string }
+  | { otherExpenseEntryId: string };
 
 /**
  * Server Action'lardan dönülen sonuç şekli. Next.js, Server Action'lardan throw edilen

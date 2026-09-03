@@ -12,8 +12,6 @@ export interface RawAdjustment {
   amount: number;
 }
 
-export type BudgetAutoSourceValue = "MAINTENANCE_PLAN" | "INSPECTION" | "FAULT_RECORDS";
-
 export interface RawLineItem {
   id: string;
   category: string | null;
@@ -22,7 +20,6 @@ export interface RawLineItem {
   isFixedContract: boolean;
   fixedAmount: number | null;
   fill: string | null;
-  autoSource: BudgetAutoSourceValue | null;
   entries: RawMonthEntry[];
   adjustments: RawAdjustment[];
 }
@@ -226,7 +223,7 @@ export interface ComputedLinkPlazaBudget {
   monthlyAvgSurplus: number;
 }
 
-const SECTION_NAMES = {
+export const SECTION_NAMES = {
   personnel: "A- PERSONEL GİDERLERİ",
   management: "YÖNETİM GİDERLERİ",
   other: "DİĞER GİDERLER",

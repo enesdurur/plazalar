@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/annual-plan", label: "3. Firma Bakım Planı" },
   { href: "/inspections", label: "Periyodik (Fenni) Muayene" },
   { href: "/records", label: "Arıza Kayıtları" },
+  { href: "/other-expenses", label: "Diğer Giderler" },
   { href: "/machines", label: "Makine / Teçhizat" },
   { href: "/tenants", label: "Kiracılar" },
   { href: "/tenant-maintenance", label: "Kiracı Bakımları" },

@@ -7,8 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete, canApprove, canAddAttachmentKind } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
-import { monthOfWeek } from "@/lib/plan/weeks";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
 import type { AttachmentKind } from "@prisma/client";
 
@@ -187,13 +185,9 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
     },
   });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
-
   revalidatePath("/inspections");
   revalidatePath("/");
   revalidatePath("/maintenance-costs");
-  revalidatePath("/budget");
-  revalidatePath("/budget/entry");
   redirect("/inspections");
 }
 
@@ -220,13 +214,9 @@ export async function setInspectionWeekEntryApproval(id: string, formData: FormD
     },
   });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
-
   revalidatePath("/inspections");
   revalidatePath("/");
   revalidatePath("/maintenance-costs");
-  revalidatePath("/budget");
-  revalidatePath("/budget/entry");
   revalidatePath(`/inspections/entries/${id}/edit`);
 }
 

@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { canWrite, canDelete, canApprove, canAddAttachmentKind } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
 import type { AttachmentKind } from "@prisma/client";
 
@@ -91,25 +90,17 @@ async function assertMachineInPlaza(machineId: string) {
   return plaza;
 }
 
-async function recomputeFaultMonth(plazaId: string, date: Date) {
-  await recomputeAutoBudgetEntry(plazaId, date.getFullYear(), date.getMonth() + 1, "FAULT_RECORDS");
-}
-
 export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
   const data = parseRecordForm(formData);
-  const plaza = await assertMachineInPlaza(data.machineId);
+  await assertMachineInPlaza(data.machineId);
 
   await prisma.maintenanceRecord.create({
     data: { ...data, createdById: session.user.id },
   });
 
-  await recomputeFaultMonth(plaza.id, data.reportedAt);
-
   revalidatePath("/records");
   revalidatePath("/");
-  revalidatePath("/budget");
-  revalidatePath("/budget/entry");
   redirect("/records");
 }
 
@@ -118,26 +109,14 @@ export async function updateRecord(id: string, formData: FormData) {
   const data = parseRecordForm(formData);
   const plaza = await assertMachineInPlaza(data.machineId);
 
-  const previous = await prisma.maintenanceRecord.findFirst({
-    where: { id, machine: { plazaId: plaza.id } },
-    select: { reportedAt: true },
-  });
-
   await prisma.maintenanceRecord.updateMany({
     where: { id, machine: { plazaId: plaza.id } },
     // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
     data: { ...data, approved: false, approvedById: null, approvedAt: null },
   });
 
-  if (previous) await recomputeFaultMonth(plaza.id, previous.reportedAt);
-  if (!previous || previous.reportedAt.getTime() !== data.reportedAt.getTime()) {
-    await recomputeFaultMonth(plaza.id, data.reportedAt);
-  }
-
   revalidatePath("/records");
   revalidatePath("/");
-  revalidatePath("/budget");
-  revalidatePath("/budget/entry");
   redirect("/records");
 }
 
@@ -148,21 +127,12 @@ export async function deleteRecord(id: string) {
   }
   const plaza = await getSelectedPlaza();
 
-  const existing = await prisma.maintenanceRecord.findFirst({
-    where: { id, machine: { plazaId: plaza.id } },
-    select: { reportedAt: true },
-  });
-
   await prisma.maintenanceRecord.deleteMany({
     where: { id, machine: { plazaId: plaza.id } },
   });
 
-  if (existing) await recomputeFaultMonth(plaza.id, existing.reportedAt);
-
   revalidatePath("/records");
   revalidatePath("/");
-  revalidatePath("/budget");
-  revalidatePath("/budget/entry");
 }
 
 export async function uploadRecordAttachment(
@@ -238,12 +208,6 @@ export async function setRecordApproval(id: string, formData: FormData) {
   }
   const plaza = await getSelectedPlaza();
 
-  const existing = await prisma.maintenanceRecord.findFirst({
-    where: { id, machine: { plazaId: plaza.id } },
-    select: { reportedAt: true },
-  });
-  if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
-
   const approved = formData.get("approved") === "true";
 
   await prisma.maintenanceRecord.updateMany({
@@ -255,10 +219,6 @@ export async function setRecordApproval(id: string, formData: FormData) {
     },
   });
 
-  await recomputeFaultMonth(plaza.id, existing.reportedAt);
-
   revalidatePath("/records");
   revalidatePath("/");
-  revalidatePath("/budget");
-  revalidatePath("/budget/entry");
 }

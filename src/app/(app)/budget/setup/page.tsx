@@ -19,12 +19,6 @@ const SECTIONS = [
   "DİĞER GİDERLER",
 ] as const;
 
-const AUTO_SOURCE_LABELS: Record<string, string> = {
-  MAINTENANCE_PLAN: "3. Firma Bakım Planı",
-  INSPECTION: "Periyodik (Fenni) Muayene",
-  FAULT_RECORDS: "Arıza Kayıtları",
-};
-
 export default async function BudgetSetupPage({
   searchParams,
 }: {
@@ -49,11 +43,16 @@ export default async function BudgetSetupPage({
       </Link>
       <h1 className="mt-1 text-xl font-semibold text-slate-900">Bütçe Kalemleri ({year})</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Her bölüme yıl başında kalemleri tanımlayın; aylık gerçekleşen tutarları{" "}
+        Her bölüme yıl başında kalemleri tanımlayın. Personel/Yönetim Giderleri kalemlerinin
+        aylık gerçekleşen tutarlarını{" "}
         <Link href={`/budget/entry?year=${year}`} className="underline">
           Veri Girişi
+        </Link>
+        , Diğer Giderler kalemlerini ise{" "}
+        <Link href="/other-expenses" className="underline">
+          Diğer Giderler
         </Link>{" "}
-        sayfasından işleyin.
+        sayfasından (fatura/belge + onay ile) işleyin.
       </p>
 
       {SECTIONS.map((name) => (
@@ -117,11 +116,7 @@ function SectionBlock({
                   TL
                 </td>
                 <td className="px-4 py-3 text-slate-600">
-                  {item.autoSource ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                      Otomatik: {AUTO_SOURCE_LABELS[item.autoSource]}
-                    </span>
-                  ) : item.isFixedContract ? (
+                  {item.isFixedContract ? (
                     <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                       Sabit sözleşme
                     </span>

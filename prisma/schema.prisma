@@ -70,6 +70,8 @@ model User {
   approvedPlanEntries       MaintenancePlanWeekEntry[] @relation("PlanEntryApprovedBy")
   approvedInspectionEntries InspectionPlanWeekEntry[]  @relation("InspectionEntryApprovedBy")
   uploadedAttachments       Attachment[]               @relation("AttachmentUploadedBy")
+  createdOtherExpenses      OtherExpenseEntry[]        @relation("OtherExpenseCreatedBy")
+  approvedOtherExpenses     OtherExpenseEntry[]        @relation("OtherExpenseApprovedBy")
 
   @@index([organizationId])
   @@map("users")
@@ -92,15 +94,18 @@ model Attachment {
   planWeekEntryId       String?
   inspectionWeekEntryId String?
   maintenanceRecordId   String?
+  otherExpenseEntryId   String?
 
   planWeekEntry       MaintenancePlanWeekEntry? @relation(fields: [planWeekEntryId], references: [id], onDelete: Cascade)
   inspectionWeekEntry InspectionPlanWeekEntry?  @relation(fields: [inspectionWeekEntryId], references: [id], onDelete: Cascade)
   maintenanceRecord   MaintenanceRecord?        @relation(fields: [maintenanceRecordId], references: [id], onDelete: Cascade)
+  otherExpenseEntry   OtherExpenseEntry?        @relation(fields: [otherExpenseEntryId], references: [id], onDelete: Cascade)
   uploadedBy          User?                     @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
 
   @@unique([planWeekEntryId, kind])
   @@unique([inspectionWeekEntryId, kind])
   @@unique([maintenanceRecordId, kind])
+  @@unique([otherExpenseEntryId, kind])
   @@map("attachments")
 }
 
@@ -508,12 +513,6 @@ model BudgetSection {
   @@map("budget_sections")
 }
 
-enum BudgetAutoSource {
-  MAINTENANCE_PLAN
-  INSPECTION
-  FAULT_RECORDS
-}
-
 model BudgetLineItem {
   id              String            @id @default(cuid())
   sectionId       String
@@ -525,20 +524,43 @@ model BudgetLineItem {
   fixedAmount     Decimal?          @db.Decimal(12, 2)
   fill            String?
   sortOrder       Int               @default(0)
-  /**
-   * Doluysa bu kalemin aylık tutarı elle girilmez — 3. Firma Bakım Planı / Periyodik Muayene /
-   * Arıza Kayıtları'na girilen maliyetlerden otomatik hesaplanıp BudgetMonthEntry.manualAmount'a
-   * yazılır (bkz. src/lib/budget/auto-sync.ts). Plaza+yıl başına her kaynak için tek kalem olabilir.
-   */
-  autoSource      BudgetAutoSource?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  entries     BudgetMonthEntry[]
-  adjustments BudgetAdjustment[]
+  entries            BudgetMonthEntry[]
+  adjustments        BudgetAdjustment[]
+  otherExpenseEntries OtherExpenseEntry[]
 
   @@unique([sectionId, label])
   @@map("budget_line_items")
+}
+
+// "DİĞER GİDERLER" bölümündeki kalemlerin (Ortak Alan Elektrik, Mekanik/Elektrik Yedek Parça,
+// 3.Firma Bakım Anlaşmaları, Fenni Muayeneler, vb.) tüm veri girişi buradan yapılır: her fatura/
+// gider kaydı kendi tutarı + destekleyici belgesiyle (fatura/form) girilir ve bina yöneticisi
+// (canApprove) onayından geçmeden Gerçekleşen Bütçe'ye yansımaz (bkz.
+// src/lib/budget/other-expense-sync.ts). Bir kalem+ay için birden fazla kayıt olabilir (aynı ay
+// içinde birden fazla fatura) — onaylı olanların toplamı o ayın tutarını oluşturur.
+model OtherExpenseEntry {
+  id           String         @id @default(cuid())
+  lineItemId   String
+  lineItem     BudgetLineItem @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  month        Int
+  amount       Decimal        @db.Decimal(12, 2)
+  note         String?
+  createdById  String?
+  createdBy    User?          @relation("OtherExpenseCreatedBy", fields: [createdById], references: [id])
+  approved     Boolean        @default(false)
+  approvedById String?
+  approvedBy   User?          @relation("OtherExpenseApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  attachments Attachment[]
+
+  @@index([lineItemId, month])
+  @@map("other_expense_entries")
 }
 
 model BudgetMonthEntry {

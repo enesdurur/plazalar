@@ -49,7 +49,6 @@ export default async function EditLineItemPage({
             monthlyBudget: Number(item.monthlyBudget),
             isFixedContract: item.isFixedContract,
             fixedAmount: item.fixedAmount != null ? Number(item.fixedAmount) : null,
-            autoSource: item.autoSource,
           }}
         />
       </div>

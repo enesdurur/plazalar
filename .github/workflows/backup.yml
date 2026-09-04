@@ -27,6 +27,14 @@ jobs:
           sudo apt-get install -y postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-18
+          # ubuntu-latest runner'ında /usr/bin/pg_dump zaten önceden kurulu (eski) bir
+          # sürüme işaret ediyor ve update-alternatives bunu otomatik geçersiz kılmıyor
+          # (bkz. ilk deneme: 18 kuruldu ama pg_dump hâlâ 16'ydı). 18'in bin dizinini
+          # PATH'in başına ekleyerek doğru binary'nin çağrılmasını garantiliyoruz.
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - name: pg_dump sürümünü doğrula
+        run: pg_dump --version
 
       - name: Bağımlılıkları yükle
         run: npm ci --omit=dev --ignore-scripts

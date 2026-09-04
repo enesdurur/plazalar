@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Build hiçbir sayfayı statik üretmiyor (hepsi dinamik — auth()/cookies()
+      # kullanıyor), bu yüzden gerçek bir veritabanına bağlanmaya ihtiyaç yok;
+      # Prisma sadece geçerli görünümlü bir URL şekli istiyor.
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      AUTH_SECRET: "ci-only-placeholder-secret-not-used-in-production"
+      AUTH_TRUST_HOST: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Bağımlılıkları yükle
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint
+
+      - name: Tip kontrolü
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: plazalar
+          POSTGRES_PASSWORD: plazalar
+          POSTGRES_DB: plazalar
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U plazalar"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://plazalar:plazalar@localhost:5432/plazalar"
+      AUTH_SECRET: "ci-only-placeholder-secret-not-used-in-production"
+      AUTH_TRUST_HOST: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Bağımlılıkları yükle
+        run: npm ci
+
+      - name: Şemayı test veritabanına uygula
+        run: npx prisma migrate deploy
+
+      - name: Testleri çalıştır
+        run: npm test

@@ -59,3 +59,41 @@ npm run lint          # eslint
 npx prisma studio    # veritabanını arayüzden görüntüle
 npm run db:seed       # veritabanını örnek veriyle doldur
 ```
+
+## Yedekleme
+
+Production veritabanı `.github/workflows/backup.yml` ile her gün otomatik yedeklenir
+(`scripts/backup.mjs`): `pg_dump --format=custom` alınır, Vercel Blob'a (`backups/`
+altına) yüklenir. Saklama politikası: son 30 günün her günü + her ayın 1'inde alınan
+yedek 12 ay boyunca tutulur, gerisi otomatik silinir.
+
+**Gerekli GitHub Actions secret'ları** (repo → Settings → Secrets and variables →
+Actions):
+
+| Secret | Açıklama |
+|---|---|
+| `DATABASE_URL` | Production bağlantı adresi (Vercel proje ayarlarından kopyalanır) |
+| `PGDUMP_DATABASE_URL` | Opsiyonel — sağlayıcınız pooled/direct bağlantıyı ayırıyorsa (ör. PgBouncer) `pg_dump` için direkt bağlantı adresi. Verilmezse `DATABASE_URL` kullanılır |
+| `BLOB_READ_WRITE_TOKEN` | Vercel proje ayarlarından, uygulamanın kendisinin de kullandığı Blob token'ı |
+
+Elle tetiklemek için: GitHub → Actions → "Veritabanı Yedekleme" → "Run workflow".
+
+Yerelde denemek için:
+
+```bash
+DATABASE_URL="..." BLOB_READ_WRITE_TOKEN="..." node scripts/backup.mjs
+```
+
+### Geri yükleme
+
+1. İlgili `.dump` dosyasını Vercel Blob panelinden (veya `@vercel/blob`'un `list()`/
+   `download` akışıyla) indirin.
+2. Boş bir veritabanına geri yükleyin:
+
+   ```bash
+   pg_restore --no-owner --no-privileges -d "$HEDEF_DATABASE_URL" plazalar-YYYY-MM-DD.dump
+   ```
+
+   Var olan bir veritabanının üzerine geri yüklemeden önce mutlaka önce boş/ayrı bir
+   veritabanında deneyin ve satır sayılarını (`SELECT count(*) FROM ...`) orijinaliyle
+   karşılaştırın.

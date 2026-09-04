@@ -1,0 +1,31 @@
+name: Veritabanı Yedekleme
+
+on:
+  schedule:
+    # Her gün 03:00 UTC (06:00 TRT)
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: pg_dump/pg_restore kur
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Bağımlılıkları yükle
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Yedek al ve Vercel Blob'a yükle
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGDUMP_DATABASE_URL: ${{ secrets.PGDUMP_DATABASE_URL }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: node scripts/backup.mjs

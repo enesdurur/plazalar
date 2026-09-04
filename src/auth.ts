@@ -26,6 +26,10 @@ declare module "next-auth" {
   }
 }
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   callbacks: {
@@ -67,8 +71,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
 
+        const now = new Date();
+        const attempt = await prisma.loginAttempt.findUnique({ where: { email } });
+        if (attempt?.lockedUntil && attempt.lockedUntil > now) {
+          return null;
+        }
+
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          const windowExpired =
+            !attempt || now.getTime() - attempt.windowStart.getTime() > LOGIN_ATTEMPT_WINDOW_MS;
+          const failedCount = windowExpired ? 1 : attempt.failedCount + 1;
+          const lockedUntil =
+            failedCount >= MAX_LOGIN_ATTEMPTS ? new Date(now.getTime() + LOGIN_LOCKOUT_MS) : null;
+          await prisma.loginAttempt.upsert({
+            where: { email },
+            create: { email, failedCount, windowStart: now, lockedUntil },
+            update: {
+              failedCount,
+              windowStart: windowExpired ? now : attempt.windowStart,
+              lockedUntil,
+            },
+          });
+          return null;
+        }
+
+        if (attempt) {
+          await prisma.loginAttempt.delete({ where: { email } }).catch(() => {});
+        }
 
         return {
           id: user.id,

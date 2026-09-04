@@ -52,6 +52,19 @@ model Organization {
   @@map("organizations")
 }
 
+// Giriş denemesi kilitleme: authorize() içinde kontrol edilir (src/auth.ts). Sadece
+// gerçekten var olan bir User.email'e karşı yapılan başarısız denemeler için satır
+// oluşturulur — var olmayan e-postalarla yapılan tarama denemeleri tabloyu şişirmesin
+// diye. organizationId yok: giriş, organizasyon seçiminden önceki bir adım.
+model LoginAttempt {
+  email       String    @id
+  failedCount Int       @default(0)
+  windowStart DateTime  @default(now())
+  lockedUntil DateTime?
+
+  @@map("login_attempts")
+}
+
 model User {
   id              String   @id @default(cuid())
   name            String

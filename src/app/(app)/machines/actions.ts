@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -27,7 +28,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 }
 
 function parseMachineForm(formData: FormData) {
-  return machineSchema.parse({
+  return parseOrThrow(machineSchema, {
     name: formData.get("name"),
     brand: emptyToUndefined(formData.get("brand")),
     model: emptyToUndefined(formData.get("model")),

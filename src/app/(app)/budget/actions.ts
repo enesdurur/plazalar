@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -56,7 +57,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 }
 
 function parseLineItemForm(formData: FormData) {
-  return lineItemSchema.parse({
+  return parseOrThrow(lineItemSchema, {
     category: emptyToUndefined(formData.get("category")),
     label: formData.get("label"),
     monthlyBudget: formData.get("monthlyBudget") || 0,
@@ -204,10 +205,9 @@ export async function setManualAmount(lineItemId: string, month: number, formDat
   // varsa düzenlenebilir/temizlenebilir kalır — sabitleme geçmiş veriyi kilitlemez.
 
   const raw = formData.get("amount");
-  const amount =
-    typeof raw === "string" && raw.trim() !== "" ? Math.max(0, Number(raw)) : null;
-  if (amount !== null && Number.isNaN(amount)) {
-    throw new Error("Geçersiz tutar.");
+  const amount = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : null;
+  if (amount !== null && (Number.isNaN(amount) || amount < 0)) {
+    throw new Error("Geçersiz tutar. Negatif olmayan bir sayı girin.");
   }
 
   await prisma.budgetMonthEntry.upsert({
@@ -236,7 +236,7 @@ export async function addAdjustment(lineItemId: string, month: number, formData:
     throw new Error("Bu kalem için fazla mesai/eksik çalışma kırılımı girilemez.");
   }
 
-  const data = adjustmentSchema.parse({
+  const data = parseOrThrow(adjustmentSchema, {
     type: formData.get("type"),
     amount: formData.get("amount"),
     label: emptyToUndefined(formData.get("label")),

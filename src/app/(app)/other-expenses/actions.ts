@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -52,7 +53,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 }
 
 function parseOtherExpenseForm(formData: FormData) {
-  return otherExpenseSchema.parse({
+  return parseOrThrow(otherExpenseSchema, {
     lineItemId: formData.get("lineItemId"),
     month: formData.get("month"),
     amount: formData.get("amount"),

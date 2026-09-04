@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -32,7 +33,7 @@ const createOrganizationSchema = z.object({
 export async function createOrganization(formData: FormData) {
   await requireSuperAdmin();
 
-  const data = createOrganizationSchema.parse({
+  const data = parseOrThrow(createOrganizationSchema, {
     orgName: formData.get("orgName"),
     orgSlug: formData.get("orgSlug") || "",
     adminName: formData.get("adminName"),

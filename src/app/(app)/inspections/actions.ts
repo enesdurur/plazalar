@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow, zOptionalDateString } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -19,8 +20,8 @@ const schema = z.object({
   reportNo: z.coerce.number().int().optional(),
   period: z.string().optional(),
   technicalFeature: z.string().optional(),
-  inspectionDate: z.string().optional(),
-  nextInspectionDate: z.string().optional(),
+  inspectionDate: zOptionalDateString(),
+  nextInspectionDate: zOptionalDateString(),
   location: z.string().optional(),
   responsiblePerson: z.string().optional(),
   cost: z.coerce.number().optional(),
@@ -33,7 +34,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 }
 
 function parseForm(formData: FormData) {
-  const parsed = schema.parse({
+  const parsed = parseOrThrow(schema, {
     code: emptyToUndefined(formData.get("code")),
     name: formData.get("name"),
     brand: emptyToUndefined(formData.get("brand")),
@@ -152,7 +153,7 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
   });
   if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
 
-  const parsed = inspectionCostSchema.parse({
+  const parsed = parseOrThrow(inspectionCostSchema, {
     cost: emptyToUndefined(formData.get("cost")),
     costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
     costExchangeRate: emptyToUndefined(formData.get("costExchangeRate")),

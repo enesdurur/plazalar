@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow, zOptionalDateString } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -12,8 +13,8 @@ const schema = z.object({
   tenantId: z.string().min(1, "Kiracı seçimi zorunludur"),
   maintenanceType: z.string().min(1, "Bakım türü zorunludur"),
   period: z.string().optional(),
-  lastMaintenanceDate: z.string().optional(),
-  nextMaintenanceDate: z.string().optional(),
+  lastMaintenanceDate: zOptionalDateString(),
+  nextMaintenanceDate: zOptionalDateString(),
   responsiblePerson: z.string().optional(),
   note: z.string().optional(),
 });
@@ -24,7 +25,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 }
 
 function parseForm(formData: FormData) {
-  const parsed = schema.parse({
+  const parsed = parseOrThrow(schema, {
     tenantId: formData.get("tenantId"),
     maintenanceType: formData.get("maintenanceType"),
     period: emptyToUndefined(formData.get("period")),

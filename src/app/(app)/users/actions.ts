@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -42,7 +43,7 @@ async function requireAdmin() {
 export async function createUser(formData: FormData) {
   const session = await requireAdmin();
 
-  const data = createSchema.parse({
+  const data = parseOrThrow(createSchema, {
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
@@ -70,7 +71,7 @@ export async function createUser(formData: FormData) {
 export async function updateUser(id: string, formData: FormData) {
   const session = await requireAdmin();
 
-  const data = updateSchema.parse({
+  const data = parseOrThrow(updateSchema, {
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password") || "",

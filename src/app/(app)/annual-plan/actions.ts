@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -72,7 +73,7 @@ export async function updatePlanWeekEntryCost(id: string, formData: FormData) {
   });
   if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
 
-  const parsed = costSchema.parse({
+  const parsed = parseOrThrow(costSchema, {
     cost: emptyToUndefined(formData.get("cost")),
     costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
     costExchangeRate: emptyToUndefined(formData.get("costExchangeRate")),

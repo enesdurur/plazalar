@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +29,7 @@ export async function updateMaintenancePlanEntry(id: string, formData: FormData)
   }
   const plaza = await getSelectedPlaza();
 
-  const data = schema.parse({
+  const data = parseOrThrow(schema, {
     cost: emptyToUndefined(formData.get("cost")),
     costCurrency: emptyToUndefined(formData.get("costCurrency")) ?? "TRY",
     note: emptyToUndefined(formData.get("note")),

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parseOrThrow, zRequiredDateString } from "@/lib/form-error";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,7 @@ const recordSchema = z.object({
   issueTypeId: z.string().optional(),
   description: z.string().min(1, "Açıklama zorunludur"),
   technicianId: z.string().optional(),
-  reportedAt: z.string().min(1, "Bildirim zamanı zorunludur"),
+  reportedAt: zRequiredDateString("Geçerli bir bildirim zamanı girin"),
   respondedAt: z.string().optional(),
   finishedAt: z.string().optional(),
   sparePartId: z.string().optional(),
@@ -36,7 +37,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 }
 
 function parseRecordForm(formData: FormData) {
-  const parsed = recordSchema.parse({
+  const parsed = parseOrThrow(recordSchema, {
     machineId: formData.get("machineId"),
     operationType: formData.get("operationType"),
     issueTypeId: emptyToUndefined(formData.get("issueTypeId")),

@@ -19,6 +19,22 @@ type AttachmentTarget =
   | { maintenanceRecordId: string }
   | { otherExpenseEntryId: string };
 
+// Attachment tablosunda organizationId/plazaId sütunu yok — sahiplik ilişki zinciri
+// (planWeekEntry.item.plazaId, ör.) üzerinden dolaylı olarak belirleniyor. Çağıran her
+// yerde zaten kendi plazaId'sini biliyor (getSelectedPlaza() üzerinden); bunu buraya da
+// vermelerini isteyerek, ileride bir çağıranın sahiplik kontrolünü atlamasına karşı bu
+// fonksiyonların kendi içinde de bir savunma katmanı oluşturuyoruz.
+function scopedToPlaza(plazaId: string) {
+  return {
+    OR: [
+      { planWeekEntry: { item: { plazaId } } },
+      { inspectionWeekEntry: { item: { plazaId } } },
+      { maintenanceRecord: { machine: { plazaId } } },
+      { otherExpenseEntry: { lineItem: { section: { plazaId } } } },
+    ],
+  };
+}
+
 /**
  * Server Action'lardan dönülen sonuç şekli. Next.js, Server Action'lardan throw edilen
  * hataların mesajını production'da sansürlüyor ("Server Components render" hatası) —
@@ -35,11 +51,13 @@ export async function saveAttachment({
   file,
   target,
   uploaderId,
+  plazaId,
 }: {
   kind: AttachmentKind;
   file: File;
   target: AttachmentTarget;
   uploaderId: string;
+  plazaId: string;
 }) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     throw new Error(
@@ -53,7 +71,9 @@ export async function saveAttachment({
     throw new Error("Dosya boyutu 15MB'ı aşamaz.");
   }
 
-  const existing = await prisma.attachment.findFirst({ where: { kind, ...target } });
+  const existing = await prisma.attachment.findFirst({
+    where: { kind, ...target, ...scopedToPlaza(plazaId) },
+  });
   if (existing) {
     await del(existing.fileUrl).catch(() => {});
     await prisma.attachment.delete({ where: { id: existing.id } });
@@ -96,8 +116,10 @@ export function toAttachmentInfo(
   };
 }
 
-export async function removeAttachment(attachmentId: string) {
-  const existing = await prisma.attachment.findUnique({ where: { id: attachmentId } });
+export async function removeAttachment(attachmentId: string, plazaId: string) {
+  const existing = await prisma.attachment.findFirst({
+    where: { id: attachmentId, ...scopedToPlaza(plazaId) },
+  });
   if (!existing) return;
   await del(existing.fileUrl).catch(() => {});
   await prisma.attachment.delete({ where: { id: attachmentId } });

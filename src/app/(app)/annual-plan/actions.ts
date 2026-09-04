@@ -204,6 +204,7 @@ export async function uploadPlanWeekEntryAttachment(
       file,
       target: { planWeekEntryId: id },
       uploaderId: session.user.id,
+      plazaId: plaza.id,
     });
 
     revalidatePath(`/annual-plan/entries/${id}/edit`);
@@ -231,7 +232,7 @@ export async function deletePlanWeekEntryAttachment(
       return { error: "Bu işlem için yetkiniz yok." };
     }
 
-    await removeAttachment(attachmentId);
+    await removeAttachment(attachmentId, plaza.id);
 
     revalidatePath(`/annual-plan/entries/${entryId}/edit`);
     revalidatePath("/maintenance-costs");

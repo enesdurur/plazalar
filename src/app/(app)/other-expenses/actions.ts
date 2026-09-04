@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canDelete, canApprove } from "@/lib/permissions";
+import { canWrite, canDelete, canApprove, canAddAttachmentKind } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { SECTION_NAMES } from "@/lib/budget/calc";
 import { recomputeOtherExpenseMonth } from "@/lib/budget/other-expense-sync";
@@ -176,7 +176,8 @@ export async function uploadOtherExpenseAttachment(
 ): Promise<AttachmentActionResult> {
   try {
     const session = await auth();
-    if (!session?.user || !canWrite(session.user.role)) {
+    const kind = formData.get("kind") as AttachmentKind;
+    if (!session?.user || !canAddAttachmentKind(session.user.role, kind)) {
       return { error: "Bu işlem için yetkiniz yok." };
     }
     const plaza = await getSelectedPlaza();
@@ -190,13 +191,13 @@ export async function uploadOtherExpenseAttachment(
     if (!(file instanceof File) || file.size === 0) {
       return { error: "Lütfen bir dosya seçin." };
     }
-    const kind = formData.get("kind") as AttachmentKind;
 
     await saveAttachment({
       kind,
       file,
       target: { otherExpenseEntryId: id },
       uploaderId: session.user.id,
+      plazaId: plaza.id,
     });
 
     revalidatePath("/other-expenses");
@@ -212,9 +213,6 @@ export async function deleteOtherExpenseAttachment(
 ): Promise<AttachmentActionResult> {
   try {
     const session = await auth();
-    if (!session?.user || !canWrite(session.user.role)) {
-      return { error: "Bu işlem için yetkiniz yok." };
-    }
     const plaza = await getSelectedPlaza();
 
     const attachment = await prisma.attachment.findFirst({
@@ -224,8 +222,11 @@ export async function deleteOtherExpenseAttachment(
       },
     });
     if (!attachment) return { error: "Belge bulunamadı." };
+    if (!session?.user || !canAddAttachmentKind(session.user.role, attachment.kind)) {
+      return { error: "Bu işlem için yetkiniz yok." };
+    }
 
-    await removeAttachment(attachmentId);
+    await removeAttachment(attachmentId, plaza.id);
 
     revalidatePath("/other-expenses");
     return { error: null };

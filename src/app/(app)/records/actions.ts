@@ -196,6 +196,7 @@ export async function uploadRecordAttachment(
       file,
       target: { maintenanceRecordId: id },
       uploaderId: session.user.id,
+      plazaId: plaza.id,
     });
 
     revalidatePath(`/records/${id}/edit`);
@@ -226,7 +227,7 @@ export async function deleteRecordAttachment(
       return { error: "Bu işlem için yetkiniz yok." };
     }
 
-    await removeAttachment(attachmentId);
+    await removeAttachment(attachmentId, plaza.id);
 
     revalidatePath(`/records/${recordId}/edit`);
     revalidatePath("/records");

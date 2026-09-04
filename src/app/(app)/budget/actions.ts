@@ -252,7 +252,7 @@ export async function addAdjustment(lineItemId: string, month: number, formData:
 }
 
 export async function deleteAdjustment(adjustmentId: string) {
-  await requireWriteAccess();
+  await requireDeleteAccess();
   const plaza = await getSelectedPlaza();
 
   const adjustment = await prisma.budgetAdjustment.findFirst({

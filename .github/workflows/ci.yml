@@ -29,11 +29,16 @@ jobs:
       - name: Lint
         run: npx eslint
 
-      - name: Tip kontrolü
-        run: npx tsc --noEmit
-
+      # Next.js'in bazı ambient tipleri (ör. LayoutProps) .next/types altında kendisi
+      # üretiyor — bu, next build (veya next dev) çalışmadan önce yoktur. Bu yüzden
+      # tip kontrolü build'den SONRA çalışıyor; next build zaten kendi içinde tam tip
+      # kontrolü yapıyor, buradaki adım onu ikinci kez (artık üretilmiş tiplerle) teyit
+      # ediyor.
       - name: Build
         run: npm run build
+
+      - name: Tip kontrolü
+        run: npx tsc --noEmit
 
   test:
     runs-on: ubuntu-latest

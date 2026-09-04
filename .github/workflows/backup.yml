@@ -17,8 +17,16 @@ jobs:
         with:
           node-version: 22
 
-      - name: pg_dump/pg_restore kur
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      # Ubuntu runner'ının varsayılan postgresql-client paketi (16) production DB'nin
+      # sürümünden (Neon, Postgres 18) daha eski — pg_dump kendinden yeni sürümdeki bir
+      # sunucudan dump almayı reddediyor ("server version mismatch"). Resmi PGDG apt
+      # deposundan sunucuyla aynı major sürümü (18) kuruyoruz.
+      - name: pg_dump/pg_restore kur (PostgreSQL 18)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
 
       - name: Bağımlılıkları yükle
         run: npm ci --omit=dev --ignore-scripts

@@ -35,8 +35,8 @@ enum Currency {
 }
 
 // Bir müşteri firma (kiracı sınırı). v1'de her User/Plaza tek bir Organization'a bağlı,
-// çoklu üyelik yok. isPlatformAdmin bu fazda salt veri bayrağı — hiçbir yerde org filtresini
-// bypass etmiyor (platform-admin arayüzü ileriki bir faz).
+// çoklu üyelik yok. Yeni organizasyon açma /platform-admin altında, User.isSuperAdmin
+// bayrağıyla korunuyor (bkz. permissions.ts canManagePlatform).
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -59,7 +59,15 @@ model User {
   passwordHash    String
   role            Role     @default(VIEWER)
   organizationId  String
+  // Kendi organizasyonunun Kullanıcılar sekmesini yönetebilir (bkz. permissions.ts
+  // canManageUsers) — org-scoped bir bayrak, tüm platformu değil sadece kendi
+  // organizasyonunu ilgilendirir.
   isPlatformAdmin Boolean  @default(false)
+  // Organization sınırının dışında: yeni müşteri organizasyonu açabilen gerçek
+  // platform sahibi (bkz. permissions.ts canManagePlatform, /platform-admin).
+  // isPlatformAdmin'den kasıtlı olarak ayrı — o bayrak her organizasyonun kendi
+  // sahibinde de true olabilir ve bu, başka organizasyonlara erişim vermemeli.
+  isSuperAdmin    Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

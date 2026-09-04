@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { ROLE_LABELS, canManageUsers } from "@/lib/permissions";
+import { ROLE_LABELS, canManageUsers, canManagePlatform } from "@/lib/permissions";
 import { NavLinks, NavLink } from "@/components/nav-links";
 import { LogoutButton } from "@/components/logout-button";
 import { Sidebar } from "@/components/sidebar";
@@ -49,6 +49,11 @@ export default async function AppLayout({
           {canManageUsers(user) && (
             <div className="pb-2">
               <NavLink href="/users" label="Kullanıcılar" />
+            </div>
+          )}
+          {canManagePlatform(user) && (
+            <div className="pb-2">
+              <NavLink href="/platform-admin" label="Platform Admin" />
             </div>
           )}
           <LogoutButton />

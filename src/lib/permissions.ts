@@ -43,6 +43,13 @@ export function canManageUsers(user: { isPlatformAdmin?: boolean } | undefined) 
   return !!user?.isPlatformAdmin;
 }
 
+// Organizasyon sınırının dışında: yeni müşteri organizasyonu açabilen gerçek platform
+// sahibi. isPlatformAdmin'den kasıtlı olarak ayrı bir bayrak — bkz. schema.prisma User
+// modelindeki yorum.
+export function canManagePlatform(user: { isSuperAdmin?: boolean } | undefined) {
+  return !!user?.isSuperAdmin;
+}
+
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "Yönetici",
   TECHNICIAN: "Teknisyen",

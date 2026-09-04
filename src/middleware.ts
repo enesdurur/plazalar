@@ -15,7 +15,7 @@ const { auth } = NextAuth(authConfig);
 const PLAZA_COOKIE_NAME = "selectedPlazaId";
 
 const PUBLIC_PATHS = ["/login"];
-const PLAZA_EXEMPT_PATHS = ["/login", "/select-company", "/select-plaza"];
+const PLAZA_EXEMPT_PATHS = ["/login", "/select-company", "/select-plaza", "/platform-admin"];
 
 export default auth((req) => {
   const isPublic = PUBLIC_PATHS.some((path) =>

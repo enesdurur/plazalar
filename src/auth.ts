@@ -10,6 +10,7 @@ declare module "next-auth" {
     role: Role;
     organizationId: string;
     isPlatformAdmin: boolean;
+    isSuperAdmin: boolean;
   }
 
   interface Session {
@@ -20,6 +21,7 @@ declare module "next-auth" {
       email: string;
       organizationId: string;
       isPlatformAdmin: boolean;
+      isSuperAdmin: boolean;
     };
   }
 }
@@ -32,12 +34,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // Self-heal on the next request instead of forcing every user to log back in.
     jwt: async (params) => {
       const token = authConfig.callbacks.jwt(params);
-      const t = token as typeof token & { id?: string; organizationId?: string; isPlatformAdmin?: boolean };
+      const t = token as typeof token & {
+        id?: string;
+        organizationId?: string;
+        isPlatformAdmin?: boolean;
+        isSuperAdmin?: boolean;
+      };
       if (!params.user && t.id && !t.organizationId) {
         const dbUser = await prisma.user.findUnique({ where: { id: t.id } });
         if (dbUser) {
           t.organizationId = dbUser.organizationId;
           t.isPlatformAdmin = dbUser.isPlatformAdmin;
+          t.isSuperAdmin = dbUser.isSuperAdmin;
         }
       }
       return t;
@@ -69,6 +77,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           organizationId: user.organizationId,
           isPlatformAdmin: user.isPlatformAdmin,
+          isSuperAdmin: user.isSuperAdmin,
         };
       },
     }),

@@ -21,12 +21,14 @@ export const authConfig = {
         role?: Role;
         organizationId?: string;
         isPlatformAdmin?: boolean;
+        isSuperAdmin?: boolean;
       };
       if (user) {
         t.id = user.id;
         t.role = user.role;
         t.organizationId = user.organizationId;
         t.isPlatformAdmin = user.isPlatformAdmin;
+        t.isSuperAdmin = user.isSuperAdmin;
       }
       return t;
     },
@@ -36,11 +38,13 @@ export const authConfig = {
         role: Role;
         organizationId?: string;
         isPlatformAdmin?: boolean;
+        isSuperAdmin?: boolean;
       };
       session.user.id = t.id;
       session.user.role = t.role;
       session.user.organizationId = t.organizationId ?? "";
       session.user.isPlatformAdmin = t.isPlatformAdmin ?? false;
+      session.user.isSuperAdmin = t.isSuperAdmin ?? false;
       return session;
     },
   },

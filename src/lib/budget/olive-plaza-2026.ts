@@ -26,6 +26,7 @@ export const OLIVE_PLAZA_BUDGET_2026: BudgetQuarterData[] = [
       { category: null, label: "Hukuki Giderleri", months: [15733, 15733, 15733], monthlyBudget: 15733, fill: "#B4C7E7" },
       { category: null, label: "Büro Hizmetleri Giderleri", months: [19500, 19500, 19500], monthlyBudget: 19500, fill: "#B4C7E7" },
       { category: null, label: "Muhasebe Hizmetleri", months: [19500, 19500, 19500], monthlyBudget: 19500, fill: "#B4C7E7" },
+      { category: null, label: "YÖNETİM KARI", months: [81885.25, 81885.25, 81885.25], monthlyBudget: 81885.25, fill: null },
     ],
     otherRows: [
       { category: null, label: "Ortak Alan Elektrik", months: [132597.66, 99763.05, 50097.88], monthlyBudget: 139702.2, fill: null },
@@ -63,6 +64,7 @@ export const OLIVE_PLAZA_BUDGET_2026: BudgetQuarterData[] = [
       { category: null, label: "Hukuki Giderleri", months: [15733, 15733, 15733], monthlyBudget: 15733, fill: "#B4C7E7" },
       { category: null, label: "Büro Hizmetleri Giderleri", months: [19500, 19500, 19500], monthlyBudget: 19500, fill: "#B4C7E7" },
       { category: null, label: "Muhasebe Hizmetleri", months: [19500, 19500, 19500], monthlyBudget: 19500, fill: "#B4C7E7" },
+      { category: null, label: "YÖNETİM KARI", months: [81885.25, 81885.25, 81885.25], monthlyBudget: 81885.25, fill: null },
     ],
     otherRows: [
       { category: null, label: "Ortak Alan Elektrik", months: [99184.07, 84064.42, 71369.63], monthlyBudget: 139702.2, fill: null },

@@ -9,6 +9,7 @@ import {
   MAINTENANCE_PLAN_ITEMS_2026,
   INSPECTION_PLAN_ITEMS_2026,
 } from "../src/lib/plan/link-plaza-2026";
+import type { PlanItemSeed } from "../src/lib/plan/link-plaza-2026";
 import {
   MAINTENANCE_PLAN_ITEMS_OLIVE_2026,
   INSPECTION_PLAN_ITEMS_OLIVE_2026,
@@ -291,6 +292,56 @@ async function main() {
     await seedQuarterlyBudget(olivePlazaIdForBudget, OLIVE_PLAZA_BUDGET_2026);
   }
 
+  function planItemMachineIds(machineIdByName: Map<string, string>, row: PlanItemSeed) {
+    return (row.machineNames ?? [])
+      .map((name) => machineIdByName.get(name))
+      .filter((id): id is string => Boolean(id));
+  }
+
+  async function seedMaintenancePlanItems(
+    plazaId: string,
+    machineIdByName: Map<string, string>,
+    items: PlanItemSeed[]
+  ) {
+    for (let i = 0; i < items.length; i++) {
+      const row = items[i];
+      const machineIds = planItemMachineIds(machineIdByName, row);
+      const base = {
+        company: row.company,
+        yearlyCount: row.yearlyCount,
+        scheduledWeeks: row.scheduledWeeks,
+        sortOrder: i,
+      };
+      await prisma.maintenancePlanItem.upsert({
+        where: { plazaId_label: { plazaId, label: row.label } },
+        update: { ...base, machines: { set: machineIds.map((id) => ({ id })) } },
+        create: { plazaId, label: row.label, ...base, machines: { connect: machineIds.map((id) => ({ id })) } },
+      });
+    }
+  }
+
+  async function seedInspectionPlanItems(
+    plazaId: string,
+    machineIdByName: Map<string, string>,
+    items: PlanItemSeed[]
+  ) {
+    for (let i = 0; i < items.length; i++) {
+      const row = items[i];
+      const machineIds = planItemMachineIds(machineIdByName, row);
+      const base = {
+        company: row.company,
+        yearlyCount: row.yearlyCount,
+        scheduledWeeks: row.scheduledWeeks,
+        sortOrder: i,
+      };
+      await prisma.inspectionPlanItem.upsert({
+        where: { plazaId_label: { plazaId, label: row.label } },
+        update: { ...base, machines: { set: machineIds.map((id) => ({ id })) } },
+        create: { plazaId, label: row.label, ...base, machines: { connect: machineIds.map((id) => ({ id })) } },
+      });
+    }
+  }
+
   console.log("Seeding Link Plaza yıllık bakım planı ve fenni muayene kalemleri (2026)...");
 
   if (linkPlazaId) {
@@ -300,37 +351,8 @@ async function main() {
     });
     const machineIdByName = new Map(linkMachines.map((m) => [m.name, m.id]));
 
-    for (let i = 0; i < MAINTENANCE_PLAN_ITEMS_2026.length; i++) {
-      const row = MAINTENANCE_PLAN_ITEMS_2026[i];
-      const data = {
-        company: row.company,
-        yearlyCount: row.yearlyCount,
-        scheduledWeeks: row.scheduledWeeks,
-        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
-        sortOrder: i,
-      };
-      await prisma.maintenancePlanItem.upsert({
-        where: { plazaId_label: { plazaId: linkPlazaId, label: row.label } },
-        update: data,
-        create: { plazaId: linkPlazaId, label: row.label, ...data },
-      });
-    }
-
-    for (let i = 0; i < INSPECTION_PLAN_ITEMS_2026.length; i++) {
-      const row = INSPECTION_PLAN_ITEMS_2026[i];
-      const data = {
-        company: row.company,
-        yearlyCount: row.yearlyCount,
-        scheduledWeeks: row.scheduledWeeks,
-        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
-        sortOrder: i,
-      };
-      await prisma.inspectionPlanItem.upsert({
-        where: { plazaId_label: { plazaId: linkPlazaId, label: row.label } },
-        update: data,
-        create: { plazaId: linkPlazaId, label: row.label, ...data },
-      });
-    }
+    await seedMaintenancePlanItems(linkPlazaId, machineIdByName, MAINTENANCE_PLAN_ITEMS_2026);
+    await seedInspectionPlanItems(linkPlazaId, machineIdByName, INSPECTION_PLAN_ITEMS_2026);
   }
 
   console.log("Seeding Olive Plaza yıllık bakım planı ve fenni muayene kalemleri (2026)...");
@@ -343,37 +365,8 @@ async function main() {
     });
     const machineIdByName = new Map(oliveMachines.map((m) => [m.name, m.id]));
 
-    for (let i = 0; i < MAINTENANCE_PLAN_ITEMS_OLIVE_2026.length; i++) {
-      const row = MAINTENANCE_PLAN_ITEMS_OLIVE_2026[i];
-      const data = {
-        company: row.company,
-        yearlyCount: row.yearlyCount,
-        scheduledWeeks: row.scheduledWeeks,
-        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
-        sortOrder: i,
-      };
-      await prisma.maintenancePlanItem.upsert({
-        where: { plazaId_label: { plazaId: olivePlazaId, label: row.label } },
-        update: data,
-        create: { plazaId: olivePlazaId, label: row.label, ...data },
-      });
-    }
-
-    for (let i = 0; i < INSPECTION_PLAN_ITEMS_OLIVE_2026.length; i++) {
-      const row = INSPECTION_PLAN_ITEMS_OLIVE_2026[i];
-      const data = {
-        company: row.company,
-        yearlyCount: row.yearlyCount,
-        scheduledWeeks: row.scheduledWeeks,
-        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
-        sortOrder: i,
-      };
-      await prisma.inspectionPlanItem.upsert({
-        where: { plazaId_label: { plazaId: olivePlazaId, label: row.label } },
-        update: data,
-        create: { plazaId: olivePlazaId, label: row.label, ...data },
-      });
-    }
+    await seedMaintenancePlanItems(olivePlazaId, machineIdByName, MAINTENANCE_PLAN_ITEMS_OLIVE_2026);
+    await seedInspectionPlanItems(olivePlazaId, machineIdByName, INSPECTION_PLAN_ITEMS_OLIVE_2026);
   }
 
   console.log("Seeding kiracı bakım kalemleri (Fancoil / Elektrik)...");

@@ -387,11 +387,11 @@ model PeriodicInspection {
 
 // Yıllık Bakım Planı: Excel'deki "BAKIM" listesiyle birebir — her kalem (ör. Trafo İşletme
 // Sorumluluğu, Jeneratör Bakımı) bir bakım firmasına ve yıllık tekrar sayısına sahip, isteğe
-// bağlı olarak mevcut bir Machine kaydına bağlanabilir. Haftalık (1-53) matris ile takip edilir.
+// bağlı olarak mevcut bir/birden fazla Machine kaydına bağlanabilir (ör. "Asansör Bakımı"
+// binadaki tüm asansörleri etkiler). Haftalık (1-53) matris ile takip edilir.
 model MaintenancePlanItem {
   id             String   @id @default(cuid())
   plazaId        String
-  machineId      String?
   label          String
   company        String?
   yearlyCount    Int?
@@ -405,7 +405,7 @@ model MaintenancePlanItem {
   updatedAt      DateTime @updatedAt
 
   plaza       Plaza                      @relation(fields: [plazaId], references: [id], onDelete: Cascade)
-  machine     Machine?                   @relation(fields: [machineId], references: [id])
+  machines    Machine[]
   weekEntries MaintenancePlanWeekEntry[]
 
   @@unique([plazaId, label])
@@ -462,7 +462,6 @@ model MaintenancePlanWeekEntry {
 model InspectionPlanItem {
   id             String   @id @default(cuid())
   plazaId        String
-  machineId      String?
   label          String
   company        String?
   yearlyCount    Int?
@@ -475,7 +474,7 @@ model InspectionPlanItem {
   updatedAt      DateTime @updatedAt
 
   plaza       Plaza                     @relation(fields: [plazaId], references: [id], onDelete: Cascade)
-  machine     Machine?                  @relation(fields: [machineId], references: [id])
+  machines    Machine[]
   weekEntries InspectionPlanWeekEntry[]
 
   @@unique([plazaId, label])
@@ -557,8 +556,8 @@ model BudgetLineItem {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  entries            BudgetMonthEntry[]
-  adjustments        BudgetAdjustment[]
+  entries             BudgetMonthEntry[]
+  adjustments         BudgetAdjustment[]
   otherExpenseEntries OtherExpenseEntry[]
 
   @@unique([sectionId, label])

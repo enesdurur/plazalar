@@ -5,6 +5,7 @@ import rawPeriodicInspections from "./seed-data/periyodik-muayene.json";
 import { LINK_PLAZA_BUDGET_2026 } from "../src/lib/budget/link-plaza-2026";
 import type { BudgetLineItem } from "../src/lib/budget/link-plaza-2026";
 import { OLIVE_PLAZA_BUDGET_2026 } from "../src/lib/budget/olive-plaza-2026";
+import { DLP_PLAZA_BUDGET_2026 } from "../src/lib/budget/dlp-plaza-2026";
 import {
   MAINTENANCE_PLAN_ITEMS_2026,
   INSPECTION_PLAN_ITEMS_2026,
@@ -14,6 +15,10 @@ import {
   MAINTENANCE_PLAN_ITEMS_OLIVE_2026,
   INSPECTION_PLAN_ITEMS_OLIVE_2026,
 } from "../src/lib/plan/olive-plaza-2026";
+import {
+  MAINTENANCE_PLAN_ITEMS_DLP_2026,
+  INSPECTION_PLAN_ITEMS_DLP_2026,
+} from "../src/lib/plan/dlp-plaza-2026";
 import {
   TENANT_MAINTENANCE_TYPES,
   TENANT_MAINTENANCE_SCHEDULES,
@@ -292,6 +297,13 @@ async function main() {
     await seedQuarterlyBudget(olivePlazaIdForBudget, OLIVE_PLAZA_BUDGET_2026);
   }
 
+  console.log("Seeding DLP No.1 Plaza gerçekleşen bütçe (2026)...");
+
+  const dlpPlazaIdForBudget = plazas.get("DLP No.1 Plaza");
+  if (dlpPlazaIdForBudget) {
+    await seedQuarterlyBudget(dlpPlazaIdForBudget, DLP_PLAZA_BUDGET_2026);
+  }
+
   function planItemMachineIds(machineIdByName: Map<string, string>, row: PlanItemSeed) {
     return (row.machineNames ?? [])
       .map((name) => machineIdByName.get(name))
@@ -367,6 +379,20 @@ async function main() {
 
     await seedMaintenancePlanItems(olivePlazaId, machineIdByName, MAINTENANCE_PLAN_ITEMS_OLIVE_2026);
     await seedInspectionPlanItems(olivePlazaId, machineIdByName, INSPECTION_PLAN_ITEMS_OLIVE_2026);
+  }
+
+  console.log("Seeding DLP No.1 Plaza yıllık bakım planı ve fenni muayene kalemleri (2026)...");
+
+  const dlpPlazaId = plazas.get("DLP No.1 Plaza");
+  if (dlpPlazaId) {
+    const dlpMachines = await prisma.machine.findMany({
+      where: { plazaId: dlpPlazaId },
+      select: { id: true, name: true },
+    });
+    const machineIdByName = new Map(dlpMachines.map((m) => [m.name, m.id]));
+
+    await seedMaintenancePlanItems(dlpPlazaId, machineIdByName, MAINTENANCE_PLAN_ITEMS_DLP_2026);
+    await seedInspectionPlanItems(dlpPlazaId, machineIdByName, INSPECTION_PLAN_ITEMS_DLP_2026);
   }
 
   console.log("Seeding kiracı bakım kalemleri (Fancoil / Elektrik)...");

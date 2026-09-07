@@ -9,6 +9,10 @@ import {
   INSPECTION_PLAN_ITEMS_2026,
 } from "../src/lib/plan/link-plaza-2026";
 import {
+  MAINTENANCE_PLAN_ITEMS_OLIVE_2026,
+  INSPECTION_PLAN_ITEMS_OLIVE_2026,
+} from "../src/lib/plan/olive-plaza-2026";
+import {
   TENANT_MAINTENANCE_TYPES,
   TENANT_MAINTENANCE_SCHEDULES,
 } from "../src/lib/plan/tenant-maintenance-types";
@@ -313,6 +317,49 @@ async function main() {
         where: { plazaId_label: { plazaId: linkPlazaId, label: row.label } },
         update: data,
         create: { plazaId: linkPlazaId, label: row.label, ...data },
+      });
+    }
+  }
+
+  console.log("Seeding Olive Plaza yıllık bakım planı ve fenni muayene kalemleri (2026)...");
+
+  const olivePlazaId = plazas.get("Olive Plaza");
+  if (olivePlazaId) {
+    const oliveMachines = await prisma.machine.findMany({
+      where: { plazaId: olivePlazaId },
+      select: { id: true, name: true },
+    });
+    const machineIdByName = new Map(oliveMachines.map((m) => [m.name, m.id]));
+
+    for (let i = 0; i < MAINTENANCE_PLAN_ITEMS_OLIVE_2026.length; i++) {
+      const row = MAINTENANCE_PLAN_ITEMS_OLIVE_2026[i];
+      const data = {
+        company: row.company,
+        yearlyCount: row.yearlyCount,
+        scheduledWeeks: row.scheduledWeeks,
+        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
+        sortOrder: i,
+      };
+      await prisma.maintenancePlanItem.upsert({
+        where: { plazaId_label: { plazaId: olivePlazaId, label: row.label } },
+        update: data,
+        create: { plazaId: olivePlazaId, label: row.label, ...data },
+      });
+    }
+
+    for (let i = 0; i < INSPECTION_PLAN_ITEMS_OLIVE_2026.length; i++) {
+      const row = INSPECTION_PLAN_ITEMS_OLIVE_2026[i];
+      const data = {
+        company: row.company,
+        yearlyCount: row.yearlyCount,
+        scheduledWeeks: row.scheduledWeeks,
+        machineId: row.machineName ? machineIdByName.get(row.machineName) : undefined,
+        sortOrder: i,
+      };
+      await prisma.inspectionPlanItem.upsert({
+        where: { plazaId_label: { plazaId: olivePlazaId, label: row.label } },
+        update: data,
+        create: { plazaId: olivePlazaId, label: row.label, ...data },
       });
     }
   }

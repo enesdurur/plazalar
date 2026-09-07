@@ -4,6 +4,7 @@ import rawRecords from "./seed-data/veri-tablosu.json";
 import rawPeriodicInspections from "./seed-data/periyodik-muayene.json";
 import { LINK_PLAZA_BUDGET_2026 } from "../src/lib/budget/link-plaza-2026";
 import type { BudgetLineItem } from "../src/lib/budget/link-plaza-2026";
+import { OLIVE_PLAZA_BUDGET_2026 } from "../src/lib/budget/olive-plaza-2026";
 import {
   MAINTENANCE_PLAN_ITEMS_2026,
   INSPECTION_PLAN_ITEMS_2026,
@@ -228,10 +229,7 @@ async function main() {
     });
   }
 
-  console.log("Seeding Link Plaza gerçekleşen bütçe (2026)...");
-
-  const linkPlazaId = plazas.get("Link Plaza");
-  if (linkPlazaId) {
+  async function seedQuarterlyBudget(plazaId: string, budget: typeof LINK_PLAZA_BUDGET_2026) {
     const SECTIONS: {
       name: string;
       key: "personnelRows" | "managementRows" | "otherRows";
@@ -244,13 +242,13 @@ async function main() {
 
     for (const s of SECTIONS) {
       const section = await prisma.budgetSection.upsert({
-        where: { plazaId_year_name: { plazaId: linkPlazaId, year: 2026, name: s.name } },
+        where: { plazaId_year_name: { plazaId, year: 2026, name: s.name } },
         update: {},
-        create: { plazaId: linkPlazaId, year: 2026, name: s.name, sortOrder: s.sortOrder },
+        create: { plazaId, year: 2026, name: s.name, sortOrder: s.sortOrder },
       });
 
-      const q1Rows: BudgetLineItem[] = LINK_PLAZA_BUDGET_2026[0][s.key];
-      const q2Rows: BudgetLineItem[] = LINK_PLAZA_BUDGET_2026[1][s.key];
+      const q1Rows: BudgetLineItem[] = budget[0][s.key];
+      const q2Rows: BudgetLineItem[] = budget[1][s.key];
 
       for (let i = 0; i < q1Rows.length; i++) {
         const row = q1Rows[i];
@@ -277,6 +275,20 @@ async function main() {
         }
       }
     }
+  }
+
+  console.log("Seeding Link Plaza gerçekleşen bütçe (2026)...");
+
+  const linkPlazaId = plazas.get("Link Plaza");
+  if (linkPlazaId) {
+    await seedQuarterlyBudget(linkPlazaId, LINK_PLAZA_BUDGET_2026);
+  }
+
+  console.log("Seeding Olive Plaza gerçekleşen bütçe (2026)...");
+
+  const olivePlazaIdForBudget = plazas.get("Olive Plaza");
+  if (olivePlazaIdForBudget) {
+    await seedQuarterlyBudget(olivePlazaIdForBudget, OLIVE_PLAZA_BUDGET_2026);
   }
 
   console.log("Seeding Link Plaza yıllık bakım planı ve fenni muayene kalemleri (2026)...");

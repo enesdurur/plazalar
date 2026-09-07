@@ -47,7 +47,13 @@ function computeRowSpans(rows: ComputedRow[]): number[] {
   return spans;
 }
 
-export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
+export function BudgetView({
+  budget,
+  plazaName,
+}: {
+  budget: ComputedLinkPlazaBudget;
+  plazaName: string;
+}) {
   const currentMonthIndex = budget.monthsElapsed - 1;
   const selectedMonths = budget.selectedMonths;
   const visibleMonths = MONTH_NAMES.map((m, i) => ({ name: m, index: i })).filter(({ index }) =>
@@ -64,7 +70,7 @@ export function BudgetView({ budget }: { budget: ComputedLinkPlazaBudget }) {
                 colSpan={2 + visibleMonths.length + 2}
                 className="border-b border-slate-200 px-3 py-2 text-center text-sm font-extrabold text-slate-900"
               >
-                LINK PLAZA GERÇEKLEŞEN BÜTÇE ({budget.year})
+                {plazaName.toLocaleUpperCase("tr-TR")} GERÇEKLEŞEN BÜTÇE ({budget.year})
               </th>
               <GapTh />
               <th

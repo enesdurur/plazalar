@@ -92,7 +92,7 @@ export default async function BudgetPage({
         <div className="mt-6">
           <MonthFilter year={year} selectedMonths={budget.selectedMonths} isFiltered={isFiltered} />
           <div className="mt-4">
-            <BudgetView budget={budget} />
+            <BudgetView budget={budget} plazaName={plaza.name} />
           </div>
         </div>
       ) : (

@@ -1,6 +1,7 @@
 import type { User } from "@prisma/client";
 import { ROLE_OPTIONS } from "@/lib/permissions";
 import { SubmitButton } from "@/components/submit-button";
+import { PasswordInput } from "@/components/password-input";
 
 export function UserForm({
   action,
@@ -24,13 +25,11 @@ export function UserForm({
         />
       </Field>
       <Field label={user ? "Yeni Şifre" : "Şifre *"}>
-        <input
+        <PasswordInput
           name="password"
-          type="password"
           required={!user}
           minLength={6}
           placeholder={user ? "Değiştirmek istemiyorsanız boş bırakın" : undefined}
-          className="input"
         />
       </Field>
       <Field label="Rol *">

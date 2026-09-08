@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/password-input";
 
 export function LoginForm({
   callbackUrl,
@@ -61,9 +62,8 @@ export function LoginForm({
         <label htmlFor="password" className="block text-sm font-medium text-slate-700">
           Şifre
         </label>
-        <input
+        <PasswordInput
           id="password"
-          type="password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}

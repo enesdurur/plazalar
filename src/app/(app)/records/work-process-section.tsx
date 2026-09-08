@@ -95,8 +95,8 @@ export function WorkProcessSection({
       : null;
 
   return (
-    <details className="mt-6 rounded-lg border border-slate-200 bg-white">
-      <summary className="cursor-pointer select-none px-5 py-3 text-sm font-semibold text-slate-900">
+    <details open className="mt-6 rounded-lg border-2 border-slate-300 bg-white shadow-sm">
+      <summary className="cursor-pointer select-none rounded-t-md bg-slate-50 px-5 py-3 text-base font-semibold text-slate-900">
         İş Süreci — Teklif / İş Verme / Fatura / Ödeme
       </summary>
 

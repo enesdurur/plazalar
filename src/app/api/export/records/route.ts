@@ -3,10 +3,9 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { newWorkbook, workbookResponse } from "@/lib/xlsx-response";
 import { mtta, mttr } from "@/lib/kpi";
 
-const OPERATION_LABELS: Record<string, string> = {
-  ARIZA: "Arıza",
-  BAKIM: "Bakım",
-};
+function toDays(minutes: number | null) {
+  return minutes === null ? "" : Math.round(minutes / 1440);
+}
 
 export async function GET() {
   const plaza = await getSelectedPlaza();
@@ -20,16 +19,15 @@ export async function GET() {
   const workbook = newWorkbook();
   const sheet = workbook.addWorksheet("Arıza Kayıtları");
   sheet.columns = [
-    { header: "Bildirim Zamanı", key: "reportedAt", width: 20 },
+    { header: "Bildirim Tarihi", key: "reportedAt", width: 16 },
     { header: "Makine", key: "machine", width: 18 },
-    { header: "İşlem Türü", key: "operationType", width: 12 },
     { header: "Kategori", key: "issueType", width: 20 },
     { header: "Açıklama", key: "description", width: 40 },
     { header: "Teknisyen", key: "technician", width: 16 },
-    { header: "Müdahale Zamanı", key: "respondedAt", width: 20 },
-    { header: "Bitiş Zamanı", key: "finishedAt", width: 20 },
-    { header: "MTTA (dk)", key: "mtta", width: 10 },
-    { header: "MTTR (dk)", key: "mttr", width: 10 },
+    { header: "Müdahale Tarihi", key: "respondedAt", width: 16 },
+    { header: "Bitiş Tarihi", key: "finishedAt", width: 16 },
+    { header: "MTTA (gün)", key: "mtta", width: 10 },
+    { header: "MTTR (gün)", key: "mttr", width: 10 },
     { header: "Durum", key: "status", width: 14 },
     { header: "Yedek Parça", key: "sparePart", width: 20 },
     { header: "Adet", key: "sparePartQty", width: 8 },
@@ -42,14 +40,13 @@ export async function GET() {
     sheet.addRow({
       reportedAt: r.reportedAt,
       machine: r.machine?.name ?? "Genel İş",
-      operationType: OPERATION_LABELS[r.operationType],
-      issueType: r.issueType?.name ?? "",
+      issueType: r.issueType?.name ?? r.issueTypeOther ?? "",
       description: r.description,
       technician: r.technician?.name ?? "",
       respondedAt: r.respondedAt ?? "",
       finishedAt: r.finishedAt ?? "",
-      mtta: mtta(r.reportedAt, r.respondedAt) ?? "",
-      mttr: mttr(r.respondedAt, r.finishedAt) ?? "",
+      mtta: toDays(mtta(r.reportedAt, r.respondedAt)),
+      mttr: toDays(mttr(r.respondedAt, r.finishedAt)),
       status: r.finishedAt ? "Tamamlandı" : "Devam Ediyor",
       sparePart: r.sparePart?.name ?? r.sparePartOther ?? "",
       sparePartQty: r.sparePartQty ?? "",
@@ -59,7 +56,7 @@ export async function GET() {
   }
 
   for (const key of ["reportedAt", "respondedAt", "finishedAt"]) {
-    sheet.getColumn(key).numFmt = "dd.mm.yyyy hh:mm";
+    sheet.getColumn(key).numFmt = "dd.mm.yyyy";
   }
 
   return workbookResponse(workbook, `${plaza.name} - Ariza-Bakim Kayitlari.xlsx`);

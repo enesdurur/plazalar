@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPlaza } from "@/lib/plaza";
-import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
+import { mtta, mttr, average, formatDays } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
 import { CostBreakdownTile, FaultCostTile } from "@/components/spare-part-cost-tile";
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
             items={topMachines.map(([label, value]) => ({
               label,
               value,
-              displayValue: formatMinutes(value),
+              displayValue: formatDays(value),
             }))}
           />
           {topMachines.length === 0 && (
@@ -293,12 +293,12 @@ export default async function DashboardPage() {
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatTile
           label="Ortalama MTTA"
-          value={formatMinutes(average(mttaValues))}
+          value={formatDays(average(mttaValues))}
           hint="Bildirim → Müdahale"
         />
         <StatTile
           label="Ortalama MTTR"
-          value={formatMinutes(average(mttrValues))}
+          value={formatDays(average(mttrValues))}
           hint="Müdahale → Bitiş"
         />
       </div>

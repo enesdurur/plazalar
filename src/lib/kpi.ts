@@ -14,12 +14,12 @@ export function mttr(respondedAt: Date | null, finishedAt: Date | null) {
   return minutesBetween(respondedAt, finishedAt);
 }
 
-export function formatMinutes(minutes: number | null) {
+// Kayıt tarihleri artık saat içermiyor (bkz. record-form.tsx date input'ları) — MTTA/MTTR
+// şuanlık günlük olarak gösteriliyor.
+export function formatDays(minutes: number | null) {
   if (minutes === null) return "-";
-  if (minutes < 60) return `${minutes} dk`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours} sa` : `${hours} sa ${rest} dk`;
+  const days = Math.round(minutes / 1440);
+  return `${days} gün`;
 }
 
 export function average(values: number[]) {

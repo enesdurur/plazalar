@@ -19,6 +19,7 @@ import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@
 import type { AttachmentKind, Role } from "@prisma/client";
 
 const OTHER_SPARE_PART = "__other__";
+const OTHER_ISSUE_TYPE = "__other__";
 
 const recordSchema = z.object({
   // Boş bırakılırsa "Genel İş" (makine/teçhizatla ilgisi olmayan iş, ör. izolasyon) olarak
@@ -26,6 +27,7 @@ const recordSchema = z.object({
   machineId: z.string().optional(),
   operationType: z.enum(["ARIZA", "BAKIM"]),
   issueTypeId: z.string().optional(),
+  issueTypeOtherName: z.string().optional(),
   description: z.string().min(1, "Açıklama zorunludur"),
   technicianId: z.string().optional(),
   reportedAt: zRequiredDateString("Geçerli bir bildirim zamanı girin"),
@@ -50,6 +52,7 @@ function parseRecordForm(formData: FormData) {
     machineId: emptyToUndefined(formData.get("machineId")),
     operationType: formData.get("operationType"),
     issueTypeId: emptyToUndefined(formData.get("issueTypeId")),
+    issueTypeOtherName: emptyToUndefined(formData.get("issueTypeOtherName")),
     description: formData.get("description"),
     technicianId: emptyToUndefined(formData.get("technicianId")),
     reportedAt: formData.get("reportedAt"),
@@ -65,11 +68,15 @@ function parseRecordForm(formData: FormData) {
   });
 
   const isOther = parsed.sparePartId === OTHER_SPARE_PART;
+  const isOtherIssueType = parsed.issueTypeId === OTHER_ISSUE_TYPE;
 
   return {
     machineId: parsed.machineId,
     operationType: parsed.operationType,
-    issueTypeId: parsed.issueTypeId,
+    // Prisma update'te undefined alan atlanır (eskisi kalır) — bu yüzden "Diğer" ile gerçek
+    // kategori arasında geçişte eskisi kalmasın diye her zaman açıkça null/değer yazılıyor.
+    issueTypeId: isOtherIssueType ? null : (parsed.issueTypeId ?? null),
+    issueTypeOther: isOtherIssueType ? (parsed.issueTypeOtherName ?? null) : null,
     description: parsed.description,
     technicianId: parsed.technicianId,
     reportedAt: new Date(parsed.reportedAt),

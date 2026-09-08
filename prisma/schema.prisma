@@ -333,6 +333,9 @@ model MaintenanceRecord {
   machineId             String?
   operationType         OperationType
   issueTypeId           String?
+  // issueTypeId listede olmayan bir kategori için elle yazılan serbest metin — sparePartOther
+  // ile aynı desen (bkz. record-form.tsx IssueTypeField, records/actions.ts).
+  issueTypeOther        String?
   description           String
   technicianId          String?
   reportedAt            DateTime

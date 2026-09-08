@@ -2,13 +2,12 @@ import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/
 import { SubmitButton } from "@/components/submit-button";
 import { SparePartField } from "./spare-part-field";
 import { SparePartCostField } from "./spare-part-cost-field";
+import { IssueTypeField } from "./issue-type-field";
 
-function toDatetimeLocal(date: Date | null | undefined) {
+function toDateInputValue(date: Date | null | undefined) {
   if (!date) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-    date.getHours()
-  )}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export function RecordForm({
@@ -41,12 +40,7 @@ export function RecordForm({
             ))}
           </select>
         </Field>
-        <Field label="İşlem Türü">
-          <input type="hidden" name="operationType" value={record?.operationType ?? "ARIZA"} />
-          <div className="input flex items-center bg-slate-50 text-slate-500">
-            {record?.operationType === "BAKIM" ? "Bakım (eski kayıt)" : "Arıza"}
-          </div>
-        </Field>
+        <input type="hidden" name="operationType" value={record?.operationType ?? "ARIZA"} />
         <Field label="Şirket *">
           {canSetCompany ? (
             <select
@@ -64,16 +58,11 @@ export function RecordForm({
             </>
           )}
         </Field>
-        <Field label="Arıza / Bakım Türü">
-          <select name="issueTypeId" defaultValue={record?.issueTypeId ?? ""} className="input">
-            <option value="">Seçiniz</option>
-            {issueTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <IssueTypeField
+          issueTypes={issueTypes}
+          defaultIssueTypeId={record?.issueTypeId}
+          defaultIssueTypeOther={record?.issueTypeOther}
+        />
         <Field label="Arızayı / Bakımı Yapan">
           <select name="technicianId" defaultValue={record?.technicianId ?? ""} className="input">
             <option value="">Seçiniz</option>
@@ -97,28 +86,28 @@ export function RecordForm({
       </Field>
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="Bildirim Zamanı *">
+        <Field label="Bildirim Tarihi *">
           <input
             name="reportedAt"
-            type="datetime-local"
+            type="date"
             required
-            defaultValue={toDatetimeLocal(record?.reportedAt)}
+            defaultValue={toDateInputValue(record?.reportedAt)}
             className="input"
           />
         </Field>
-        <Field label="Müdahale Zamanı">
+        <Field label="Müdahale Tarihi">
           <input
             name="respondedAt"
-            type="datetime-local"
-            defaultValue={toDatetimeLocal(record?.respondedAt)}
+            type="date"
+            defaultValue={toDateInputValue(record?.respondedAt)}
             className="input"
           />
         </Field>
-        <Field label="Bitiş Zamanı">
+        <Field label="Bitiş Tarihi">
           <input
             name="finishedAt"
-            type="datetime-local"
-            defaultValue={toDatetimeLocal(record?.finishedAt)}
+            type="date"
+            defaultValue={toDateInputValue(record?.finishedAt)}
             className="input"
           />
         </Field>

@@ -3,14 +3,9 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteButton } from "@/components/delete-button";
-import { mtta, mttr, formatMinutes } from "@/lib/kpi";
+import { mtta, mttr, formatDays } from "@/lib/kpi";
 import { deleteRecord } from "./actions";
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
-
-const OPERATION_LABELS: Record<string, string> = {
-  ARIZA: "Arıza",
-  BAKIM: "Bakım",
-};
 
 const COMPANY_LABELS: Record<string, string> = {
   KAPITAL: "Kapital",
@@ -47,12 +42,12 @@ export function RecordsTable({
   const columns: DataTableColumn<RecordWithRelations>[] = [
     {
       key: "reportedAt",
-      header: "Bildirim Zamanı",
-      width: "170px",
-      filterValue: (r) => r.reportedAt.toLocaleString("tr-TR"),
+      header: "Bildirim Tarihi",
+      width: "120px",
+      filterValue: (r) => r.reportedAt.toLocaleDateString("tr-TR"),
       render: (r) => (
         <span className="whitespace-nowrap text-slate-600">
-          {r.reportedAt.toLocaleString("tr-TR")}
+          {r.reportedAt.toLocaleDateString("tr-TR")}
         </span>
       ),
     },
@@ -96,26 +91,13 @@ export function RecordsTable({
       ),
     },
     {
-      key: "operationType",
-      header: "Tür",
-      width: "90px",
-      filterValue: (r) => OPERATION_LABELS[r.operationType],
-      render: (r) => (
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            r.operationType === "ARIZA" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-          }`}
-        >
-          {OPERATION_LABELS[r.operationType]}
-        </span>
-      ),
-    },
-    {
       key: "issueType",
       header: "Kategori",
       width: "150px",
-      filterValue: (r) => r.issueType?.name ?? "-",
-      render: (r) => <span className="text-slate-600">{r.issueType?.name ?? "-"}</span>,
+      filterValue: (r) => r.issueType?.name ?? r.issueTypeOther ?? "-",
+      render: (r) => (
+        <span className="text-slate-600">{r.issueType?.name ?? r.issueTypeOther ?? "-"}</span>
+      ),
     },
     {
       key: "description",
@@ -139,7 +121,7 @@ export function RecordsTable({
       header: "MTTA",
       width: "80px",
       render: (r) => (
-        <span className="text-slate-600">{formatMinutes(mtta(r.reportedAt, r.respondedAt))}</span>
+        <span className="text-slate-600">{formatDays(mtta(r.reportedAt, r.respondedAt))}</span>
       ),
     },
     {
@@ -147,7 +129,7 @@ export function RecordsTable({
       header: "MTTR",
       width: "80px",
       render: (r) => (
-        <span className="text-slate-600">{formatMinutes(mttr(r.respondedAt, r.finishedAt))}</span>
+        <span className="text-slate-600">{formatDays(mttr(r.respondedAt, r.finishedAt))}</span>
       ),
     },
     {

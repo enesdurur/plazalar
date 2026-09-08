@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessKapitalDashboard } from "@/lib/permissions";
 import { sortByPlazaOrder } from "@/lib/plaza-order";
-import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
+import { mtta, mttr, average, formatDays } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
 import { LogoutButton } from "@/components/logout-button";
@@ -102,8 +102,8 @@ export default async function KapitalDashboardPage() {
             value={String(records.length)}
             hint={`${completedCount} tamamlanan · ${ongoingCount} devam eden`}
           />
-          <StatTile label="Ortalama MTTA" value={formatMinutes(average(mttaValues))} hint="Bildirim → Müdahale" />
-          <StatTile label="Ortalama MTTR" value={formatMinutes(average(mttrValues))} hint="Müdahale → Bitiş" />
+          <StatTile label="Ortalama MTTA" value={formatDays(average(mttaValues))} hint="Bildirim → Müdahale" />
+          <StatTile label="Ortalama MTTR" value={formatDays(average(mttrValues))} hint="Müdahale → Bitiş" />
           <StatTile label="Plaza Sayısı" value={String(plazas.length)} />
         </div>
 
@@ -114,7 +114,7 @@ export default async function KapitalDashboardPage() {
               items={byPlaza.map(({ plaza, avgMtta }) => ({
                 label: plaza.name,
                 value: avgMtta ?? 0,
-                displayValue: formatMinutes(avgMtta),
+                displayValue: formatDays(avgMtta),
               }))}
             />
             {byPlaza.length === 0 && <p className="mt-4 text-sm text-slate-500">Henüz veri yok.</p>}
@@ -126,7 +126,7 @@ export default async function KapitalDashboardPage() {
               items={byPlaza.map(({ plaza, avgMttr }) => ({
                 label: plaza.name,
                 value: avgMttr ?? 0,
-                displayValue: formatMinutes(avgMttr),
+                displayValue: formatDays(avgMttr),
               }))}
             />
             {byPlaza.length === 0 && <p className="mt-4 text-sm text-slate-500">Henüz veri yok.</p>}
@@ -149,11 +149,11 @@ export default async function KapitalDashboardPage() {
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <p className="text-xs text-slate-400">Ort. MTTA</p>
-                  <p className="font-medium text-slate-700">{formatMinutes(avgMtta)}</p>
+                  <p className="font-medium text-slate-700">{formatDays(avgMtta)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Ort. MTTR</p>
-                  <p className="font-medium text-slate-700">{formatMinutes(avgMttr)}</p>
+                  <p className="font-medium text-slate-700">{formatDays(avgMttr)}</p>
                 </div>
               </div>
               <form action={selectPlaza.bind(null, plaza.id)} className="mt-4">

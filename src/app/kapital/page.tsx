@@ -4,9 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessKapitalDashboard } from "@/lib/permissions";
 import { sortByPlazaOrder } from "@/lib/plaza-order";
-import { mtta, mttr, average, formatDays } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
-import { BarBreakdown } from "@/components/bar-breakdown";
 import { LogoutButton } from "@/components/logout-button";
 import { selectPlaza } from "@/app/select-plaza/actions";
 import type { Metadata } from "next";
@@ -28,7 +26,7 @@ export default async function KapitalDashboardPage() {
     prisma.plaza.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
     prisma.maintenanceRecord.findMany({
       where: { plaza: { organizationId } },
-      include: { machine: true },
+      select: { plazaId: true, finishedAt: true },
     }),
   ]);
   const plazas = sortByPlazaOrder(plazasRaw);
@@ -36,27 +34,13 @@ export default async function KapitalDashboardPage() {
   const completedCount = records.filter((r) => r.finishedAt).length;
   const ongoingCount = records.length - completedCount;
 
-  const mttaValues = records
-    .map((r) => mtta(r.reportedAt, r.respondedAt))
-    .filter((v): v is number => v !== null);
-  const mttrValues = records
-    .map((r) => mttr(r.respondedAt, r.finishedAt))
-    .filter((v): v is number => v !== null);
-
   const byPlaza = plazas.map((plaza) => {
     const plazaRecords = records.filter((r) => r.plazaId === plaza.id);
-    const plazaMtta = plazaRecords
-      .map((r) => mtta(r.reportedAt, r.respondedAt))
-      .filter((v): v is number => v !== null);
-    const plazaMttr = plazaRecords
-      .map((r) => mttr(r.respondedAt, r.finishedAt))
-      .filter((v): v is number => v !== null);
     return {
       plaza,
       count: plazaRecords.length,
       ongoing: plazaRecords.filter((r) => !r.finishedAt).length,
-      avgMtta: average(plazaMtta),
-      avgMttr: average(plazaMttr),
+      completed: plazaRecords.filter((r) => r.finishedAt).length,
     };
   });
 
@@ -102,40 +86,14 @@ export default async function KapitalDashboardPage() {
             value={String(records.length)}
             hint={`${completedCount} tamamlanan · ${ongoingCount} devam eden`}
           />
-          <StatTile label="Ortalama MTTA" value={formatDays(average(mttaValues))} hint="Bildirim → Müdahale" />
-          <StatTile label="Ortalama MTTR" value={formatDays(average(mttrValues))} hint="Müdahale → Bitiş" />
+          <StatTile label="Devam Eden" value={String(ongoingCount)} />
+          <StatTile label="Tamamlanan" value={String(completedCount)} />
           <StatTile label="Plaza Sayısı" value={String(plazas.length)} />
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Plaza Bazında Ortalama MTTA</h2>
-            <BarBreakdown
-              items={byPlaza.map(({ plaza, avgMtta }) => ({
-                label: plaza.name,
-                value: avgMtta ?? 0,
-                displayValue: formatDays(avgMtta),
-              }))}
-            />
-            {byPlaza.length === 0 && <p className="mt-4 text-sm text-slate-500">Henüz veri yok.</p>}
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Plaza Bazında Ortalama MTTR</h2>
-            <BarBreakdown
-              items={byPlaza.map(({ plaza, avgMttr }) => ({
-                label: plaza.name,
-                value: avgMttr ?? 0,
-                displayValue: formatDays(avgMttr),
-              }))}
-            />
-            {byPlaza.length === 0 && <p className="mt-4 text-sm text-slate-500">Henüz veri yok.</p>}
-          </div>
         </div>
 
         <h2 className="mt-8 text-sm font-semibold text-slate-900">Plazalar</h2>
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {byPlaza.map(({ plaza, count, ongoing, avgMtta, avgMttr }) => (
+          {byPlaza.map(({ plaza, count, ongoing, completed }) => (
             <div key={plaza.id} className="rounded-lg border border-slate-200 bg-white p-5">
               <p className="text-sm font-semibold text-slate-900">{plaza.name}</p>
               <div className="mt-2 flex gap-3 text-xs text-slate-500">
@@ -145,16 +103,9 @@ export default async function KapitalDashboardPage() {
                 <span>
                   <span className="font-medium text-amber-600">{ongoing}</span> devam eden
                 </span>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-xs text-slate-400">Ort. MTTA</p>
-                  <p className="font-medium text-slate-700">{formatDays(avgMtta)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Ort. MTTR</p>
-                  <p className="font-medium text-slate-700">{formatDays(avgMttr)}</p>
-                </div>
+                <span>
+                  <span className="font-medium text-green-600">{completed}</span> tamamlanan
+                </span>
               </div>
               <form action={selectPlaza.bind(null, plaza.id)} className="mt-4">
                 <button

@@ -83,21 +83,43 @@ async function sumFaultRecords(plazaId: string, year: number, month: number) {
     where: {
       plazaId,
       operationType: "ARIZA",
+      // Kapital sorumluluğundaki kayıtlar (mülk sahibini ilgilendiren işler) Gerçekleşen
+      // Bütçe'ye hiçbir şekilde girmez — Kapital'in bütçesi ayrı tutulur.
+      responsibleCompany: "BURGAZ",
       reportedAt: { gte: start, lt: end },
-      sparePartCost: { not: null },
       approved: true,
+      OR: [{ sparePartCost: { not: null } }, { invoiceAmount: { not: null } }],
     },
-    select: { sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+    select: {
+      sparePartCost: true,
+      sparePartCostCurrency: true,
+      sparePartExchangeRate: true,
+      invoiceAmount: true,
+      invoiceCurrency: true,
+      invoiceExchangeRate: true,
+    },
   });
 
   let total = 0;
   for (const r of records) {
-    const tl = toTRY(
-      Number(r.sparePartCost),
-      r.sparePartCostCurrency,
-      r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null
-    );
-    if (tl != null) total += tl;
+    if (r.sparePartCost != null) {
+      const tl = toTRY(
+        Number(r.sparePartCost),
+        r.sparePartCostCurrency,
+        r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null
+      );
+      if (tl != null) total += tl;
+    }
+    // İş Süreci bölümünde girilen fatura tutarı (izolasyon/taşeron işleri gibi işçilik/
+    // hizmet maliyetleri) — sparePartCost'tan ayrı ama aynı şekilde bütçeye yansır.
+    if (r.invoiceAmount != null) {
+      const tl = toTRY(
+        Number(r.invoiceAmount),
+        r.invoiceCurrency ?? "TRY",
+        r.invoiceExchangeRate != null ? Number(r.invoiceExchangeRate) : null
+      );
+      if (tl != null) total += tl;
+    }
   }
   return total;
 }

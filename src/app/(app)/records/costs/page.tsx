@@ -19,7 +19,8 @@ export default async function MaintenanceCostsPage() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { plazaId: plaza.id, sparePartCost: { not: null } },
+    // Kapital sorumluluğundaki kayıtlar bu sayfada (binanın maliyetleri) görünmez.
+    where: { plazaId: plaza.id, sparePartCost: { not: null }, responsibleCompany: "BURGAZ" },
     include: {
       machine: true,
       sparePart: true,

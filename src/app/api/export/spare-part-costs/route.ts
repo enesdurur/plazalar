@@ -6,7 +6,8 @@ export async function GET() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { plazaId: plaza.id, sparePartCost: { not: null } },
+    // Kapital sorumluluğundaki kayıtlar bu dışa aktarmada (binanın maliyetleri) görünmez.
+    where: { plazaId: plaza.id, sparePartCost: { not: null }, responsibleCompany: "BURGAZ" },
     include: { machine: true, sparePart: true },
     orderBy: { reportedAt: "desc" },
   });
@@ -36,7 +37,7 @@ export async function GET() {
     });
   }
 
-  sheet.getColumn("reportedAt").numFmt = "dd.mm.yyyy hh:mm";
+  sheet.getColumn("reportedAt").numFmt = "dd.mm.yyyy";
 
   return workbookResponse(workbook, `${plaza.name} - Ariza Maliyetleri.xlsx`);
 }

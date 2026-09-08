@@ -128,18 +128,23 @@ export default async function DashboardPage() {
   // (3. Firma Bakım Planı / Periyodik Muayene / Kiracı Bakımları) takip ediliyor, bu yüzden
   // her biri kendi yapıldı/yapılmadı/bekliyor dağılımıyla ayrı ayrı gösteriliyor.
 
-  const mttaValues = records
+  // MTTA/MTTR artık sadece makine/teçhizata bağlı kayıtlar için anlamlı bir metrik —
+  // Genel İş kayıtları (r.machine === null) bu ortalamalara dahil edilmiyor.
+  const machineRecords = records.filter((r) => r.machine);
+  const mttaValues = machineRecords
     .map((r) => mtta(r.reportedAt, r.respondedAt))
     .filter((v): v is number => v !== null);
-  const mttrValues = records
+  const mttrValues = machineRecords
     .map((r) => mttr(r.respondedAt, r.finishedAt))
     .filter((v): v is number => v !== null);
 
   // Arıza kayıtlarındaki (MaintenanceRecord) yedek parça maliyeti — "Arıza Maliyetleri"
-  // kutucuğunun kaynağı, yalnızca Arıza Kayıtları'na yönlendirir.
+  // kutucuğunun kaynağı, yalnızca Arıza Kayıtları'na yönlendirir. Kapital sorumluluğundaki
+  // kayıtlar Gerçekleşen Bütçe'ye hiç girmediği için burada da sayılmıyor (bkz. auto-sync.ts
+  // sumFaultRecords) — aksi halde bu kutucuk bütçeyle tutarsız bir rakam gösterir.
   const faultSparePartCostByCurrency = { TRY: 0, USD: 0, EUR: 0 };
   for (const r of records) {
-    if (r.sparePartCost) {
+    if (r.sparePartCost && r.responsibleCompany === "BURGAZ") {
       faultSparePartCostByCurrency[r.sparePartCostCurrency] += Number(r.sparePartCost);
     }
   }

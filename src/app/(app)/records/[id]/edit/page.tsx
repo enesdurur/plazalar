@@ -6,6 +6,7 @@ import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../../record-form";
 import { updateRecord, uploadRecordAttachment, deleteRecordAttachment } from "../../actions";
 import { AttachmentUpload } from "@/components/attachment-upload";
+import { WorkProcessSection } from "../../work-process-section";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -28,7 +29,11 @@ export default async function EditRecordPage({
   const [record, machines, issueTypes, technicians, spareParts] = await Promise.all([
     prisma.maintenanceRecord.findFirst({
       where: { id, plazaId: plaza.id },
-      include: { attachments: { include: { uploadedBy: true } } },
+      include: {
+        attachments: { include: { uploadedBy: true } },
+        quotes: { orderBy: { createdAt: "asc" } },
+        payments: { orderBy: { paidAt: "asc" } },
+      },
     }),
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
     prisma.issueType.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
@@ -98,6 +103,38 @@ export default async function EditRecordPage({
           spareParts={spareParts}
           record={record}
           canSetCompany={canSetCompany}
+        />
+      </div>
+
+      <div className="max-w-2xl">
+        <WorkProcessSection
+          recordId={id}
+          record={{
+            awardedContractor: record.awardedContractor,
+            awardedAmount: record.awardedAmount != null ? Number(record.awardedAmount) : null,
+            awardedCurrency: record.awardedCurrency,
+            invoiceNo: record.invoiceNo,
+            invoiceAmount: record.invoiceAmount != null ? Number(record.invoiceAmount) : null,
+            invoiceCurrency: record.invoiceCurrency,
+            invoiceExchangeRate:
+              record.invoiceExchangeRate != null ? Number(record.invoiceExchangeRate) : null,
+            invoicedAt: record.invoicedAt ? record.invoicedAt.toISOString() : null,
+          }}
+          quotes={record.quotes.map((q) => ({
+            id: q.id,
+            contractorName: q.contractorName,
+            amount: Number(q.amount),
+            currency: q.currency,
+            note: q.note,
+            selected: q.selected,
+          }))}
+          payments={record.payments.map((p) => ({
+            id: p.id,
+            amount: Number(p.amount),
+            currency: p.currency,
+            paidAt: p.paidAt.toISOString(),
+            note: p.note,
+          }))}
         />
       </div>
     </div>

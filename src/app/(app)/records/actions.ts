@@ -128,6 +128,18 @@ async function recomputeFaultMonth(plazaId: string, date: Date) {
   await recomputeAutoBudgetEntry(plazaId, date.getFullYear(), date.getMonth() + 1, "FAULT_RECORDS");
 }
 
+// İş Süreci (teklif/ödeme/fatura) action'larının ortak plaza-scoping kontrolü — kaydın
+// gerçekten seçili plazaya ait olduğunu doğrular, aksi halde reddeder.
+async function assertRecordInPlaza(recordId: string) {
+  const plaza = await getSelectedPlaza();
+  const record = await prisma.maintenanceRecord.findFirst({
+    where: { id: recordId, plazaId: plaza.id },
+    select: { reportedAt: true },
+  });
+  if (!record) throw new Error("Kayıt bu plazaya ait değil.");
+  return { plaza, record };
+}
+
 export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
   const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
@@ -301,4 +313,175 @@ export async function setRecordApproval(id: string, formData: FormData) {
   revalidatePath("/budget");
   revalidatePath("/budget/entry");
   revalidatePath("/other-expenses");
+}
+
+// ---------------------------------------------------------------------------------------
+// İş Süreci: Teklif → İş Verme → Fatura → Ödeme (bkz. work-process-section.tsx)
+// ---------------------------------------------------------------------------------------
+
+const quoteSchema = z.object({
+  contractorName: z.string().min(1, "Firma adı zorunludur"),
+  amount: z.coerce.number().positive("Geçerli bir tutar girin"),
+  currency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  note: z.string().optional(),
+});
+
+export async function addQuote(recordId: string, formData: FormData) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+  const data = parseOrThrow(quoteSchema, {
+    contractorName: formData.get("contractorName"),
+    amount: formData.get("amount"),
+    currency: emptyToUndefined(formData.get("currency")) ?? "TRY",
+    note: emptyToUndefined(formData.get("note")),
+  });
+
+  await prisma.recordQuote.create({
+    data: { recordId, ...data },
+  });
+
+  revalidatePath(`/records/${recordId}/edit`);
+}
+
+export async function deleteQuote(recordId: string, quoteId: string) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+
+  await prisma.recordQuote.deleteMany({ where: { id: quoteId, recordId } });
+
+  revalidatePath(`/records/${recordId}/edit`);
+}
+
+export async function selectQuote(recordId: string, quoteId: string) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+
+  const quote = await prisma.recordQuote.findFirst({ where: { id: quoteId, recordId } });
+  if (!quote) throw new Error("Teklif bulunamadı.");
+
+  await prisma.$transaction([
+    prisma.recordQuote.updateMany({ where: { recordId }, data: { selected: false } }),
+    prisma.recordQuote.update({ where: { id: quoteId }, data: { selected: true } }),
+    prisma.maintenanceRecord.update({
+      where: { id: recordId },
+      data: {
+        awardedContractor: quote.contractorName,
+        awardedAmount: quote.amount,
+        awardedCurrency: quote.currency,
+      },
+    }),
+  ]);
+
+  revalidatePath(`/records/${recordId}/edit`);
+}
+
+const awardSchema = z.object({
+  awardedContractor: z.string().optional(),
+  awardedAmount: z.coerce.number().optional(),
+  awardedCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+});
+
+export async function updateAwardInfo(recordId: string, formData: FormData) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+  const data = parseOrThrow(awardSchema, {
+    awardedContractor: emptyToUndefined(formData.get("awardedContractor")),
+    awardedAmount: emptyToUndefined(formData.get("awardedAmount")),
+    awardedCurrency: emptyToUndefined(formData.get("awardedCurrency")) ?? "TRY",
+  });
+
+  await prisma.maintenanceRecord.updateMany({
+    where: { id: recordId },
+    data: {
+      awardedContractor: data.awardedContractor ?? null,
+      awardedAmount: data.awardedAmount ?? null,
+      awardedCurrency: data.awardedCurrency,
+    },
+  });
+
+  revalidatePath(`/records/${recordId}/edit`);
+}
+
+const invoiceSchema = z.object({
+  invoiceNo: z.string().optional(),
+  invoiceAmount: z.coerce.number().optional(),
+  invoiceCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  invoiceExchangeRate: z.coerce.number().positive().optional(),
+  invoicedAt: z.string().optional(),
+});
+
+export async function updateInvoiceInfo(recordId: string, formData: FormData) {
+  await requireWriteAccess();
+  const { plaza, record } = await assertRecordInPlaza(recordId);
+  const data = parseOrThrow(invoiceSchema, {
+    invoiceNo: emptyToUndefined(formData.get("invoiceNo")),
+    invoiceAmount: emptyToUndefined(formData.get("invoiceAmount")),
+    invoiceCurrency: emptyToUndefined(formData.get("invoiceCurrency")) ?? "TRY",
+    invoiceExchangeRate: emptyToUndefined(formData.get("invoiceExchangeRate")),
+    invoicedAt: emptyToUndefined(formData.get("invoicedAt")),
+  });
+
+  await prisma.maintenanceRecord.updateMany({
+    where: { id: recordId },
+    data: {
+      invoiceNo: data.invoiceNo ?? null,
+      invoiceAmount: data.invoiceAmount ?? null,
+      invoiceCurrency: data.invoiceCurrency,
+      invoiceExchangeRate: data.invoiceCurrency !== "TRY" ? (data.invoiceExchangeRate ?? null) : null,
+      invoicedAt: data.invoicedAt ? new Date(data.invoicedAt) : null,
+      // Fatura tutarı sparePartCost ile aynı onay akışına tabi — düzenlendiğinde yeniden
+      // Yönetim Müdürü onayına düşer.
+      approved: false,
+      approvedById: null,
+      approvedAt: null,
+    },
+  });
+
+  await recomputeFaultMonth(plaza.id, record.reportedAt);
+
+  revalidatePath(`/records/${recordId}/edit`);
+  revalidatePath("/records");
+  revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/budget/entry");
+  revalidatePath("/other-expenses");
+}
+
+const paymentSchema = z.object({
+  amount: z.coerce.number().positive("Geçerli bir tutar girin"),
+  currency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
+  paidAt: zRequiredDateString("Geçerli bir ödeme tarihi girin"),
+  note: z.string().optional(),
+});
+
+export async function addPayment(recordId: string, formData: FormData) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+  const data = parseOrThrow(paymentSchema, {
+    amount: formData.get("amount"),
+    currency: emptyToUndefined(formData.get("currency")) ?? "TRY",
+    paidAt: formData.get("paidAt"),
+    note: emptyToUndefined(formData.get("note")),
+  });
+
+  await prisma.recordPayment.create({
+    data: {
+      recordId,
+      amount: data.amount,
+      currency: data.currency,
+      paidAt: new Date(data.paidAt),
+      note: data.note,
+    },
+  });
+
+  revalidatePath(`/records/${recordId}/edit`);
+}
+
+export async function deletePayment(recordId: string, paymentId: string) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+
+  await prisma.recordPayment.deleteMany({ where: { id: paymentId, recordId } });
+
+  revalidatePath(`/records/${recordId}/edit`);
 }

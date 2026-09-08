@@ -107,6 +107,9 @@ export default async function OtherExpensesPage({
           where: {
             plazaId: plaza.id,
             operationType: "ARIZA",
+            // sumFaultRecords (auto-sync.ts) ile aynı filtre — Kapital sorumluluğundaki
+            // kayıtlar bu otomatik bütçe kalemine hiç girmiyor.
+            responsibleCompany: "BURGAZ",
             sparePartCost: { not: null },
             reportedAt: {
               gte: new Date(Date.UTC(year, 0, 1)),

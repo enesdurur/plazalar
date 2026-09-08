@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteButton } from "@/components/delete-button";
-import { mtta, mttr, formatDays } from "@/lib/kpi";
 import { deleteRecord } from "./actions";
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
 
@@ -117,19 +116,14 @@ export function RecordsTable({
       render: (r) => <span className="text-slate-600">{r.technician?.name ?? "-"}</span>,
     },
     {
-      key: "mtta",
-      header: "MTTA",
-      width: "80px",
+      key: "finishedAt",
+      header: "Bitiş Tarihi",
+      width: "120px",
+      filterValue: (r) => (r.finishedAt ? r.finishedAt.toLocaleDateString("tr-TR") : "-"),
       render: (r) => (
-        <span className="text-slate-600">{formatDays(mtta(r.reportedAt, r.respondedAt))}</span>
-      ),
-    },
-    {
-      key: "mttr",
-      header: "MTTR",
-      width: "80px",
-      render: (r) => (
-        <span className="text-slate-600">{formatDays(mttr(r.respondedAt, r.finishedAt))}</span>
+        <span className="whitespace-nowrap text-slate-600">
+          {r.finishedAt ? r.finishedAt.toLocaleDateString("tr-TR") : "-"}
+        </span>
       ),
     },
     {

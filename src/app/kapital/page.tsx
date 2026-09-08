@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessKapitalDashboard } from "@/lib/permissions";
+import { sortByPlazaOrder } from "@/lib/plaza-order";
 import { mtta, mttr, average, formatMinutes } from "@/lib/kpi";
 import { StatTile } from "@/components/stat-tile";
 import { BarBreakdown } from "@/components/bar-breakdown";
@@ -23,13 +24,14 @@ export default async function KapitalDashboardPage() {
 
   const organizationId = session.user.organizationId;
 
-  const [plazas, records] = await Promise.all([
+  const [plazasRaw, records] = await Promise.all([
     prisma.plaza.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
     prisma.maintenanceRecord.findMany({
       where: { machine: { plaza: { organizationId } } },
       include: { machine: { include: { plaza: true } } },
     }),
   ]);
+  const plazas = sortByPlazaOrder(plazasRaw);
 
   const completedCount = records.filter((r) => r.finishedAt).length;
   const ongoingCount = records.length - completedCount;

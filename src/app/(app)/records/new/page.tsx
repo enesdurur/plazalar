@@ -28,7 +28,7 @@ export default async function NewRecordPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-slate-900">Yeni Arıza / Bakım Kaydı</h1>
+      <h1 className="text-xl font-semibold text-slate-900">Yeni Arıza</h1>
       <div className="mt-6">
         <RecordForm
           action={createRecord}

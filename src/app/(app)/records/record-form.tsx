@@ -31,9 +31,9 @@ export function RecordForm({
   return (
     <form action={action} className="max-w-2xl space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Makine *">
-          <select name="machineId" required defaultValue={record?.machineId ?? ""} className="input">
-            <option value="">Seçiniz</option>
+        <Field label="Makine">
+          <select name="machineId" defaultValue={record?.machineId ?? ""} className="input">
+            <option value="">Genel İş (makine/teçhizatla ilgisi yok)</option>
             {machines.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}

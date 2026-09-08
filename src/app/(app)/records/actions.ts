@@ -21,7 +21,9 @@ import type { AttachmentKind, Role } from "@prisma/client";
 const OTHER_SPARE_PART = "__other__";
 
 const recordSchema = z.object({
-  machineId: z.string().min(1, "Makine seçimi zorunludur"),
+  // Boş bırakılırsa "Genel İş" (makine/teçhizatla ilgisi olmayan iş, ör. izolasyon) olarak
+  // kaydedilir — bkz. record-form.tsx.
+  machineId: z.string().optional(),
   operationType: z.enum(["ARIZA", "BAKIM"]),
   issueTypeId: z.string().optional(),
   description: z.string().min(1, "Açıklama zorunludur"),
@@ -45,7 +47,7 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
 
 function parseRecordForm(formData: FormData) {
   const parsed = parseOrThrow(recordSchema, {
-    machineId: formData.get("machineId"),
+    machineId: emptyToUndefined(formData.get("machineId")),
     operationType: formData.get("operationType"),
     issueTypeId: emptyToUndefined(formData.get("issueTypeId")),
     description: formData.get("description"),
@@ -103,8 +105,11 @@ async function requireWriteAccess() {
   return session;
 }
 
-async function assertMachineInPlaza(machineId: string) {
+// machineId boşsa (Genel İş) sadece seçili plazayı döner; doluysa makinenin gerçekten bu
+// plazaya ait olduğunu doğrular.
+async function resolvePlazaForRecord(machineId: string | undefined) {
   const plaza = await getSelectedPlaza();
+  if (!machineId) return plaza;
   const machine = await prisma.machine.findFirst({
     where: { id: machineId, plazaId: plaza.id },
   });
@@ -119,10 +124,10 @@ async function recomputeFaultMonth(plazaId: string, date: Date) {
 export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
   const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
-  const plaza = await assertMachineInPlaza(data.machineId);
+  const plaza = await resolvePlazaForRecord(data.machineId);
 
   await prisma.maintenanceRecord.create({
-    data: { ...data, createdById: session.user.id },
+    data: { ...data, machineId: data.machineId ?? null, plazaId: plaza.id, createdById: session.user.id },
   });
 
   await recomputeFaultMonth(plaza.id, data.reportedAt);
@@ -138,17 +143,17 @@ export async function createRecord(formData: FormData) {
 export async function updateRecord(id: string, formData: FormData) {
   const session = await requireWriteAccess();
   const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
-  const plaza = await assertMachineInPlaza(data.machineId);
+  const plaza = await resolvePlazaForRecord(data.machineId);
 
   const previous = await prisma.maintenanceRecord.findFirst({
-    where: { id, machine: { plazaId: plaza.id } },
+    where: { id, plazaId: plaza.id },
     select: { reportedAt: true },
   });
 
   await prisma.maintenanceRecord.updateMany({
-    where: { id, machine: { plazaId: plaza.id } },
+    where: { id, plazaId: plaza.id },
     // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
-    data: { ...data, approved: false, approvedById: null, approvedAt: null },
+    data: { ...data, machineId: data.machineId ?? null, approved: false, approvedById: null, approvedAt: null },
   });
 
   if (previous) await recomputeFaultMonth(plaza.id, previous.reportedAt);
@@ -172,12 +177,12 @@ export async function deleteRecord(id: string) {
   const plaza = await getSelectedPlaza();
 
   const existing = await prisma.maintenanceRecord.findFirst({
-    where: { id, machine: { plazaId: plaza.id } },
+    where: { id, plazaId: plaza.id },
     select: { reportedAt: true },
   });
 
   await prisma.maintenanceRecord.deleteMany({
-    where: { id, machine: { plazaId: plaza.id } },
+    where: { id, plazaId: plaza.id },
   });
 
   if (existing) await recomputeFaultMonth(plaza.id, existing.reportedAt);
@@ -202,7 +207,7 @@ export async function uploadRecordAttachment(
     const plaza = await getSelectedPlaza();
 
     const existing = await prisma.maintenanceRecord.findFirst({
-      where: { id, machine: { plazaId: plaza.id } },
+      where: { id, plazaId: plaza.id },
     });
     if (!existing) return { error: "Kayıt bu plazaya ait değil." };
 
@@ -239,7 +244,7 @@ export async function deleteRecordAttachment(
     const attachment = await prisma.attachment.findFirst({
       where: {
         id: attachmentId,
-        maintenanceRecord: { id: recordId, machine: { plazaId: plaza.id } },
+        maintenanceRecord: { id: recordId, plazaId: plaza.id },
       },
     });
     if (!attachment) return { error: "Belge bulunamadı." };
@@ -266,7 +271,7 @@ export async function setRecordApproval(id: string, formData: FormData) {
   const plaza = await getSelectedPlaza();
 
   const existing = await prisma.maintenanceRecord.findFirst({
-    where: { id, machine: { plazaId: plaza.id } },
+    where: { id, plazaId: plaza.id },
     select: { reportedAt: true },
   });
   if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
@@ -274,7 +279,7 @@ export async function setRecordApproval(id: string, formData: FormData) {
   const approved = formData.get("approved") === "true";
 
   await prisma.maintenanceRecord.updateMany({
-    where: { id, machine: { plazaId: plaza.id } },
+    where: { id, plazaId: plaza.id },
     data: {
       approved,
       approvedById: approved ? session.user.id : null,

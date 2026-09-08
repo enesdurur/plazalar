@@ -19,7 +19,7 @@ export default async function MaintenanceCostsPage() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { machine: { plazaId: plaza.id }, sparePartCost: { not: null } },
+    where: { plazaId: plaza.id, sparePartCost: { not: null } },
     include: {
       machine: true,
       sparePart: true,

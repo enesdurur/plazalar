@@ -6,7 +6,7 @@ export async function GET() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { machine: { plazaId: plaza.id }, sparePartCost: { not: null } },
+    where: { plazaId: plaza.id, sparePartCost: { not: null } },
     include: { machine: true, sparePart: true },
     orderBy: { reportedAt: "desc" },
   });
@@ -27,7 +27,7 @@ export async function GET() {
   for (const r of records) {
     sheet.addRow({
       reportedAt: r.reportedAt,
-      machine: r.machine.name,
+      machine: r.machine?.name ?? "Genel İş",
       description: r.description,
       sparePart: r.sparePart?.name ?? r.sparePartOther ?? "",
       sparePartQty: r.sparePartQty ?? "",

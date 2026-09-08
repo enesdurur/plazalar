@@ -27,7 +27,7 @@ export default async function EditRecordPage({
 
   const [record, machines, issueTypes, technicians, spareParts] = await Promise.all([
     prisma.maintenanceRecord.findFirst({
-      where: { id, machine: { plazaId: plaza.id } },
+      where: { id, plazaId: plaza.id },
       include: { attachments: { include: { uploadedBy: true } } },
     }),
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),

@@ -27,8 +27,8 @@ export default async function KapitalDashboardPage() {
   const [plazasRaw, records] = await Promise.all([
     prisma.plaza.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
     prisma.maintenanceRecord.findMany({
-      where: { machine: { plaza: { organizationId } } },
-      include: { machine: { include: { plaza: true } } },
+      where: { plaza: { organizationId } },
+      include: { machine: true },
     }),
   ]);
   const plazas = sortByPlazaOrder(plazasRaw);
@@ -44,7 +44,7 @@ export default async function KapitalDashboardPage() {
     .filter((v): v is number => v !== null);
 
   const byPlaza = plazas.map((plaza) => {
-    const plazaRecords = records.filter((r) => r.machine.plazaId === plaza.id);
+    const plazaRecords = records.filter((r) => r.plazaId === plaza.id);
     const plazaMtta = plazaRecords
       .map((r) => mtta(r.reportedAt, r.respondedAt))
       .filter((v): v is number => v !== null);

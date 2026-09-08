@@ -12,7 +12,7 @@ export async function GET() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { machine: { plazaId: plaza.id } },
+    where: { plazaId: plaza.id },
     include: { machine: true, issueType: true, technician: true, sparePart: true },
     orderBy: { reportedAt: "desc" },
   });
@@ -41,7 +41,7 @@ export async function GET() {
   for (const r of records) {
     sheet.addRow({
       reportedAt: r.reportedAt,
-      machine: r.machine.name,
+      machine: r.machine?.name ?? "Genel İş",
       operationType: OPERATION_LABELS[r.operationType],
       issueType: r.issueType?.name ?? "",
       description: r.description,

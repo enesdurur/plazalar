@@ -22,9 +22,11 @@ type RecordWithRelations = Omit<
   sparePartExchangeRate: number | null;
   formAttachment?: AttachmentInfo | null;
   invoiceAttachment?: AttachmentInfo | null;
-  machine: Machine;
+  machine: Machine | null;
   sparePart: SparePart | null;
 };
+
+const GENERAL_WORK_LABEL = "Genel İş";
 
 export function CostsTable({
   records,
@@ -49,8 +51,10 @@ export function CostsTable({
       key: "machine",
       header: "Makine",
       width: "240px",
-      filterValue: (r) => r.machine.name,
-      render: (r) => <span className="font-medium text-slate-900">{r.machine.name}</span>,
+      filterValue: (r) => r.machine?.name ?? GENERAL_WORK_LABEL,
+      render: (r) => (
+        <span className="font-medium text-slate-900">{r.machine?.name ?? GENERAL_WORK_LABEL}</span>
+      ),
     },
     {
       key: "reportedAt",
@@ -112,7 +116,7 @@ export function CostsTable({
                   action={approver ? setRecordApproval.bind(null, r.id) : undefined}
                 />
                 <AttachmentQuickPanel
-                  title={`${r.machine.name} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
+                  title={`${r.machine?.name ?? GENERAL_WORK_LABEL} · ${r.reportedAt.toLocaleDateString("tr-TR")}`}
                   form={r.formAttachment ?? null}
                   invoice={r.invoiceAttachment ?? null}
                   canForm={canForm}

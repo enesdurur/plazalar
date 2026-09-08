@@ -191,6 +191,7 @@ async function main() {
 
     await prisma.maintenanceRecord.create({
       data: {
+        plazaId: squarePlazaId,
         machineId,
         operationType: r["İŞLEM TÜRÜ"] as OperationType,
         issueTypeId: issueTypes.get(r["ARIZA/BAKIM TÜRÜ"]),

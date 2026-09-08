@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { machine: { plazaId: plaza.id } },
+    where: { plazaId: plaza.id },
     include: { machine: true },
   });
 
@@ -169,6 +169,7 @@ export default async function DashboardPage() {
 
   const downtimeByMachine = new Map<string, number>();
   for (const r of records) {
+    if (!r.machine) continue; // Genel İş kayıtları makine bazlı bu panele dahil edilmiyor.
     const downtime = mttr(r.respondedAt, r.finishedAt) ?? 0;
     downtimeByMachine.set(
       r.machine.name,

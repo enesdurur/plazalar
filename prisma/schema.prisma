@@ -153,6 +153,7 @@ model Plaza {
   budgetSections       BudgetSection[]
   maintenancePlanItems MaintenancePlanItem[]
   inspectionPlanItems  InspectionPlanItem[]
+  maintenanceRecords   MaintenanceRecord[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -325,7 +326,11 @@ model SparePart {
 
 model MaintenanceRecord {
   id                    String        @id @default(cuid())
-  machineId             String
+  plazaId               String
+  // Belirli bir makine/teçhizatla ilgisi olmayan işler (ör. izolasyon) için boş bırakılır —
+  // "Genel İş" olarak gösterilir (bkz. record-form.tsx, records-table.tsx). plazaId, machine
+  // hangi durumda olursa olsun kaydın plaza-izolasyon sınırıdır (bkz. records/actions.ts).
+  machineId             String?
   operationType         OperationType
   issueTypeId           String?
   description           String
@@ -356,7 +361,8 @@ model MaintenanceRecord {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  machine     Machine      @relation(fields: [machineId], references: [id])
+  plaza       Plaza        @relation(fields: [plazaId], references: [id])
+  machine     Machine?     @relation(fields: [machineId], references: [id])
   issueType   IssueType?   @relation(fields: [issueTypeId], references: [id])
   technician  Technician?  @relation(fields: [technicianId], references: [id])
   sparePart   SparePart?   @relation(fields: [sparePartId], references: [id])
@@ -364,6 +370,7 @@ model MaintenanceRecord {
   approvedBy  User?        @relation("RecordApprovedBy", fields: [approvedById], references: [id])
   attachments Attachment[]
 
+  @@index([plazaId])
   @@index([machineId])
   @@index([reportedAt])
   @@index([operationType])

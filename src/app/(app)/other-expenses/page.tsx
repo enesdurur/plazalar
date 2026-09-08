@@ -105,7 +105,7 @@ export default async function OtherExpensesPage({
     wantsFaultRecords
       ? prisma.maintenanceRecord.findMany({
           where: {
-            machine: { plazaId: plaza.id },
+            plazaId: plaza.id,
             operationType: "ARIZA",
             sparePartCost: { not: null },
             reportedAt: {

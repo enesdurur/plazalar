@@ -19,8 +19,9 @@ export default async function RecordsPage() {
   const plaza = await getSelectedPlaza();
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { machine: { plazaId: plaza.id } },
+    where: { plazaId: plaza.id },
     include: {
+      plaza: true,
       machine: true,
       issueType: true,
       technician: true,

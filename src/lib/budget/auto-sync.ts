@@ -81,7 +81,7 @@ async function sumFaultRecords(plazaId: string, year: number, month: number) {
 
   const records = await prisma.maintenanceRecord.findMany({
     where: {
-      machine: { plazaId },
+      plazaId,
       operationType: "ARIZA",
       reportedAt: { gte: start, lt: end },
       sparePartCost: { not: null },

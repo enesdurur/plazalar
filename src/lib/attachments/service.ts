@@ -29,7 +29,7 @@ function scopedToPlaza(plazaId: string) {
     OR: [
       { planWeekEntry: { item: { plazaId } } },
       { inspectionWeekEntry: { item: { plazaId } } },
-      { maintenanceRecord: { machine: { plazaId } } },
+      { maintenanceRecord: { plazaId } },
       { otherExpenseEntry: { lineItem: { section: { plazaId } } } },
     ],
   };

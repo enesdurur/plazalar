@@ -17,13 +17,16 @@ const COMPANY_LABELS: Record<string, string> = {
   BURGAZ: "Burgaz",
 };
 
+const GENERAL_WORK_LABEL = "Genel İş";
+
 type RecordWithRelations = Omit<
   MaintenanceRecord,
   "sparePartCost" | "sparePartExchangeRate"
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
-  machine: Machine & { plaza?: { name: string } };
+  machine: Machine | null;
+  plaza?: { name: string };
   issueType: IssueType | null;
   technician: Technician | null;
 };
@@ -59,9 +62,9 @@ export function RecordsTable({
             key: "plaza",
             header: "Plaza",
             width: "140px",
-            filterValue: (r: RecordWithRelations) => r.machine.plaza?.name ?? "-",
+            filterValue: (r: RecordWithRelations) => r.plaza?.name ?? "-",
             render: (r: RecordWithRelations) => (
-              <span className="text-slate-600">{r.machine.plaza?.name ?? "-"}</span>
+              <span className="text-slate-600">{r.plaza?.name ?? "-"}</span>
             ),
           } satisfies DataTableColumn<RecordWithRelations>,
         ]
@@ -70,8 +73,10 @@ export function RecordsTable({
       key: "machine",
       header: "Makine",
       width: "150px",
-      filterValue: (r) => r.machine.name,
-      render: (r) => <span className="font-medium text-slate-900">{r.machine.name}</span>,
+      filterValue: (r) => r.machine?.name ?? GENERAL_WORK_LABEL,
+      render: (r) => (
+        <span className="font-medium text-slate-900">{r.machine?.name ?? GENERAL_WORK_LABEL}</span>
+      ),
     },
     {
       key: "company",

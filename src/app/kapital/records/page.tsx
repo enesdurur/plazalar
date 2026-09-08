@@ -21,9 +21,10 @@ export default async function KapitalRecordsPage() {
   const organizationId = session.user.organizationId;
 
   const records = await prisma.maintenanceRecord.findMany({
-    where: { machine: { plaza: { organizationId } } },
+    where: { plaza: { organizationId } },
     include: {
-      machine: { include: { plaza: true } },
+      plaza: true,
+      machine: true,
       issueType: true,
       technician: true,
     },

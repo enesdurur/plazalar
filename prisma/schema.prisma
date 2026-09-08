@@ -34,6 +34,15 @@ enum Currency {
   EUR
 }
 
+// Bir arıza/bakım kaydının hangi şirketin sorumluluğunda olduğu — Kapital (mülk sahibi)
+// ya da Burgaz (yönetim şirketi). TECHNICIAN rolü bunu her zaman BURGAZ'da sabit görür
+// (bkz. permissions.ts canSetResponsibleCompany); diğer roller ikisi arasında seçip
+// gerektiğinde değiştirebilir.
+enum ResponsibleCompany {
+  KAPITAL
+  BURGAZ
+}
+
 // Bir müşteri firma (kiracı sınırı). v1'de her User/Plaza tek bir Organization'a bağlı,
 // çoklu üyelik yok. Yeni organizasyon açma /platform-admin altında, User.isSuperAdmin
 // bayrağıyla korunuyor (bkz. permissions.ts canManagePlatform).
@@ -343,6 +352,7 @@ model MaintenanceRecord {
   approved              Boolean       @default(false)
   approvedById          String?
   approvedAt            DateTime?
+  responsibleCompany    ResponsibleCompany @default(BURGAZ)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 

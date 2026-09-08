@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canAddInvoice, canAddMaintenanceForm } from "@/lib/permissions";
+import { canAddInvoice, canAddMaintenanceForm, canSetResponsibleCompany } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../../record-form";
 import { updateRecord, uploadRecordAttachment, deleteRecordAttachment } from "../../actions";
@@ -21,6 +21,7 @@ export default async function EditRecordPage({
   const session = await auth();
   const canInvoice = canAddInvoice(session?.user.role);
   const canForm = canAddMaintenanceForm(session?.user.role);
+  const canSetCompany = canSetResponsibleCompany(session?.user.role);
   const plaza = await getSelectedPlaza();
   const organizationId = session!.user.organizationId;
 
@@ -96,6 +97,7 @@ export default async function EditRecordPage({
           technicians={technicians}
           spareParts={spareParts}
           record={record}
+          canSetCompany={canSetCompany}
         />
       </div>
     </div>

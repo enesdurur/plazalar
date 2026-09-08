@@ -18,6 +18,7 @@ export function RecordForm({
   technicians,
   spareParts,
   record,
+  canSetCompany,
 }: {
   action: (formData: FormData) => Promise<void>;
   machines: Machine[];
@@ -25,6 +26,7 @@ export function RecordForm({
   technicians: Technician[];
   spareParts: { id: string; name: string }[];
   record?: MaintenanceRecord;
+  canSetCompany: boolean;
 }) {
   return (
     <form action={action} className="max-w-2xl space-y-4">
@@ -44,6 +46,23 @@ export function RecordForm({
           <div className="input flex items-center bg-slate-50 text-slate-500">
             {record?.operationType === "BAKIM" ? "Bakım (eski kayıt)" : "Arıza"}
           </div>
+        </Field>
+        <Field label="Şirket *">
+          {canSetCompany ? (
+            <select
+              name="responsibleCompany"
+              defaultValue={record?.responsibleCompany ?? "BURGAZ"}
+              className="input"
+            >
+              <option value="BURGAZ">Burgaz</option>
+              <option value="KAPITAL">Kapital</option>
+            </select>
+          ) : (
+            <>
+              <input type="hidden" name="responsibleCompany" value="BURGAZ" />
+              <div className="input flex items-center bg-slate-50 text-slate-500">Burgaz</div>
+            </>
+          )}
         </Field>
         <Field label="Arıza / Bakım Türü">
           <select name="issueTypeId" defaultValue={record?.issueTypeId ?? ""} className="input">

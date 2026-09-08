@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { canSetResponsibleCompany } from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { RecordForm } from "../record-form";
 import { createRecord } from "../actions";
@@ -13,6 +14,7 @@ export default async function NewRecordPage() {
   const session = await auth();
   const plaza = await getSelectedPlaza();
   const organizationId = session!.user.organizationId;
+  const canSetCompany = canSetResponsibleCompany(session?.user.role);
   const [machines, issueTypes, technicians, spareParts] = await Promise.all([
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
     prisma.issueType.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
@@ -34,6 +36,7 @@ export default async function NewRecordPage() {
           issueTypes={issueTypes}
           technicians={technicians}
           spareParts={spareParts}
+          canSetCompany={canSetCompany}
         />
       </div>
     </div>

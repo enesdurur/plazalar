@@ -12,13 +12,18 @@ const OPERATION_LABELS: Record<string, string> = {
   BAKIM: "Bakım",
 };
 
+const COMPANY_LABELS: Record<string, string> = {
+  KAPITAL: "Kapital",
+  BURGAZ: "Burgaz",
+};
+
 type RecordWithRelations = Omit<
   MaintenanceRecord,
   "sparePartCost" | "sparePartExchangeRate"
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
-  machine: Machine;
+  machine: Machine & { plaza?: { name: string } };
   issueType: IssueType | null;
   technician: Technician | null;
 };
@@ -28,11 +33,13 @@ export function RecordsTable({
   writable,
   deletable,
   emptyMessage,
+  showPlaza,
 }: {
   records: RecordWithRelations[];
   writable: boolean;
   deletable: boolean;
   emptyMessage: string;
+  showPlaza?: boolean;
 }) {
   const columns: DataTableColumn<RecordWithRelations>[] = [
     {
@@ -46,12 +53,42 @@ export function RecordsTable({
         </span>
       ),
     },
+    ...(showPlaza
+      ? [
+          {
+            key: "plaza",
+            header: "Plaza",
+            width: "140px",
+            filterValue: (r: RecordWithRelations) => r.machine.plaza?.name ?? "-",
+            render: (r: RecordWithRelations) => (
+              <span className="text-slate-600">{r.machine.plaza?.name ?? "-"}</span>
+            ),
+          } satisfies DataTableColumn<RecordWithRelations>,
+        ]
+      : []),
     {
       key: "machine",
       header: "Makine",
       width: "150px",
       filterValue: (r) => r.machine.name,
       render: (r) => <span className="font-medium text-slate-900">{r.machine.name}</span>,
+    },
+    {
+      key: "company",
+      header: "Şirket",
+      width: "90px",
+      filterValue: (r) => COMPANY_LABELS[r.responsibleCompany],
+      render: (r) => (
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            r.responsibleCompany === "KAPITAL"
+              ? "bg-indigo-100 text-indigo-700"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {COMPANY_LABELS[r.responsibleCompany]}
+        </span>
+      ),
     },
     {
       key: "operationType",

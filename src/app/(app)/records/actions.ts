@@ -6,11 +6,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { canWrite, canDelete, canApprove, canAddAttachmentKind } from "@/lib/permissions";
+import {
+  canWrite,
+  canDelete,
+  canApprove,
+  canAddAttachmentKind,
+  canSetResponsibleCompany,
+} from "@/lib/permissions";
 import { getSelectedPlaza } from "@/lib/plaza";
 import { recomputeAutoBudgetEntry } from "@/lib/budget/auto-sync";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
-import type { AttachmentKind } from "@prisma/client";
+import type { AttachmentKind, Role } from "@prisma/client";
 
 const OTHER_SPARE_PART = "__other__";
 
@@ -29,6 +35,7 @@ const recordSchema = z.object({
   sparePartCost: z.coerce.number().optional(),
   sparePartCostCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
   sparePartExchangeRate: z.coerce.number().positive().optional(),
+  responsibleCompany: z.enum(["KAPITAL", "BURGAZ"]).default("BURGAZ"),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -52,6 +59,7 @@ function parseRecordForm(formData: FormData) {
     sparePartCost: emptyToUndefined(formData.get("sparePartCost")),
     sparePartCostCurrency: emptyToUndefined(formData.get("sparePartCostCurrency")) ?? "TRY",
     sparePartExchangeRate: emptyToUndefined(formData.get("sparePartExchangeRate")),
+    responsibleCompany: emptyToUndefined(formData.get("responsibleCompany")) ?? "BURGAZ",
   });
 
   const isOther = parsed.sparePartId === OTHER_SPARE_PART;
@@ -72,7 +80,19 @@ function parseRecordForm(formData: FormData) {
     sparePartCostCurrency: parsed.sparePartCostCurrency,
     sparePartExchangeRate:
       parsed.sparePartCostCurrency !== "TRY" ? (parsed.sparePartExchangeRate ?? null) : null,
+    responsibleCompany: parsed.responsibleCompany,
   };
+}
+
+// Formdan gelen responsibleCompany'yi doğrudan güvenmeden, gönderen kullanıcının bu alanı
+// değiştirme yetkisi yoksa (ör. TECHNICIAN) her zaman BURGAZ'a zorlar — tarayıcıdan formu
+// manipüle ederek KAPITAL göndermeyi engeller (bkz. permissions.ts canSetResponsibleCompany).
+function enforceResponsibleCompany<T extends { responsibleCompany: "KAPITAL" | "BURGAZ" }>(
+  data: T,
+  role: Role | undefined
+): T {
+  if (canSetResponsibleCompany(role)) return data;
+  return { ...data, responsibleCompany: "BURGAZ" };
 }
 
 async function requireWriteAccess() {
@@ -98,7 +118,7 @@ async function recomputeFaultMonth(plazaId: string, date: Date) {
 
 export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
-  const data = parseRecordForm(formData);
+  const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
   const plaza = await assertMachineInPlaza(data.machineId);
 
   await prisma.maintenanceRecord.create({
@@ -116,8 +136,8 @@ export async function createRecord(formData: FormData) {
 }
 
 export async function updateRecord(id: string, formData: FormData) {
-  await requireWriteAccess();
-  const data = parseRecordForm(formData);
+  const session = await requireWriteAccess();
+  const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
   const plaza = await assertMachineInPlaza(data.machineId);
 
   const previous = await prisma.maintenanceRecord.findFirst({

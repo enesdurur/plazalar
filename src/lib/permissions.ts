@@ -34,6 +34,23 @@ export function canDelete(role: Role | undefined) {
   return role === "ADMIN";
 }
 
+// Bir arıza/bakım kaydının "Şirket" (Kapital/Burgaz sorumluluğu) alanını görüp
+// değiştirebilenler. TECHNICIAN hariç herkes — teknisyenler için bu alan her zaman
+// Burgaz'da sabittir (bkz. records/record-form.tsx, records/actions.ts).
+export function canSetResponsibleCompany(role: Role | undefined) {
+  return (
+    role === "ADMIN" ||
+    role === "MANAGEMENT_DIRECTOR" ||
+    role === "TEKNIKER" ||
+    role === "STPU"
+  );
+}
+
+// Tüm plazaların birleşik görünümü olan Kapital dashboard'una (/kapital) erişim.
+export function canAccessKapitalDashboard(role: Role | undefined) {
+  return role === "ADMIN" || role === "MANAGEMENT_DIRECTOR" || role === "TEKNIKER";
+}
+
 // "Yönetici" (ADMIN) rolü, o organizasyonun birden çok kişisine atanabilir (ör. bir müdür
 // yardımcısı) — bunların hepsi Kullanıcılar sekmesini görüp yönetebilirse yönetim kimin
 // hesap açıp kapatabileceğini kontrol edemez. Bu yüzden Kullanıcılar sekmesi role="ADMIN"

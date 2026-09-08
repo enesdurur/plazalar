@@ -15,15 +15,10 @@ export default async function NewRecordPage() {
   const plaza = await getSelectedPlaza();
   const organizationId = session!.user.organizationId;
   const canSetCompany = canSetResponsibleCompany(session?.user.role);
-  const [machines, issueTypes, technicians, spareParts] = await Promise.all([
+  const [machines, issueTypes, technicians] = await Promise.all([
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
     prisma.issueType.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
     prisma.technician.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
-    prisma.sparePart.findMany({
-      where: { organizationId },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
   ]);
 
   return (
@@ -35,7 +30,6 @@ export default async function NewRecordPage() {
           machines={machines}
           issueTypes={issueTypes}
           technicians={technicians}
-          spareParts={spareParts}
           canSetCompany={canSetCompany}
         />
       </div>

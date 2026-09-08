@@ -398,13 +398,18 @@ model MaintenanceRecord {
   @@map("maintenance_records")
 }
 
-// Bir iş için toplanan teklifler (ör. izolasyon işi için 3 farklı firmadan teklif).
-// `selected=true` olan teklif, kaydın awardedContractor/awardedAmount alanlarını besler
-// (bkz. records/actions.ts selectQuote).
+// Bir iş için toplanan teklifler (ör. izolasyon işi için birden fazla firmadan teklif).
+// Tek bir iş birden fazla iş kalemine (workItem) bölünebilir, her kalem kendi firmasını
+// bağımsız seçebilir (bkz. records/actions.ts selectQuote — aynı workItem'daki diğer
+// teklifler seçimsiz bırakılır, farklı kalemler etkilenmez).
 model RecordQuote {
   id             String   @id @default(cuid())
   recordId       String
   contractorName String
+  // İş Kalemi (Mekanik, Elektrik, İzolasyon vb.) — IssueType listesinden seçilen serbest
+  // metin, RecordQuote'un IssueType'a bir FK bağımlılığı yok. "Seçildi" işaretlemesi aynı
+  // workItem'a sahip teklifler arasında birbirini dışlar (bkz. records/actions.ts selectQuote).
+  workItem       String?
   amount         Decimal  @db.Decimal(12, 2)
   currency       Currency @default(TRY)
   note           String?

@@ -1,8 +1,7 @@
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
 import { SubmitButton } from "@/components/submit-button";
-import { SparePartField } from "./spare-part-field";
-import { SparePartCostField } from "./spare-part-cost-field";
 import { IssueTypeField } from "./issue-type-field";
+import { QuoteDraftField } from "./quote-draft-field";
 
 function toDateInputValue(date: Date | null | undefined) {
   if (!date) return "";
@@ -15,7 +14,6 @@ export function RecordForm({
   machines,
   issueTypes,
   technicians,
-  spareParts,
   record,
   canSetCompany,
 }: {
@@ -23,7 +21,6 @@ export function RecordForm({
   machines: Machine[];
   issueTypes: IssueType[];
   technicians: Technician[];
-  spareParts: { id: string; name: string }[];
   record?: MaintenanceRecord;
   canSetCompany: boolean;
 }) {
@@ -113,27 +110,7 @@ export function RecordForm({
         </Field>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <SparePartField
-          spareParts={spareParts}
-          defaultSparePartId={record?.sparePartId}
-          defaultSparePartOther={record?.sparePartOther}
-        />
-        <Field label="Adet">
-          <input
-            name="sparePartQty"
-            type="number"
-            min={0}
-            defaultValue={record?.sparePartQty ?? ""}
-            className="input"
-          />
-        </Field>
-        <SparePartCostField
-          defaultCost={record?.sparePartCost?.toString() ?? null}
-          defaultCurrency={record?.sparePartCostCurrency ?? "TRY"}
-          defaultExchangeRate={record?.sparePartExchangeRate?.toString() ?? null}
-        />
-      </div>
+      {!record && <QuoteDraftField issueTypes={issueTypes} />}
 
       <div className="flex gap-3 pt-2">
         <SubmitButton />

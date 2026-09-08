@@ -145,9 +145,39 @@ export async function createRecord(formData: FormData) {
   const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
   const plaza = await resolvePlazaForRecord(data.machineId);
 
-  await prisma.maintenanceRecord.create({
+  const record = await prisma.maintenanceRecord.create({
     data: { ...data, machineId: data.machineId ?? null, plazaId: plaza.id, createdById: session.user.id },
   });
+
+  // Yeni Kayıt formundaki "İş Süreci" onay kutusu işaretlenip teklif satırları girildiyse
+  // (bkz. quote-draft-field.tsx), kayıtla birlikte tek seferde oluşturulur.
+  const quotesRaw = formData.get("quotesJson");
+  if (typeof quotesRaw === "string" && quotesRaw.trim() && quotesRaw !== "[]") {
+    let parsedQuotes: unknown;
+    try {
+      parsedQuotes = JSON.parse(quotesRaw);
+    } catch {
+      parsedQuotes = [];
+    }
+    if (Array.isArray(parsedQuotes)) {
+      const rows = parsedQuotes
+        .map((q) => quoteSchema.safeParse(q))
+        .filter((r) => r.success)
+        .map((r) => r.data);
+      if (rows.length > 0) {
+        await prisma.recordQuote.createMany({
+          data: rows.map((q) => ({
+            recordId: record.id,
+            contractorName: q.contractorName,
+            workItem: q.workItem || null,
+            amount: q.amount,
+            currency: q.currency,
+            note: q.note || null,
+          })),
+        });
+      }
+    }
+  }
 
   await recomputeFaultMonth(plaza.id, data.reportedAt);
 
@@ -321,6 +351,7 @@ export async function setRecordApproval(id: string, formData: FormData) {
 
 const quoteSchema = z.object({
   contractorName: z.string().min(1, "Firma adı zorunludur"),
+  workItem: z.string().optional(),
   amount: z.coerce.number().positive("Geçerli bir tutar girin"),
   currency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
   note: z.string().optional(),
@@ -331,13 +362,14 @@ export async function addQuote(recordId: string, formData: FormData) {
   await assertRecordInPlaza(recordId);
   const data = parseOrThrow(quoteSchema, {
     contractorName: formData.get("contractorName"),
+    workItem: emptyToUndefined(formData.get("workItem")),
     amount: formData.get("amount"),
     currency: emptyToUndefined(formData.get("currency")) ?? "TRY",
     note: emptyToUndefined(formData.get("note")),
   });
 
   await prisma.recordQuote.create({
-    data: { recordId, ...data },
+    data: { recordId, ...data, workItem: data.workItem ?? null },
   });
 
   revalidatePath(`/records/${recordId}/edit`);
@@ -359,17 +391,15 @@ export async function selectQuote(recordId: string, quoteId: string) {
   const quote = await prisma.recordQuote.findFirst({ where: { id: quoteId, recordId } });
   if (!quote) throw new Error("Teklif bulunamadı.");
 
+  // Aynı iş kalemindeki (workItem) diğer teklifler seçimsiz bırakılır — farklı kalemler
+  // birbirinden bağımsız kendi firmasını seçebilir (ör. Mekanik ve Elektrik ayrı firmalara
+  // verilebilir).
   await prisma.$transaction([
-    prisma.recordQuote.updateMany({ where: { recordId }, data: { selected: false } }),
-    prisma.recordQuote.update({ where: { id: quoteId }, data: { selected: true } }),
-    prisma.maintenanceRecord.update({
-      where: { id: recordId },
-      data: {
-        awardedContractor: quote.contractorName,
-        awardedAmount: quote.amount,
-        awardedCurrency: quote.currency,
-      },
+    prisma.recordQuote.updateMany({
+      where: { recordId, workItem: quote.workItem },
+      data: { selected: false },
     }),
+    prisma.recordQuote.update({ where: { id: quoteId }, data: { selected: true } }),
   ]);
 
   revalidatePath(`/records/${recordId}/edit`);

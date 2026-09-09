@@ -21,9 +21,15 @@ type RecordWithRelations = Omit<
   sparePartExchangeRate: number | null;
   machine: Machine | null;
   plaza?: { name: string };
-  issueType: IssueType | null;
+  issueTypes: IssueType[];
   technician: Technician | null;
 };
+
+function categoryLabel(r: RecordWithRelations) {
+  const names = r.issueTypes.map((t) => t.name);
+  if (r.issueTypeOther) names.push(r.issueTypeOther);
+  return names.length > 0 ? names.join(", ") : "-";
+}
 
 export function RecordsTable({
   records,
@@ -69,7 +75,12 @@ export function RecordsTable({
       width: "150px",
       filterValue: (r) => r.machine?.name ?? GENERAL_WORK_LABEL,
       render: (r) => (
-        <span className="font-medium text-slate-900">{r.machine?.name ?? GENERAL_WORK_LABEL}</span>
+        <Link
+          href={`/records/${r.id}`}
+          className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-slate-700 hover:decoration-slate-500"
+        >
+          {r.machine?.name ?? GENERAL_WORK_LABEL}
+        </Link>
       ),
     },
     {
@@ -93,10 +104,8 @@ export function RecordsTable({
       key: "issueType",
       header: "Kategori",
       width: "150px",
-      filterValue: (r) => r.issueType?.name ?? r.issueTypeOther ?? "-",
-      render: (r) => (
-        <span className="text-slate-600">{r.issueType?.name ?? r.issueTypeOther ?? "-"}</span>
-      ),
+      filterValue: categoryLabel,
+      render: (r) => <span className="text-slate-600">{categoryLabel(r)}</span>,
     },
     {
       key: "description",

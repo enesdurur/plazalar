@@ -332,8 +332,7 @@ model MaintenanceRecord {
   // hangi durumda olursa olsun kaydın plaza-izolasyon sınırıdır (bkz. records/actions.ts).
   machineId             String?
   operationType         OperationType
-  issueTypeId           String?
-  // issueTypeId listede olmayan bir kategori için elle yazılan serbest metin — sparePartOther
+  // issueTypes listede olmayan bir kategori için elle yazılan serbest metin — sparePartOther
   // ile aynı desen (bkz. record-form.tsx IssueTypeField, records/actions.ts).
   issueTypeOther        String?
   description           String
@@ -379,10 +378,13 @@ model MaintenanceRecord {
   invoiceCurrency       Currency?          @default(TRY)
   invoiceExchangeRate   Decimal?           @db.Decimal(10, 4)
   invoicedAt            DateTime?
+  // İş Süreci (teklif) tablosunun başlığı — description'dan tamamen bağımsız, ayrı saklanır
+  // (bkz. work-process-section.tsx, quote-draft-field.tsx).
+  workTitle             String?
 
   plaza       Plaza          @relation(fields: [plazaId], references: [id])
   machine     Machine?       @relation(fields: [machineId], references: [id])
-  issueType   IssueType?     @relation(fields: [issueTypeId], references: [id])
+  issueTypes  IssueType[]
   technician  Technician?    @relation(fields: [technicianId], references: [id])
   sparePart   SparePart?     @relation(fields: [sparePartId], references: [id])
   createdBy   User?          @relation("RecordCreatedBy", fields: [createdById], references: [id])

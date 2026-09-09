@@ -208,6 +208,7 @@ export function QuoteDraftField({ issueTypes }: { issueTypes: { id: string; name
       {enabled && (
         <div className="space-y-4 px-5 py-4">
           <input
+            name="workTitle"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Örn. Maslak Square Plaza Baza Katı Duvar Örülmesi ve Koridor Oluşturulması İşi"

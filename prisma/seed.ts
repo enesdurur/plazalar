@@ -194,7 +194,10 @@ async function main() {
         plazaId: squarePlazaId,
         machineId,
         operationType: r["İŞLEM TÜRÜ"] as OperationType,
-        issueTypeId: issueTypes.get(r["ARIZA/BAKIM TÜRÜ"]),
+        issueTypes: (() => {
+          const issueTypeId = issueTypes.get(r["ARIZA/BAKIM TÜRÜ"]);
+          return issueTypeId ? { connect: [{ id: issueTypeId }] } : undefined;
+        })(),
         description: r["ARIZA/BAKIM TANIMI"],
         technicianId: r["Arıza/Bakımı Yapan"]
           ? technicians.get(r["Arıza/Bakımı Yapan"])

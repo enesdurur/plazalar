@@ -23,7 +23,7 @@ export default async function RecordsPage() {
     include: {
       plaza: true,
       machine: true,
-      issueType: true,
+      issueTypes: true,
       technician: true,
     },
     orderBy: { reportedAt: "desc" },

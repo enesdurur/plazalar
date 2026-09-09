@@ -21,7 +21,7 @@ export function RecordForm({
   machines: Machine[];
   issueTypes: IssueType[];
   technicians: Technician[];
-  record?: MaintenanceRecord;
+  record?: MaintenanceRecord & { issueTypes?: { id: string; name: string }[] };
   canSetCompany: boolean;
 }) {
   return (
@@ -58,10 +58,10 @@ export function RecordForm({
           </Field>
           <IssueTypeField
             issueTypes={issueTypes}
-            defaultIssueTypeId={record?.issueTypeId}
+            defaultIssueTypeIds={record?.issueTypes?.map((t) => t.id)}
             defaultIssueTypeOther={record?.issueTypeOther}
           />
-          <Field label="Arızayı / Bakımı Yapan">
+          <Field label="Arıza Bildirimini Yapan">
             <select name="technicianId" defaultValue={record?.technicianId ?? ""} className="input">
               <option value="">Seçiniz</option>
               {technicians.map((t) => (

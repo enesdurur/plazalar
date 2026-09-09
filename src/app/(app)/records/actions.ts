@@ -26,8 +26,13 @@ const recordSchema = z.object({
   // kaydedilir — bkz. record-form.tsx.
   machineId: z.string().optional(),
   operationType: z.enum(["ARIZA", "BAKIM"]),
-  issueTypeId: z.string().optional(),
+  // Kategori artık çoklu seçim — bkz. issue-type-field.tsx.
+  issueTypeIds: z.array(z.string()).optional(),
   issueTypeOtherName: z.string().optional(),
+  // İş Süreci (teklif) tablosunun başlığı — description'dan tamamen bağımsız, sadece Yeni
+  // Kayıt formundan (quote-draft-field.tsx) gelir; Kayıt Düzenle'de ayrı bir action ile
+  // güncellenir (bkz. updateWorkTitle).
+  workTitle: z.string().optional(),
   description: z.string().min(1, "Açıklama zorunludur"),
   technicianId: z.string().optional(),
   reportedAt: zRequiredDateString("Geçerli bir bildirim zamanı girin"),
@@ -51,8 +56,9 @@ function parseRecordForm(formData: FormData) {
   const parsed = parseOrThrow(recordSchema, {
     machineId: emptyToUndefined(formData.get("machineId")),
     operationType: formData.get("operationType"),
-    issueTypeId: emptyToUndefined(formData.get("issueTypeId")),
+    issueTypeIds: formData.getAll("issueTypeIds").filter((v): v is string => typeof v === "string"),
     issueTypeOtherName: emptyToUndefined(formData.get("issueTypeOtherName")),
+    workTitle: emptyToUndefined(formData.get("workTitle")),
     description: formData.get("description"),
     technicianId: emptyToUndefined(formData.get("technicianId")),
     reportedAt: formData.get("reportedAt"),
@@ -68,15 +74,16 @@ function parseRecordForm(formData: FormData) {
   });
 
   const isOther = parsed.sparePartId === OTHER_SPARE_PART;
-  const isOtherIssueType = parsed.issueTypeId === OTHER_ISSUE_TYPE;
+  const isOtherIssueType = (parsed.issueTypeIds ?? []).includes(OTHER_ISSUE_TYPE);
 
   return {
     machineId: parsed.machineId,
     operationType: parsed.operationType,
-    // Prisma update'te undefined alan atlanır (eskisi kalır) — bu yüzden "Diğer" ile gerçek
-    // kategori arasında geçişte eskisi kalmasın diye her zaman açıkça null/değer yazılıyor.
-    issueTypeId: isOtherIssueType ? null : (parsed.issueTypeId ?? null),
+    // "Diğer" onay kutusu diğer kategorilerle birlikte aynı issueTypeIds listesine
+    // gönderiliyor — gerçek kategori id'lerinden ayrılır, ilişkiye dahil edilmez.
+    issueTypeIds: (parsed.issueTypeIds ?? []).filter((id) => id !== OTHER_ISSUE_TYPE),
     issueTypeOther: isOtherIssueType ? (parsed.issueTypeOtherName ?? null) : null,
+    workTitle: parsed.workTitle,
     description: parsed.description,
     technicianId: parsed.technicianId,
     reportedAt: new Date(parsed.reportedAt),
@@ -144,9 +151,16 @@ export async function createRecord(formData: FormData) {
   const session = await requireWriteAccess();
   const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
   const plaza = await resolvePlazaForRecord(data.machineId);
+  const { issueTypeIds, ...recordData } = data;
 
   const record = await prisma.maintenanceRecord.create({
-    data: { ...data, machineId: data.machineId ?? null, plazaId: plaza.id, createdById: session.user.id },
+    data: {
+      ...recordData,
+      machineId: data.machineId ?? null,
+      plazaId: plaza.id,
+      createdById: session.user.id,
+      issueTypes: { connect: issueTypeIds.map((id) => ({ id })) },
+    },
   });
 
   // Yeni Kayıt formundaki "İş Süreci" onay kutusu işaretlenip teklif satırları girildiyse
@@ -193,20 +207,31 @@ export async function updateRecord(id: string, formData: FormData) {
   const session = await requireWriteAccess();
   const data = enforceResponsibleCompany(parseRecordForm(formData), session.user.role);
   const plaza = await resolvePlazaForRecord(data.machineId);
+  const { issueTypeIds, ...recordData } = data;
 
   const previous = await prisma.maintenanceRecord.findFirst({
     where: { id, plazaId: plaza.id },
     select: { reportedAt: true },
   });
+  if (!previous) throw new Error("Kayıt bu plazaya ait değil.");
 
-  await prisma.maintenanceRecord.updateMany({
-    where: { id, plazaId: plaza.id },
-    // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
-    data: { ...data, machineId: data.machineId ?? null, approved: false, approvedById: null, approvedAt: null },
+  // Kategori ilişkisi (many-to-many "set") updateMany ile desteklenmiyor — bu yüzden yukarıda
+  // plaza sahipliği doğrulandıktan sonra doğrudan update kullanılıyor.
+  await prisma.maintenanceRecord.update({
+    where: { id },
+    data: {
+      ...recordData,
+      machineId: data.machineId ?? null,
+      issueTypes: { set: issueTypeIds.map((issueTypeId) => ({ id: issueTypeId })) },
+      // Maliyet her düzenlendiğinde yeniden Yönetim Müdürü onayına düşer.
+      approved: false,
+      approvedById: null,
+      approvedAt: null,
+    },
   });
 
-  if (previous) await recomputeFaultMonth(plaza.id, previous.reportedAt);
-  if (!previous || previous.reportedAt.getTime() !== data.reportedAt.getTime()) {
+  await recomputeFaultMonth(plaza.id, previous.reportedAt);
+  if (previous.reportedAt.getTime() !== data.reportedAt.getTime()) {
     await recomputeFaultMonth(plaza.id, data.reportedAt);
   }
 
@@ -348,6 +373,22 @@ export async function setRecordApproval(id: string, formData: FormData) {
 // ---------------------------------------------------------------------------------------
 // İş Süreci: Teklif → İş Verme → Fatura → Ödeme (bkz. work-process-section.tsx)
 // ---------------------------------------------------------------------------------------
+
+// Kayıt Düzenle sayfasındaki teklif tablosunun başlığı — Açıklama alanından tamamen bağımsız,
+// input blur olduğunda doğrudan (form olmadan) çağrılır.
+export async function updateWorkTitle(recordId: string, title: string) {
+  await requireWriteAccess();
+  await assertRecordInPlaza(recordId);
+
+  await prisma.maintenanceRecord.update({
+    where: { id: recordId },
+    data: { workTitle: title.trim() || null },
+  });
+
+  revalidatePath(`/records/${recordId}/edit`);
+  revalidatePath(`/records/${recordId}`);
+  revalidatePath("/records");
+}
 
 const quoteSchema = z.object({
   contractorName: z.string().min(1, "Firma adı zorunludur"),

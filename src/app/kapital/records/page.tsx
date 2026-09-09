@@ -25,7 +25,7 @@ export default async function KapitalRecordsPage() {
     include: {
       plaza: true,
       machine: true,
-      issueType: true,
+      issueTypes: true,
       technician: true,
     },
     orderBy: { reportedAt: "desc" },

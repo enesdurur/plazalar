@@ -12,7 +12,7 @@ export async function GET() {
 
   const records = await prisma.maintenanceRecord.findMany({
     where: { plazaId: plaza.id },
-    include: { machine: true, issueType: true, technician: true, sparePart: true },
+    include: { machine: true, issueTypes: true, technician: true, sparePart: true },
     orderBy: { reportedAt: "desc" },
   });
 
@@ -40,7 +40,7 @@ export async function GET() {
     sheet.addRow({
       reportedAt: r.reportedAt,
       machine: r.machine?.name ?? "Genel İş",
-      issueType: r.issueType?.name ?? r.issueTypeOther ?? "",
+      issueType: [...r.issueTypes.map((t) => t.name), ...(r.issueTypeOther ? [r.issueTypeOther] : [])].join(", "),
       description: r.description,
       technician: r.technician?.name ?? "",
       respondedAt: r.respondedAt ?? "",

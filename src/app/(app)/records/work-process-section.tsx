@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import { addQuote, deleteQuote, selectQuote } from "./actions";
+import { addQuote, deleteQuote, selectQuote, updateWorkTitle } from "./actions";
 
 const OTHER_VALUE = "__other__";
 const NO_WORK_ITEM = "İş Kalemi Belirtilmedi";
@@ -97,11 +97,13 @@ export function WorkProcessSection({
   quotes,
   issueTypes,
   defaultTitle,
+  readOnly = false,
 }: {
   recordId: string;
   quotes: QuoteInfo[];
   issueTypes: { id: string; name: string }[];
-  defaultTitle?: string;
+  defaultTitle?: string | null;
+  readOnly?: boolean;
 }) {
   const [title, setTitle] = useState(defaultTitle ?? "");
   const [addingOpen, setAddingOpen] = useState(quotes.length === 0);
@@ -114,12 +116,21 @@ export function WorkProcessSection({
       </summary>
 
       <div className="space-y-5 border-t border-slate-200 px-5 py-5">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Örn. Maslak Square Plaza Baza Katı Duvar Örülmesi ve Koridor Oluşturulması İşi"
-          className="w-full rounded-md border-2 border-[#2F5597] px-3 py-2 text-center text-sm font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400"
-        />
+        {readOnly ? (
+          <h3 className="w-full rounded-md border-2 border-[#2F5597] px-3 py-2 text-center text-sm font-bold text-slate-900">
+            {title || "(Başlık girilmemiş)"}
+          </h3>
+        ) : (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => {
+              void updateWorkTitle(recordId, title);
+            }}
+            placeholder="Örn. Maslak Square Plaza Baza Katı Duvar Örülmesi ve Koridor Oluşturulması İşi"
+            className="w-full rounded-md border-2 border-[#2F5597] px-3 py-2 text-center text-sm font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400"
+          />
+        )}
 
         {workItems.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-slate-300">
@@ -164,11 +175,12 @@ export function WorkProcessSection({
                                 >
                                   {formatCostAmount(q.amount, q.currency)}
                                 </div>
-                                {q.selected ? (
+                                {q.selected && (
                                   <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                                     Seçildi
                                   </span>
-                                ) : (
+                                )}
+                                {!readOnly && !q.selected && (
                                   <form action={selectQuote.bind(null, recordId, q.id)}>
                                     <button
                                       type="submit"
@@ -178,14 +190,16 @@ export function WorkProcessSection({
                                     </button>
                                   </form>
                                 )}
-                                <form action={deleteQuote.bind(null, recordId, q.id)}>
-                                  <button
-                                    type="submit"
-                                    className="block text-xs font-medium text-red-600 hover:text-red-800"
-                                  >
-                                    Sil
-                                  </button>
-                                </form>
+                                {!readOnly && (
+                                  <form action={deleteQuote.bind(null, recordId, q.id)}>
+                                    <button
+                                      type="submit"
+                                      className="block text-xs font-medium text-red-600 hover:text-red-800"
+                                    >
+                                      Sil
+                                    </button>
+                                  </form>
+                                )}
                               </div>
                             ) : (
                               <span className="text-slate-300">-</span>
@@ -203,61 +217,62 @@ export function WorkProcessSection({
           <p className="text-sm text-slate-500">Henüz teklif eklenmedi.</p>
         )}
 
-        {addingOpen ? (
-          <form
-            action={addQuote.bind(null, recordId)}
-            className="grid grid-cols-1 gap-4 rounded-md border border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-600">Firma Adı</span>
-              <input name="contractorName" required className="input py-2.5 text-base" />
-            </label>
-            <WorkItemSelect key={quotes.length} knownWorkItems={workItems} issueTypes={issueTypes} />
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-600">Tutar</span>
-              <div className="flex gap-2">
+        {!readOnly &&
+          (addingOpen ? (
+            <form
+              action={addQuote.bind(null, recordId)}
+              className="grid grid-cols-1 gap-4 rounded-md border border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-600">Firma Adı</span>
+                <input name="contractorName" required className="input py-2.5 text-base" />
+              </label>
+              <WorkItemSelect key={quotes.length} knownWorkItems={workItems} issueTypes={issueTypes} />
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-600">Tutar</span>
+                <div className="flex gap-2">
+                  <input
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    required
+                    className="input min-w-0 flex-1 py-2.5 text-base"
+                  />
+                  <select name="currency" defaultValue="TRY" className="input w-24 py-2.5 text-base">
+                    <option value="TRY">TL</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+              </label>
+              <label className="block sm:col-span-2 lg:col-span-2">
+                <span className="mb-1 block text-sm font-medium text-slate-600">Açıklama</span>
                 <input
-                  name="amount"
-                  type="number"
-                  step="0.01"
-                  required
-                  className="input min-w-0 flex-1 py-2.5 text-base"
+                  name="note"
+                  placeholder="Bu iş kalemi için (ilk teklifte girilir)"
+                  className="input py-2.5 text-base"
                 />
-                <select name="currency" defaultValue="TRY" className="input w-24 py-2.5 text-base">
-                  <option value="TRY">TL</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
+              </label>
+              <div className="flex items-end gap-3">
+                <SmallSubmit>Ekle</SmallSubmit>
+                <button
+                  type="button"
+                  onClick={() => setAddingOpen(false)}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-700"
+                >
+                  Vazgeç
+                </button>
               </div>
-            </label>
-            <label className="block sm:col-span-2 lg:col-span-2">
-              <span className="mb-1 block text-sm font-medium text-slate-600">Açıklama</span>
-              <input
-                name="note"
-                placeholder="Bu iş kalemi için (ilk teklifte girilir)"
-                className="input py-2.5 text-base"
-              />
-            </label>
-            <div className="flex items-end gap-3">
-              <SmallSubmit>Ekle</SmallSubmit>
-              <button
-                type="button"
-                onClick={() => setAddingOpen(false)}
-                className="text-sm font-medium text-slate-500 hover:text-slate-700"
-              >
-                Vazgeç
-              </button>
-            </div>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setAddingOpen(true)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            + İş Kalemi / Teklif Ekle
-          </button>
-        )}
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingOpen(true)}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              + İş Kalemi / Teklif Ekle
+            </button>
+          ))}
       </div>
     </details>
   );

@@ -32,6 +32,7 @@ export default async function EditRecordPage({
       include: {
         attachments: { include: { uploadedBy: true } },
         quotes: { orderBy: { createdAt: "asc" } },
+        issueTypes: true,
       },
     }),
     prisma.machine.findMany({ where: { plazaId: plaza.id }, orderBy: { name: "asc" } }),
@@ -49,44 +50,46 @@ export default async function EditRecordPage({
     <div>
       <h1 className="text-xl font-semibold text-slate-900">Kayıt Düzenle</h1>
 
-      <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
-        <AttachmentUpload
-          label="Bakım Formu"
-          kind="MAINTENANCE_FORM"
-          attachment={
-            form
-              ? {
-                  id: form.id,
-                  fileName: form.fileName,
-                  fileUrl: form.fileUrl,
-                  uploadedAt: form.uploadedAt.toISOString(),
-                  uploaderName: form.uploadedBy?.name ?? null,
-                }
-              : null
-          }
-          canManage={canForm}
-          uploadAction={uploadRecordAttachment.bind(null, id)}
-          deleteAction={form ? deleteRecordAttachment.bind(null, id, form.id) : undefined}
-        />
-        <AttachmentUpload
-          label="Fatura"
-          kind="INVOICE"
-          attachment={
-            invoice
-              ? {
-                  id: invoice.id,
-                  fileName: invoice.fileName,
-                  fileUrl: invoice.fileUrl,
-                  uploadedAt: invoice.uploadedAt.toISOString(),
-                  uploaderName: invoice.uploadedBy?.name ?? null,
-                }
-              : null
-          }
-          canManage={canInvoice}
-          uploadAction={uploadRecordAttachment.bind(null, id)}
-          deleteAction={invoice ? deleteRecordAttachment.bind(null, id, invoice.id) : undefined}
-        />
-      </div>
+      {record.finishedAt && (
+        <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+          <AttachmentUpload
+            label="Bakım Formu"
+            kind="MAINTENANCE_FORM"
+            attachment={
+              form
+                ? {
+                    id: form.id,
+                    fileName: form.fileName,
+                    fileUrl: form.fileUrl,
+                    uploadedAt: form.uploadedAt.toISOString(),
+                    uploaderName: form.uploadedBy?.name ?? null,
+                  }
+                : null
+            }
+            canManage={canForm}
+            uploadAction={uploadRecordAttachment.bind(null, id)}
+            deleteAction={form ? deleteRecordAttachment.bind(null, id, form.id) : undefined}
+          />
+          <AttachmentUpload
+            label="Fatura"
+            kind="INVOICE"
+            attachment={
+              invoice
+                ? {
+                    id: invoice.id,
+                    fileName: invoice.fileName,
+                    fileUrl: invoice.fileUrl,
+                    uploadedAt: invoice.uploadedAt.toISOString(),
+                    uploaderName: invoice.uploadedBy?.name ?? null,
+                  }
+                : null
+            }
+            canManage={canInvoice}
+            uploadAction={uploadRecordAttachment.bind(null, id)}
+            deleteAction={invoice ? deleteRecordAttachment.bind(null, id, invoice.id) : undefined}
+          />
+        </div>
+      )}
 
       <div className="mt-6">
         <RecordForm
@@ -103,7 +106,7 @@ export default async function EditRecordPage({
         <WorkProcessSection
           recordId={id}
           issueTypes={issueTypes}
-          defaultTitle={record.description}
+          defaultTitle={record.workTitle}
           quotes={record.quotes.map((q) => ({
             id: q.id,
             contractorName: q.contractorName,

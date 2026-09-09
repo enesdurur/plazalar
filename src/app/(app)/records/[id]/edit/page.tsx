@@ -99,7 +99,7 @@ export default async function EditRecordPage({
         />
       </div>
 
-      <div className="max-w-2xl">
+      <div>
         <WorkProcessSection
           recordId={id}
           issueTypes={issueTypes}

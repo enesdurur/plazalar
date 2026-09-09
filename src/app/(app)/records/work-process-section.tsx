@@ -47,12 +47,12 @@ function WorkItemSelect({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-600">İş Kalemi</span>
+      <span className="mb-1 block text-sm font-medium text-slate-600">İş Kalemi</span>
       <select
         name={isOther ? undefined : "workItem"}
         value={selectValue}
         onChange={(e) => setSelectValue(e.target.value)}
-        className="input"
+        className="input py-2.5 text-base"
       >
         <option value="">Seçiniz</option>
         {options.map((name) => (
@@ -68,7 +68,7 @@ function WorkItemSelect({
           value={otherText}
           onChange={(e) => setOtherText(e.target.value)}
           placeholder="İş kalemi adı"
-          className="input mt-1"
+          className="input mt-1 py-2.5 text-base"
         />
       )}
     </label>
@@ -136,56 +136,66 @@ export function WorkProcessSection({
                 </tr>
               </thead>
               <tbody>
-                {workItems.map((wi) => (
-                  <tr key={wi} className="bg-[#E2EFDA] align-top">
-                    <td className="border border-slate-300 px-3 py-2 font-bold text-slate-900">
-                      {wi}
-                    </td>
-                    <td className="border border-slate-300 px-3 py-2 text-slate-700">
-                      {notes.get(wi) ?? "-"}
-                    </td>
-                    {contractors.map((c) => {
-                      const q = cells.get(`${wi}|${c}`);
-                      return (
-                        <td key={c} className="border border-slate-300 px-3 py-2 text-center">
-                          {q ? (
-                            <div className="space-y-1">
-                              <div
-                                className={`font-semibold tabular-nums ${q.selected ? "text-green-800" : "text-slate-900"}`}
-                              >
-                                {formatCostAmount(q.amount, q.currency)}
-                              </div>
-                              {q.selected ? (
-                                <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                  Seçildi
-                                </span>
-                              ) : (
-                                <form action={selectQuote.bind(null, recordId, q.id)}>
+                {workItems.map((wi, idx) => {
+                  // Farklı bir iş kalemine geçildiğinde belirgin bir ayırıcı çizgi olsun diye
+                  // (her satır zaten ayrı bir kalem) ilk satır hariç kalın üst kenarlık.
+                  const dividerClass = idx > 0 ? "border-t-4 border-t-slate-500" : "";
+                  return (
+                    <tr key={wi} className="bg-[#E2EFDA] align-top">
+                      <td
+                        className={`border border-slate-300 px-3 py-3 font-bold text-slate-900 ${dividerClass}`}
+                      >
+                        {wi}
+                      </td>
+                      <td className={`border border-slate-300 px-3 py-3 text-slate-700 ${dividerClass}`}>
+                        {notes.get(wi) ?? "-"}
+                      </td>
+                      {contractors.map((c) => {
+                        const q = cells.get(`${wi}|${c}`);
+                        return (
+                          <td
+                            key={c}
+                            className={`border border-slate-300 px-3 py-3 text-center ${dividerClass}`}
+                          >
+                            {q ? (
+                              <div className="space-y-1">
+                                <div
+                                  className={`text-base font-semibold tabular-nums ${q.selected ? "text-green-800" : "text-slate-900"}`}
+                                >
+                                  {formatCostAmount(q.amount, q.currency)}
+                                </div>
+                                {q.selected ? (
+                                  <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                    Seçildi
+                                  </span>
+                                ) : (
+                                  <form action={selectQuote.bind(null, recordId, q.id)}>
+                                    <button
+                                      type="submit"
+                                      className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                                    >
+                                      Seç
+                                    </button>
+                                  </form>
+                                )}
+                                <form action={deleteQuote.bind(null, recordId, q.id)}>
                                   <button
                                     type="submit"
-                                    className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                                    className="block text-xs font-medium text-red-600 hover:text-red-800"
                                   >
-                                    Seç
+                                    Sil
                                   </button>
                                 </form>
-                              )}
-                              <form action={deleteQuote.bind(null, recordId, q.id)}>
-                                <button
-                                  type="submit"
-                                  className="block text-xs font-medium text-red-600 hover:text-red-800"
-                                >
-                                  Sil
-                                </button>
-                              </form>
-                            </div>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -196,34 +206,44 @@ export function WorkProcessSection({
         {addingOpen ? (
           <form
             action={addQuote.bind(null, recordId)}
-            className="grid grid-cols-2 gap-3 rounded-md border border-slate-200 p-3 sm:grid-cols-5"
+            className="grid grid-cols-1 gap-4 rounded-md border border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-3"
           >
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-slate-600">Firma Adı</span>
-              <input name="contractorName" required className="input" />
+              <span className="mb-1 block text-sm font-medium text-slate-600">Firma Adı</span>
+              <input name="contractorName" required className="input py-2.5 text-base" />
             </label>
             <WorkItemSelect key={quotes.length} knownWorkItems={workItems} issueTypes={issueTypes} />
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-slate-600">Tutar</span>
-              <div className="flex gap-1">
-                <input name="amount" type="number" step="0.01" required className="input" />
-                <select name="currency" defaultValue="TRY" className="input w-20">
+              <span className="mb-1 block text-sm font-medium text-slate-600">Tutar</span>
+              <div className="flex gap-2">
+                <input
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  required
+                  className="input min-w-0 flex-1 py-2.5 text-base"
+                />
+                <select name="currency" defaultValue="TRY" className="input w-24 py-2.5 text-base">
                   <option value="TRY">TL</option>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                 </select>
               </div>
             </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-slate-600">Açıklama</span>
-              <input name="note" placeholder="Bu iş kalemi için (ilk teklifte girilir)" className="input" />
+            <label className="block sm:col-span-2 lg:col-span-2">
+              <span className="mb-1 block text-sm font-medium text-slate-600">Açıklama</span>
+              <input
+                name="note"
+                placeholder="Bu iş kalemi için (ilk teklifte girilir)"
+                className="input py-2.5 text-base"
+              />
             </label>
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-3">
               <SmallSubmit>Ekle</SmallSubmit>
               <button
                 type="button"
                 onClick={() => setAddingOpen(false)}
-                className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                className="text-sm font-medium text-slate-500 hover:text-slate-700"
               >
                 Vazgeç
               </button>

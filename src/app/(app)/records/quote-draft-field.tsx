@@ -85,18 +85,22 @@ function AddQuoteForm({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 rounded-md border border-slate-200 p-3 sm:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 rounded-md border border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-3">
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-slate-600">Firma Adı</span>
+        <span className="mb-1 block text-sm font-medium text-slate-600">Firma Adı</span>
         <input
           value={contractorName}
           onChange={(e) => setContractorName(e.target.value)}
-          className="input"
+          className="input py-2.5 text-base"
         />
       </label>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-slate-600">İş Kalemi</span>
-        <select value={workItem} onChange={(e) => setWorkItem(e.target.value)} className="input">
+        <span className="mb-1 block text-sm font-medium text-slate-600">İş Kalemi</span>
+        <select
+          value={workItem}
+          onChange={(e) => setWorkItem(e.target.value)}
+          className="input py-2.5 text-base"
+        >
           <option value="">Seçiniz</option>
           {options.map((name) => (
             <option key={name} value={name}>
@@ -110,24 +114,24 @@ function AddQuoteForm({
             value={workItemOther}
             onChange={(e) => setWorkItemOther(e.target.value)}
             placeholder="İş kalemi adı"
-            className="input mt-1"
+            className="input mt-1 py-2.5 text-base"
           />
         )}
       </label>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-slate-600">Tutar</span>
-        <div className="flex gap-1">
+        <span className="mb-1 block text-sm font-medium text-slate-600">Tutar</span>
+        <div className="flex gap-2">
           <input
             type="number"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="input"
+            className="input min-w-0 flex-1 py-2.5 text-base"
           />
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value as Currency)}
-            className="input w-20"
+            className="input w-24 py-2.5 text-base"
           >
             <option value="TRY">TL</option>
             <option value="USD">USD</option>
@@ -135,27 +139,27 @@ function AddQuoteForm({
           </select>
         </div>
       </label>
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium text-slate-600">Açıklama</span>
+      <label className="block sm:col-span-2 lg:col-span-2">
+        <span className="mb-1 block text-sm font-medium text-slate-600">Açıklama</span>
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Bu iş kalemi için (ilk teklifte girilir)"
-          className="input"
+          className="input py-2.5 text-base"
         />
       </label>
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-3">
         <button
           type="button"
           onClick={submit}
-          className="whitespace-nowrap rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+          className="whitespace-nowrap rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
         >
           Ekle
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs font-medium text-slate-500 hover:text-slate-700"
+          className="text-sm font-medium text-slate-500 hover:text-slate-700"
         >
           Vazgeç
         </button>
@@ -225,39 +229,49 @@ export function QuoteDraftField({ issueTypes }: { issueTypes: { id: string; name
                   </tr>
                 </thead>
                 <tbody>
-                  {workItems.map((wi) => (
-                    <tr key={wi} className="bg-[#E2EFDA] align-top">
-                      <td className="border border-slate-300 px-3 py-2 font-bold text-slate-900">
-                        {wi}
-                      </td>
-                      <td className="border border-slate-300 px-3 py-2 text-slate-700">
-                        {notes.get(wi) ?? "-"}
-                      </td>
-                      {contractors.map((c) => {
-                        const q = cells.get(`${wi}|${c}`);
-                        return (
-                          <td key={c} className="border border-slate-300 px-3 py-2 text-center">
-                            {q ? (
-                              <div className="space-y-1">
-                                <div className="font-semibold tabular-nums text-slate-900">
-                                  {formatCostAmount(q.amount, q.currency)}
+                  {workItems.map((wi, idx) => {
+                    // Farklı bir iş kalemine geçildiğinde belirgin bir ayırıcı çizgi olsun diye
+                    // (her satır zaten ayrı bir kalem) ilk satır hariç kalın üst kenarlık.
+                    const dividerClass = idx > 0 ? "border-t-4 border-t-slate-500" : "";
+                    return (
+                      <tr key={wi} className="bg-[#E2EFDA] align-top">
+                        <td
+                          className={`border border-slate-300 px-3 py-3 font-bold text-slate-900 ${dividerClass}`}
+                        >
+                          {wi}
+                        </td>
+                        <td className={`border border-slate-300 px-3 py-3 text-slate-700 ${dividerClass}`}>
+                          {notes.get(wi) ?? "-"}
+                        </td>
+                        {contractors.map((c) => {
+                          const q = cells.get(`${wi}|${c}`);
+                          return (
+                            <td
+                              key={c}
+                              className={`border border-slate-300 px-3 py-3 text-center ${dividerClass}`}
+                            >
+                              {q ? (
+                                <div className="space-y-1">
+                                  <div className="text-base font-semibold tabular-nums text-slate-900">
+                                    {formatCostAmount(q.amount, q.currency)}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeRow(q.key)}
+                                    className="text-xs font-medium text-red-600 hover:text-red-800"
+                                  >
+                                    Sil
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removeRow(q.key)}
-                                  className="text-xs font-medium text-red-600 hover:text-red-800"
-                                >
-                                  Sil
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-slate-300">-</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

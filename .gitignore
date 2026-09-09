@@ -47,3 +47,7 @@ next-env.d.ts
 /.windsurf/
 /.claude/skills/
 skills-lock.json
+
+# local Claude Code session state (personal settings + ephemeral agent worktree checkouts)
+/.claude/settings.local.json
+/.claude/worktrees/

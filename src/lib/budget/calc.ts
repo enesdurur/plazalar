@@ -12,7 +12,7 @@ export interface RawAdjustment {
   amount: number;
 }
 
-export type BudgetAutoSourceValue = "MAINTENANCE_PLAN" | "INSPECTION" | "FAULT_RECORDS";
+export type BudgetAutoSourceValue = "MAINTENANCE_PLAN" | "INSPECTION" | "FAULT_RECORDS" | "SPARE_PARTS";
 
 export interface RawLineItem {
   id: string;

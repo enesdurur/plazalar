@@ -45,6 +45,9 @@ const recordSchema = z.object({
   sparePartCostCurrency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
   sparePartExchangeRate: z.coerce.number().positive().optional(),
   responsibleCompany: z.enum(["KAPITAL", "BURGAZ"]).default("BURGAZ"),
+  // Bu kaydın maliyetinin Diğer Giderler'de hangi ayın bütçesine sayılacağı — boşsa
+  // reportedAt'ın ayı kullanılır (bkz. src/lib/budget/auto-sync.ts sumSpareParts).
+  budgetMonth: z.coerce.number().int().min(1).max(12).optional(),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -71,6 +74,7 @@ function parseRecordForm(formData: FormData) {
     sparePartCostCurrency: emptyToUndefined(formData.get("sparePartCostCurrency")) ?? "TRY",
     sparePartExchangeRate: emptyToUndefined(formData.get("sparePartExchangeRate")),
     responsibleCompany: emptyToUndefined(formData.get("responsibleCompany")) ?? "BURGAZ",
+    budgetMonth: emptyToUndefined(formData.get("budgetMonth")),
   });
 
   const isOther = parsed.sparePartId === OTHER_SPARE_PART;
@@ -97,6 +101,7 @@ function parseRecordForm(formData: FormData) {
     sparePartExchangeRate:
       parsed.sparePartCostCurrency !== "TRY" ? (parsed.sparePartExchangeRate ?? null) : null,
     responsibleCompany: parsed.responsibleCompany,
+    budgetMonth: parsed.budgetMonth ?? null,
   };
 }
 
@@ -131,8 +136,13 @@ async function resolvePlazaForRecord(machineId: string | undefined) {
   return plaza;
 }
 
-async function recomputeFaultMonth(plazaId: string, date: Date) {
-  await recomputeAutoBudgetEntry(plazaId, date.getFullYear(), date.getMonth() + 1, "FAULT_RECORDS");
+async function recomputeFaultMonth(plazaId: string, reportedAt: Date, budgetMonth: number | null) {
+  // FAULT_RECORDS artık her zaman 0 döner (dormant) — yedek parça/İş Süreci maliyetleri
+  // SPARE_PARTS kaynağı üzerinden "Mekanik/Elektrik ve Diğer Sarf Malzemeler/Yedek Parçalar"
+  // kalemine akar (bkz. src/lib/budget/auto-sync.ts).
+  await recomputeAutoBudgetEntry(plazaId, reportedAt.getFullYear(), reportedAt.getMonth() + 1, "FAULT_RECORDS");
+  const month = budgetMonth ?? reportedAt.getMonth() + 1;
+  await recomputeAutoBudgetEntry(plazaId, reportedAt.getFullYear(), month, "SPARE_PARTS");
 }
 
 // İş Süreci (teklif/ödeme/fatura) action'larının ortak plaza-scoping kontrolü — kaydın
@@ -141,7 +151,7 @@ async function assertRecordInPlaza(recordId: string) {
   const plaza = await getSelectedPlaza();
   const record = await prisma.maintenanceRecord.findFirst({
     where: { id: recordId, plazaId: plaza.id },
-    select: { reportedAt: true },
+    select: { reportedAt: true, budgetMonth: true },
   });
   if (!record) throw new Error("Kayıt bu plazaya ait değil.");
   return { plaza, record };
@@ -193,7 +203,7 @@ export async function createRecord(formData: FormData) {
     }
   }
 
-  await recomputeFaultMonth(plaza.id, data.reportedAt);
+  await recomputeFaultMonth(plaza.id, data.reportedAt, data.budgetMonth);
 
   revalidatePath("/records");
   revalidatePath("/");
@@ -211,7 +221,7 @@ export async function updateRecord(id: string, formData: FormData) {
 
   const previous = await prisma.maintenanceRecord.findFirst({
     where: { id, plazaId: plaza.id },
-    select: { reportedAt: true },
+    select: { reportedAt: true, budgetMonth: true },
   });
   if (!previous) throw new Error("Kayıt bu plazaya ait değil.");
 
@@ -230,9 +240,12 @@ export async function updateRecord(id: string, formData: FormData) {
     },
   });
 
-  await recomputeFaultMonth(plaza.id, previous.reportedAt);
-  if (previous.reportedAt.getTime() !== data.reportedAt.getTime()) {
-    await recomputeFaultMonth(plaza.id, data.reportedAt);
+  await recomputeFaultMonth(plaza.id, previous.reportedAt, previous.budgetMonth);
+  if (
+    previous.reportedAt.getTime() !== data.reportedAt.getTime() ||
+    previous.budgetMonth !== data.budgetMonth
+  ) {
+    await recomputeFaultMonth(plaza.id, data.reportedAt, data.budgetMonth);
   }
 
   revalidatePath("/records");
@@ -252,14 +265,14 @@ export async function deleteRecord(id: string) {
 
   const existing = await prisma.maintenanceRecord.findFirst({
     where: { id, plazaId: plaza.id },
-    select: { reportedAt: true },
+    select: { reportedAt: true, budgetMonth: true },
   });
 
   await prisma.maintenanceRecord.deleteMany({
     where: { id, plazaId: plaza.id },
   });
 
-  if (existing) await recomputeFaultMonth(plaza.id, existing.reportedAt);
+  if (existing) await recomputeFaultMonth(plaza.id, existing.reportedAt, existing.budgetMonth);
 
   revalidatePath("/records");
   revalidatePath("/");
@@ -346,7 +359,7 @@ export async function setRecordApproval(id: string, formData: FormData) {
 
   const existing = await prisma.maintenanceRecord.findFirst({
     where: { id, plazaId: plaza.id },
-    select: { reportedAt: true },
+    select: { reportedAt: true, budgetMonth: true },
   });
   if (!existing) throw new Error("Kayıt bu plazaya ait değil.");
 
@@ -361,7 +374,7 @@ export async function setRecordApproval(id: string, formData: FormData) {
     },
   });
 
-  await recomputeFaultMonth(plaza.id, existing.reportedAt);
+  await recomputeFaultMonth(plaza.id, existing.reportedAt, existing.budgetMonth);
 
   revalidatePath("/records");
   revalidatePath("/");
@@ -508,7 +521,7 @@ export async function updateInvoiceInfo(recordId: string, formData: FormData) {
     },
   });
 
-  await recomputeFaultMonth(plaza.id, record.reportedAt);
+  await recomputeFaultMonth(plaza.id, record.reportedAt, record.budgetMonth);
 
   revalidatePath(`/records/${recordId}/edit`);
   revalidatePath("/records");

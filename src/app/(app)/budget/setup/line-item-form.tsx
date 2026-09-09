@@ -7,7 +7,8 @@ const AUTO_SOURCE_OPTIONS = [
   { value: "", label: "Yok — Diğer Giderler sayfasından elle giriyorum" },
   { value: "MAINTENANCE_PLAN", label: "3. Firma Bakım Planı" },
   { value: "INSPECTION", label: "Periyodik (Fenni) Muayene" },
-  { value: "FAULT_RECORDS", label: "Arıza Kayıtları (yedek parça)" },
+  { value: "SPARE_PARTS", label: "Yedek Parça / Sarf Malzemesi (Bakım+Muayene+Arıza)" },
+  { value: "FAULT_RECORDS", label: "Arıza Kayıtları (kullanımdan kaldırıldı)" },
 ];
 
 export function LineItemForm({

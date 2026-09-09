@@ -22,7 +22,8 @@ const SECTIONS = [
 const AUTO_SOURCE_LABELS: Record<string, string> = {
   MAINTENANCE_PLAN: "3. Firma Bakım Planı",
   INSPECTION: "Periyodik (Fenni) Muayene",
-  FAULT_RECORDS: "Arıza Kayıtları",
+  FAULT_RECORDS: "Arıza Kayıtları (kullanımdan kaldırıldı)",
+  SPARE_PARTS: "Yedek Parça / Sarf Malzemesi",
 };
 
 export default async function BudgetSetupPage({

@@ -40,7 +40,8 @@ function formatTL(amount: number) {
 const AUTO_SOURCE_LABELS: Record<string, string> = {
   MAINTENANCE_PLAN: "3. Firma Bakım Planı",
   INSPECTION: "Periyodik (Fenni) Muayene",
-  FAULT_RECORDS: "Arıza Kayıtları",
+  FAULT_RECORDS: "Arıza Kayıtları (kullanımdan kaldırıldı)",
+  SPARE_PARTS: "Yedek Parça / Sarf Malzemesi",
 };
 
 export default async function OtherExpensesPage({
@@ -100,8 +101,9 @@ export default async function OtherExpensesPage({
   const wantsFaultRecords = autoItems.some((i) => i.autoSource === "FAULT_RECORDS");
   const wantsMaintenancePlan = autoItems.some((i) => i.autoSource === "MAINTENANCE_PLAN");
   const wantsInspection = autoItems.some((i) => i.autoSource === "INSPECTION");
+  const sparePartsLineItem = autoItems.find((i) => i.autoSource === "SPARE_PARTS");
 
-  const [faultRecords, planEntries, inspectionEntries] = await Promise.all([
+  const [faultRecords, planEntries, inspectionEntries, sparePartsSources] = await Promise.all([
     wantsFaultRecords
       ? prisma.maintenanceRecord.findMany({
           where: {
@@ -142,7 +144,41 @@ export default async function OtherExpensesPage({
           orderBy: { week: "desc" },
         })
       : Promise.resolve([]),
+    // sumSpareParts (auto-sync.ts) ile aynı 3 kaynak — Aylık Özet'te onaydan bağımsız
+    // GİRİLEN tutarları göstermek için burada da ayrıca çekiliyor.
+    sparePartsLineItem
+      ? Promise.all([
+          prisma.maintenancePlanWeekEntry.findMany({
+            where: { year, item: { plazaId: plaza.id }, sparePartCost: { not: null } },
+            select: { week: true, sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+          }),
+          prisma.inspectionPlanWeekEntry.findMany({
+            where: { year, item: { plazaId: plaza.id }, sparePartCost: { not: null } },
+            select: { week: true, sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+          }),
+          prisma.maintenanceRecord.findMany({
+            where: {
+              plazaId: plaza.id,
+              operationType: "ARIZA",
+              responsibleCompany: "BURGAZ",
+              invoiceAmount: { not: null },
+              reportedAt: {
+                gte: new Date(Date.UTC(year, 0, 1)),
+                lt: new Date(Date.UTC(year + 1, 0, 1)),
+              },
+            },
+            select: {
+              reportedAt: true,
+              budgetMonth: true,
+              invoiceAmount: true,
+              invoiceCurrency: true,
+              invoiceExchangeRate: true,
+            },
+          }),
+        ])
+      : Promise.resolve([[], [], []] as const),
   ]);
+  const [sparePlanEntries, sparePartsInspectionEntries, sparePartsFaultRecords] = sparePartsSources;
 
   // "Aylık Özet" tablosu, onay durumundan bağımsız olarak GİRİLEN tüm tutarları gösterir
   // (bina yöneticisi onayı yalnızca Gerçekleşen Bütçe'ye yansımayı belirler — bkz. üstteki not).
@@ -203,6 +239,36 @@ export default async function OtherExpensesPage({
         );
         if (tl != null) addEntered(planLineItem.id, month, tl);
       }
+    }
+  }
+
+  if (sparePartsLineItem) {
+    for (const e of sparePlanEntries) {
+      const month = monthOfWeek(e.week);
+      const tl = toTRY(
+        Number(e.sparePartCost),
+        e.sparePartCostCurrency,
+        e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
+      );
+      if (tl != null) addEntered(sparePartsLineItem.id, month, tl);
+    }
+    for (const e of sparePartsInspectionEntries) {
+      const month = monthOfWeek(e.week);
+      const tl = toTRY(
+        Number(e.sparePartCost),
+        e.sparePartCostCurrency,
+        e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
+      );
+      if (tl != null) addEntered(sparePartsLineItem.id, month, tl);
+    }
+    for (const r of sparePartsFaultRecords) {
+      const month = r.budgetMonth ?? r.reportedAt.getUTCMonth() + 1;
+      const tl = toTRY(
+        Number(r.invoiceAmount),
+        r.invoiceCurrency ?? "TRY",
+        r.invoiceExchangeRate != null ? Number(r.invoiceExchangeRate) : null
+      );
+      if (tl != null) addEntered(sparePartsLineItem.id, month, tl);
     }
   }
 

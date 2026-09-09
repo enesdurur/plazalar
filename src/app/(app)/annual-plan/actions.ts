@@ -13,6 +13,13 @@ import { monthOfWeek } from "@/lib/plan/weeks";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
 import type { AttachmentKind } from "@prisma/client";
 
+// Bakım Planı'nda onaylanan bir haftalık girişin hem "3. Firma Bakım Planı" (işçilik/hizmet)
+// hem de "Yedek Parça" (sparePartCost, ayrı kaleme akar) tutarlarını aynı anda yeniden hesaplar.
+async function recomputeMonth(plazaId: string, year: number, month: number) {
+  await recomputeAutoBudgetEntry(plazaId, year, month, "MAINTENANCE_PLAN");
+  await recomputeAutoBudgetEntry(plazaId, year, month, "SPARE_PARTS");
+}
+
 export async function togglePlanWeekEntry(itemId: string, year: number, week: number) {
   const session = await auth();
   if (!session?.user || !canWrite(session.user.role)) {
@@ -108,7 +115,7 @@ export async function updatePlanWeekEntryCost(id: string, formData: FormData) {
     },
   });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "MAINTENANCE_PLAN");
+  await recomputeMonth(plaza.id, existing.year, monthOfWeek(existing.week));
 
   revalidatePath("/annual-plan");
   revalidatePath("/");
@@ -133,7 +140,7 @@ export async function deletePlanWeekEntry(id: string) {
 
   await prisma.maintenancePlanWeekEntry.delete({ where: { id: existing.id } });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "MAINTENANCE_PLAN");
+  await recomputeMonth(plaza.id, existing.year, monthOfWeek(existing.week));
 
   revalidatePath("/annual-plan");
   revalidatePath("/");
@@ -166,7 +173,7 @@ export async function setPlanWeekEntryApproval(id: string, formData: FormData) {
     },
   });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "MAINTENANCE_PLAN");
+  await recomputeMonth(plaza.id, existing.year, monthOfWeek(existing.week));
 
   revalidatePath("/annual-plan");
   revalidatePath("/");

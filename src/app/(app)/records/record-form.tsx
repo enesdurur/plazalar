@@ -3,6 +3,21 @@ import { SubmitButton } from "@/components/submit-button";
 import { IssueTypeField } from "./issue-type-field";
 import { QuoteDraftField } from "./quote-draft-field";
 
+const MONTH_NAMES = [
+  "Ocak",
+  "Şubat",
+  "Mart",
+  "Nisan",
+  "Mayıs",
+  "Haziran",
+  "Temmuz",
+  "Ağustos",
+  "Eylül",
+  "Ekim",
+  "Kasım",
+  "Aralık",
+];
+
 function toDateInputValue(date: Date | null | undefined) {
   if (!date) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -55,6 +70,16 @@ export function RecordForm({
                 <div className="input flex items-center bg-slate-50 text-slate-500">Burgaz</div>
               </>
             )}
+          </Field>
+          <Field label="Bütçe Ayı">
+            <select name="budgetMonth" defaultValue={record?.budgetMonth ?? ""} className="input">
+              <option value="">Otomatik (Bildirim Tarihine Göre)</option>
+              {MONTH_NAMES.map((ad, i) => (
+                <option key={i} value={i + 1}>
+                  {ad}
+                </option>
+              ))}
+            </select>
           </Field>
           <IssueTypeField
             issueTypes={issueTypes}

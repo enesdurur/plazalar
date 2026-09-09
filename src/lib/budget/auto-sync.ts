@@ -20,9 +20,6 @@ async function sumMaintenancePlan(plazaId: string, year: number, month: number) 
       cost: true,
       costCurrency: true,
       costExchangeRate: true,
-      sparePartCost: true,
-      sparePartCostCurrency: true,
-      sparePartExchangeRate: true,
     },
   });
 
@@ -30,14 +27,6 @@ async function sumMaintenancePlan(plazaId: string, year: number, month: number) 
   for (const e of entries) {
     if (e.cost != null) {
       const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
-      if (tl != null) total += tl;
-    }
-    if (e.sparePartCost != null) {
-      const tl = toTRY(
-        Number(e.sparePartCost),
-        e.sparePartCostCurrency,
-        e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
-      );
       if (tl != null) total += tl;
     }
   }
@@ -51,9 +40,6 @@ async function sumInspection(plazaId: string, year: number, month: number) {
       cost: true,
       costCurrency: true,
       costExchangeRate: true,
-      sparePartCost: true,
-      sparePartCostCurrency: true,
-      sparePartExchangeRate: true,
     },
   });
 
@@ -63,64 +49,92 @@ async function sumInspection(plazaId: string, year: number, month: number) {
       const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
       if (tl != null) total += tl;
     }
-    if (e.sparePartCost != null) {
-      const tl = toTRY(
-        Number(e.sparePartCost),
-        e.sparePartCostCurrency,
-        e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
-      );
-      if (tl != null) total += tl;
-    }
   }
   return total;
 }
 
-async function sumFaultRecords(plazaId: string, year: number, month: number) {
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
+// Arızalarda/bakımlarda ve fenni muayenelerde girilen yedek parça/sarf malzemesi maliyetleri
+// artık "Bakım"/"Fenni Muayene" kalemlerine değil, tek bir birleşik "Mekanik/Elektrik ve Diğer
+// Sarf Malzemeler/Yedek Parçalar" kalemine yansır — bkz. sumSpareParts. FAULT_RECORDS kaynağı
+// bu yüzden artık hiçbir tutar üretmiyor (dormant); enum değeri ve fonksiyon, üretimde bu
+// kaynağı kullanan bir kalem olması ihtimaline karşı (çift sayım oluşturmadan) geriye dönük
+// uyumluluk için duruyor.
+async function sumFaultRecords(_plazaId: string, _year: number, _month: number) {
+  return 0;
+}
 
+async function sumSpareParts(plazaId: string, year: number, month: number) {
+  let total = 0;
+
+  const planEntries = await prisma.maintenancePlanWeekEntry.findMany({
+    where: {
+      year,
+      item: { plazaId },
+      week: { in: weeksOfMonth(month) },
+      approved: true,
+      sparePartCost: { not: null },
+    },
+    select: { sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+  });
+  for (const e of planEntries) {
+    const tl = toTRY(
+      Number(e.sparePartCost),
+      e.sparePartCostCurrency,
+      e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
+    );
+    if (tl != null) total += tl;
+  }
+
+  const inspectionEntries = await prisma.inspectionPlanWeekEntry.findMany({
+    where: {
+      year,
+      item: { plazaId },
+      week: { in: weeksOfMonth(month) },
+      approved: true,
+      sparePartCost: { not: null },
+    },
+    select: { sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+  });
+  for (const e of inspectionEntries) {
+    const tl = toTRY(
+      Number(e.sparePartCost),
+      e.sparePartCostCurrency,
+      e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
+    );
+    if (tl != null) total += tl;
+  }
+
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+  const monthStart = new Date(Date.UTC(year, month - 1, 1));
+  const monthEnd = new Date(Date.UTC(year, month, 1));
+
+  // BURGAZ sorumluluğundaki arıza kayıtlarının İş Süreci fatura tutarı — kaydın budgetMonth
+  // override'ı doluysa o ay, boşsa reportedAt'ın ayı hedef alınır (yıl her zaman reportedAt'tan
+  // gelir, bkz. schema.prisma MaintenanceRecord.budgetMonth).
   const records = await prisma.maintenanceRecord.findMany({
     where: {
       plazaId,
       operationType: "ARIZA",
-      // Kapital sorumluluğundaki kayıtlar (mülk sahibini ilgilendiren işler) Gerçekleşen
-      // Bütçe'ye hiçbir şekilde girmez — Kapital'in bütçesi ayrı tutulur.
       responsibleCompany: "BURGAZ",
-      reportedAt: { gte: start, lt: end },
       approved: true,
-      OR: [{ sparePartCost: { not: null } }, { invoiceAmount: { not: null } }],
+      invoiceAmount: { not: null },
+      OR: [
+        { budgetMonth: month, reportedAt: { gte: yearStart, lt: yearEnd } },
+        { budgetMonth: null, reportedAt: { gte: monthStart, lt: monthEnd } },
+      ],
     },
-    select: {
-      sparePartCost: true,
-      sparePartCostCurrency: true,
-      sparePartExchangeRate: true,
-      invoiceAmount: true,
-      invoiceCurrency: true,
-      invoiceExchangeRate: true,
-    },
+    select: { invoiceAmount: true, invoiceCurrency: true, invoiceExchangeRate: true },
   });
-
-  let total = 0;
   for (const r of records) {
-    if (r.sparePartCost != null) {
-      const tl = toTRY(
-        Number(r.sparePartCost),
-        r.sparePartCostCurrency,
-        r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null
-      );
-      if (tl != null) total += tl;
-    }
-    // İş Süreci bölümünde girilen fatura tutarı (izolasyon/taşeron işleri gibi işçilik/
-    // hizmet maliyetleri) — sparePartCost'tan ayrı ama aynı şekilde bütçeye yansır.
-    if (r.invoiceAmount != null) {
-      const tl = toTRY(
-        Number(r.invoiceAmount),
-        r.invoiceCurrency ?? "TRY",
-        r.invoiceExchangeRate != null ? Number(r.invoiceExchangeRate) : null
-      );
-      if (tl != null) total += tl;
-    }
+    const tl = toTRY(
+      Number(r.invoiceAmount),
+      r.invoiceCurrency ?? "TRY",
+      r.invoiceExchangeRate != null ? Number(r.invoiceExchangeRate) : null
+    );
+    if (tl != null) total += tl;
   }
+
   return total;
 }
 
@@ -157,7 +171,9 @@ export async function recomputeAutoBudgetEntry(
       ? await sumMaintenancePlan(plazaId, year, month)
       : source === "INSPECTION"
         ? await sumInspection(plazaId, year, month)
-        : await sumFaultRecords(plazaId, year, month);
+        : source === "SPARE_PARTS"
+          ? await sumSpareParts(plazaId, year, month)
+          : await sumFaultRecords(plazaId, year, month);
 
   await prisma.budgetMonthEntry.upsert({
     where: { lineItemId_month: { lineItemId: lineItem.id, month } },

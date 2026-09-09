@@ -48,7 +48,7 @@ const lineItemSchema = z.object({
   isFixedContract: z.coerce.boolean(),
   fixedAmount: z.coerce.number().min(0).optional(),
   fill: z.string().optional(),
-  autoSource: z.enum(["MAINTENANCE_PLAN", "INSPECTION", "FAULT_RECORDS"]).optional(),
+  autoSource: z.enum(["MAINTENANCE_PLAN", "INSPECTION", "FAULT_RECORDS", "SPARE_PARTS"]).optional(),
 });
 
 function emptyToUndefined(value: FormDataEntryValue | null) {
@@ -73,7 +73,7 @@ function parseLineItemForm(formData: FormData) {
 async function releaseAutoSourceFromOtherItems(
   plazaId: string,
   year: number,
-  source: "MAINTENANCE_PLAN" | "INSPECTION" | "FAULT_RECORDS",
+  source: "MAINTENANCE_PLAN" | "INSPECTION" | "FAULT_RECORDS" | "SPARE_PARTS",
   exceptItemId?: string
 ) {
   await prisma.budgetLineItem.updateMany({

@@ -13,6 +13,14 @@ import { monthOfWeek } from "@/lib/plan/weeks";
 import { saveAttachment, removeAttachment, type AttachmentActionResult } from "@/lib/attachments/service";
 import type { AttachmentKind } from "@prisma/client";
 
+// Fenni Muayene'de onaylanan bir haftalık girişin hem "Periyodik (Fenni) Muayene" (işçilik/
+// hizmet) hem de "Yedek Parça" (sparePartCost, ayrı kaleme akar) tutarlarını aynı anda
+// yeniden hesaplar.
+async function recomputeMonth(plazaId: string, year: number, month: number) {
+  await recomputeAutoBudgetEntry(plazaId, year, month, "INSPECTION");
+  await recomputeAutoBudgetEntry(plazaId, year, month, "SPARE_PARTS");
+}
+
 const schema = z.object({
   code: z.string().optional(),
   name: z.string().min(1, "Ekipman adı zorunludur"),
@@ -188,7 +196,7 @@ export async function updateInspectionWeekEntryCost(id: string, formData: FormDa
     },
   });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+  await recomputeMonth(plaza.id, existing.year, monthOfWeek(existing.week));
 
   revalidatePath("/inspections");
   revalidatePath("/");
@@ -213,7 +221,7 @@ export async function deleteInspectionWeekEntry(id: string) {
 
   await prisma.inspectionPlanWeekEntry.delete({ where: { id: existing.id } });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+  await recomputeMonth(plaza.id, existing.year, monthOfWeek(existing.week));
 
   revalidatePath("/inspections");
   revalidatePath("/");
@@ -246,7 +254,7 @@ export async function setInspectionWeekEntryApproval(id: string, formData: FormD
     },
   });
 
-  await recomputeAutoBudgetEntry(plaza.id, existing.year, monthOfWeek(existing.week), "INSPECTION");
+  await recomputeMonth(plaza.id, existing.year, monthOfWeek(existing.week));
 
   revalidatePath("/inspections");
   revalidatePath("/");

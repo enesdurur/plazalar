@@ -360,6 +360,12 @@ model MaintenanceRecord {
   approvedById          String?
   approvedAt            DateTime?
   responsibleCompany    ResponsibleCompany @default(BURGAZ)
+  /**
+   * Bu kaydın maliyetinin (İş Süreci fatura tutarı) Diğer Giderler'de hangi ayın bütçesine
+   * sayılacağını belirtir (1-12) — boşsa reportedAt'ın ayı kullanılır. Yıl her zaman
+   * reportedAt'tan gelir, override edilmez (bkz. src/lib/budget/auto-sync.ts).
+   */
+  budgetMonth           Int?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -648,6 +654,7 @@ enum BudgetAutoSource {
   MAINTENANCE_PLAN
   INSPECTION
   FAULT_RECORDS
+  SPARE_PARTS
 }
 
 // "DİĞER GİDERLER" bölümündeki, autoSource'u olmayan (Ortak Alan Elektrik, Peyzaj vb. gibi

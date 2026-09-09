@@ -75,12 +75,7 @@ export function RecordsTable({
       width: "150px",
       filterValue: (r) => r.machine?.name ?? GENERAL_WORK_LABEL,
       render: (r) => (
-        <Link
-          href={`/records/${r.id}`}
-          className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:text-slate-700 hover:decoration-slate-500"
-        >
-          {r.machine?.name ?? GENERAL_WORK_LABEL}
-        </Link>
+        <span className="font-medium text-slate-900">{r.machine?.name ?? GENERAL_WORK_LABEL}</span>
       ),
     },
     {
@@ -161,6 +156,7 @@ export function RecordsTable({
       emptyMessage={emptyMessage}
       maxHeight="50vh"
       actionsWidth="110px"
+      rowHref={(r) => `/records/${r.id}`}
       renderActions={(r) => (
         <>
           {writable && (

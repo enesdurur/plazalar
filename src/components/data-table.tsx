@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 
 export type MoneyValue = { amount: number; currency: "TRY" | "USD" | "EUR" } | null;
@@ -32,6 +33,8 @@ interface DataTableProps<T> {
   maxHeight?: string;
   /** Width for the actions column (only used when every column has a fixed width). */
   actionsWidth?: string;
+  /** When provided, the whole row becomes clickable and navigates here (actions column excluded). */
+  rowHref?: (row: T) => string;
 }
 
 function sumMoney<T>(rows: T[], getMoney: (row: T) => MoneyValue) {
@@ -51,7 +54,9 @@ export function DataTable<T>({
   renderActions,
   maxHeight = "70vh",
   actionsWidth,
+  rowHref,
 }: DataTableProps<T>) {
+  const router = useRouter();
   const [filters, setFilters] = useState<Record<string, Set<string>>>({});
   const fixedLayout = columns.every((c) => c.width);
   const totalWidth = fixedLayout
@@ -160,7 +165,10 @@ export function DataTable<T>({
             {filteredRows.map((row) => (
               <tr
                 key={rowKey(row)}
-                className="odd:bg-white even:bg-slate-50/60 hover:bg-slate-100"
+                onClick={rowHref ? () => router.push(rowHref(row)) : undefined}
+                className={`odd:bg-white even:bg-slate-50/60 hover:bg-slate-100 ${
+                  rowHref ? "cursor-pointer" : ""
+                }`}
               >
                 {columns.map((col) => (
                   <td
@@ -173,7 +181,10 @@ export function DataTable<T>({
                   </td>
                 ))}
                 {renderActions && (
-                  <td className="px-4 py-3 text-right print:hidden">
+                  <td
+                    className="px-4 py-3 text-right print:hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex justify-end gap-3">{renderActions(row)}</div>
                   </td>
                 )}

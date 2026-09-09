@@ -27,6 +27,7 @@ export default async function KapitalRecordsPage() {
       machine: true,
       issueTypes: true,
       technician: true,
+      quotes: { orderBy: { createdAt: "asc" } },
     },
     orderBy: { reportedAt: "desc" },
     take: 500,
@@ -37,6 +38,7 @@ export default async function KapitalRecordsPage() {
     ...r,
     sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
     sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
+    quotes: r.quotes.map((q) => ({ ...q, amount: Number(q.amount) })),
   }));
 
   const ongoing = serialized.filter((r) => !r.finishedAt);

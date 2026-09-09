@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 
 export type MoneyValue = { amount: number; currency: "TRY" | "USD" | "EUR" } | null;
@@ -33,8 +32,12 @@ interface DataTableProps<T> {
   maxHeight?: string;
   /** Width for the actions column (only used when every column has a fixed width). */
   actionsWidth?: string;
-  /** When provided, the whole row becomes clickable and navigates here (actions column excluded). */
-  rowHref?: (row: T) => string;
+  /**
+   * When provided, the whole row becomes clickable (actions column excluded) and toggles an
+   * extra full-width row directly beneath it showing this content — no navigation, click again
+   * (anywhere on the row) to collapse.
+   */
+  renderExpanded?: (row: T) => React.ReactNode;
 }
 
 function sumMoney<T>(rows: T[], getMoney: (row: T) => MoneyValue) {
@@ -54,10 +57,10 @@ export function DataTable<T>({
   renderActions,
   maxHeight = "70vh",
   actionsWidth,
-  rowHref,
+  renderExpanded,
 }: DataTableProps<T>) {
-  const router = useRouter();
   const [filters, setFilters] = useState<Record<string, Set<string>>>({});
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const fixedLayout = columns.every((c) => c.width);
   const totalWidth = fixedLayout
     ? columns.reduce((sum, c) => sum + parseFloat(c.width!), 0) +
@@ -162,34 +165,53 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredRows.map((row) => (
-              <tr
-                key={rowKey(row)}
-                onClick={rowHref ? () => router.push(rowHref(row)) : undefined}
-                className={`odd:bg-white even:bg-slate-50/60 hover:bg-slate-100 ${
-                  rowHref ? "cursor-pointer" : ""
-                }`}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={`px-4 py-3 ${col.align === "right" ? "text-right" : ""} ${
-                      col.className ?? ""
+            {filteredRows.map((row) => {
+              const key = rowKey(row);
+              const expanded = renderExpanded ? expandedKeys.has(key) : false;
+              const toggle = () =>
+                setExpandedKeys((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(key)) next.delete(key);
+                  else next.add(key);
+                  return next;
+                });
+              return (
+                <Fragment key={key}>
+                  <tr
+                    onClick={renderExpanded ? toggle : undefined}
+                    className={`odd:bg-white even:bg-slate-50/60 hover:bg-slate-100 ${
+                      renderExpanded ? "cursor-pointer" : ""
                     }`}
                   >
-                    {col.render(row)}
-                  </td>
-                ))}
-                {renderActions && (
-                  <td
-                    className="px-4 py-3 text-right print:hidden"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex justify-end gap-3">{renderActions(row)}</div>
-                  </td>
-                )}
-              </tr>
-            ))}
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`px-4 py-3 ${col.align === "right" ? "text-right" : ""} ${
+                          col.className ?? ""
+                        }`}
+                      >
+                        {col.render(row)}
+                      </td>
+                    ))}
+                    {renderActions && (
+                      <td
+                        className="px-4 py-3 text-right print:hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex justify-end gap-3">{renderActions(row)}</div>
+                      </td>
+                    )}
+                  </tr>
+                  {expanded && (
+                    <tr className="bg-slate-50">
+                      <td colSpan={columnCount} className="px-4 py-4">
+                        {renderExpanded!(row)}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
             {filteredRows.length === 0 && (
               <tr>
                 <td colSpan={columnCount} className="px-4 py-8 text-center text-slate-500">

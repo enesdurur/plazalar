@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteRecord } from "./actions";
+import { WorkProcessSection, type QuoteInfo } from "./work-process-section";
 import type { Machine, IssueType, Technician, MaintenanceRecord } from "@prisma/client";
 
 const COMPANY_LABELS: Record<string, string> = {
@@ -23,6 +24,7 @@ type RecordWithRelations = Omit<
   plaza?: { name: string };
   issueTypes: IssueType[];
   technician: Technician | null;
+  quotes: QuoteInfo[];
 };
 
 function categoryLabel(r: RecordWithRelations) {
@@ -156,7 +158,15 @@ export function RecordsTable({
       emptyMessage={emptyMessage}
       maxHeight="50vh"
       actionsWidth="110px"
-      rowHref={(r) => `/records/${r.id}`}
+      renderExpanded={(r) => (
+        <WorkProcessSection
+          recordId={r.id}
+          issueTypes={[]}
+          defaultTitle={r.workTitle}
+          readOnly
+          quotes={r.quotes}
+        />
+      )}
       renderActions={(r) => (
         <>
           {writable && (

@@ -454,9 +454,21 @@ export async function selectQuote(recordId: string, quoteId: string) {
       data: { selected: false },
     }),
     prisma.recordQuote.update({ where: { id: quoteId }, data: { selected: true } }),
+    // awardedContractor/awardedAmount kaydın kendisinde tek bir alan (iş kalemi başına değil)
+    // — birden fazla iş kalemi seçiliyse en son seçilen firma/tutar görünür. Diğer Giderler'deki
+    // "Firma" sütunu bu alanı gösterir (bkz. fault-invoice-table.tsx).
+    prisma.maintenanceRecord.update({
+      where: { id: recordId },
+      data: {
+        awardedContractor: quote.contractorName,
+        awardedAmount: quote.amount,
+        awardedCurrency: quote.currency,
+      },
+    }),
   ]);
 
   revalidatePath(`/records/${recordId}/edit`);
+  revalidatePath("/other-expenses");
 }
 
 const awardSchema = z.object({

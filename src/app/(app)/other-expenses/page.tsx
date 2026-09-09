@@ -9,6 +9,7 @@ import { monthOfWeek } from "@/lib/plan/weeks";
 import { toAttachmentInfo } from "@/lib/attachments/service";
 import { OtherExpensesTable } from "./other-expenses-table";
 import { CostsTable } from "../records/costs/costs-table";
+import { FaultInvoiceTable } from "../records/fault-invoice-table";
 import { PlanEntriesTable } from "../maintenance-costs/plan-entries-table";
 import { InspectionsCostTable } from "../maintenance-costs/inspections-table";
 import type { Metadata } from "next";
@@ -144,17 +145,20 @@ export default async function OtherExpensesPage({
           orderBy: { week: "desc" },
         })
       : Promise.resolve([]),
-    // sumSpareParts (auto-sync.ts) ile aynı 3 kaynak — Aylık Özet'te onaydan bağımsız
-    // GİRİLEN tutarları göstermek için burada da ayrıca çekiliyor.
+    // sumSpareParts (auto-sync.ts) ile aynı 3 kaynak — hem Aylık Özet'te onaydan bağımsız
+    // GİRİLEN tutarları göstermek hem de "Otomatik Gelen Kayıtlar"da onay/belge yönetimini
+    // burada da yapabilmek için tam veriyle (item/machine + attachments dahil) çekiliyor.
     sparePartsLineItem
       ? Promise.all([
           prisma.maintenancePlanWeekEntry.findMany({
             where: { year, item: { plazaId: plaza.id }, sparePartCost: { not: null } },
-            select: { week: true, sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+            include: { item: true, attachments: { include: { uploadedBy: true } } },
+            orderBy: { week: "desc" },
           }),
           prisma.inspectionPlanWeekEntry.findMany({
             where: { year, item: { plazaId: plaza.id }, sparePartCost: { not: null } },
-            select: { week: true, sparePartCost: true, sparePartCostCurrency: true, sparePartExchangeRate: true },
+            include: { item: true, attachments: { include: { uploadedBy: true } } },
+            orderBy: { week: "desc" },
           }),
           prisma.maintenanceRecord.findMany({
             where: {
@@ -167,13 +171,8 @@ export default async function OtherExpensesPage({
                 lt: new Date(Date.UTC(year + 1, 0, 1)),
               },
             },
-            select: {
-              reportedAt: true,
-              budgetMonth: true,
-              invoiceAmount: true,
-              invoiceCurrency: true,
-              invoiceExchangeRate: true,
-            },
+            include: { machine: true, attachments: { include: { uploadedBy: true } } },
+            orderBy: { reportedAt: "desc" },
           }),
         ])
       : Promise.resolve([[], [], []] as const),
@@ -317,6 +316,28 @@ export default async function OtherExpensesPage({
     sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
     formAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
     invoiceAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
+  }));
+
+  const sparePlanEntriesSerialized = sparePlanEntries.map((e) => ({
+    ...e,
+    cost: e.cost != null ? Number(e.cost) : null,
+    sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+    formAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
+    invoiceAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
+  }));
+  const sparePartsInspectionEntriesSerialized = sparePartsInspectionEntries.map((e) => ({
+    ...e,
+    cost: e.cost != null ? Number(e.cost) : null,
+    sparePartCost: e.sparePartCost != null ? Number(e.sparePartCost) : null,
+    formAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
+    invoiceAttachment: toAttachmentInfo(e.attachments.find((a) => a.kind === "INVOICE")),
+  }));
+  const sparePartsFaultRecordsSerialized = sparePartsFaultRecords.map((r) => ({
+    ...r,
+    invoiceAmount: r.invoiceAmount != null ? Number(r.invoiceAmount) : null,
+    invoiceExchangeRate: r.invoiceExchangeRate != null ? Number(r.invoiceExchangeRate) : null,
+    formAttachment: toAttachmentInfo(r.attachments.find((a) => a.kind === "MAINTENANCE_FORM")),
+    invoiceAttachment: toAttachmentInfo(r.attachments.find((a) => a.kind === "INVOICE")),
   }));
 
   return (
@@ -523,6 +544,52 @@ export default async function OtherExpensesPage({
                   <div className="mt-2">
                     <InspectionsCostTable
                       entries={inspectionEntriesSerialized}
+                      showApproval
+                      deletable={deletable}
+                      approver={approver}
+                      canForm={canForm}
+                      canInvoice={canInvoice}
+                    />
+                  </div>
+                </>
+              )}
+
+              {sparePartsLineItem && (
+                <>
+                  <h3 className="mt-6 text-sm font-medium text-slate-700">
+                    Yedek Parça / Sarf Malzemesi — 3. Firma Bakım Planı
+                  </h3>
+                  <div className="mt-2">
+                    <PlanEntriesTable
+                      entries={sparePlanEntriesSerialized}
+                      showApproval
+                      deletable={deletable}
+                      approver={approver}
+                      canForm={canForm}
+                      canInvoice={canInvoice}
+                    />
+                  </div>
+
+                  <h3 className="mt-6 text-sm font-medium text-slate-700">
+                    Yedek Parça / Sarf Malzemesi — Periyodik (Fenni) Muayene
+                  </h3>
+                  <div className="mt-2">
+                    <InspectionsCostTable
+                      entries={sparePartsInspectionEntriesSerialized}
+                      showApproval
+                      deletable={deletable}
+                      approver={approver}
+                      canForm={canForm}
+                      canInvoice={canInvoice}
+                    />
+                  </div>
+
+                  <h3 className="mt-6 text-sm font-medium text-slate-700">
+                    Yedek Parça / Sarf Malzemesi — Arıza Kayıtları (İş Süreci Fatura Tutarı)
+                  </h3>
+                  <div className="mt-2">
+                    <FaultInvoiceTable
+                      records={sparePartsFaultRecordsSerialized}
                       showApproval
                       deletable={deletable}
                       approver={approver}

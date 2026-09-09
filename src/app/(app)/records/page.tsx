@@ -36,6 +36,9 @@ export default async function RecordsPage() {
     ...r,
     sparePartCost: r.sparePartCost != null ? Number(r.sparePartCost) : null,
     sparePartExchangeRate: r.sparePartExchangeRate != null ? Number(r.sparePartExchangeRate) : null,
+    awardedAmount: r.awardedAmount != null ? Number(r.awardedAmount) : null,
+    invoiceAmount: r.invoiceAmount != null ? Number(r.invoiceAmount) : null,
+    invoiceExchangeRate: r.invoiceExchangeRate != null ? Number(r.invoiceExchangeRate) : null,
     quotes: r.quotes.map((q) => ({ ...q, amount: Number(q.amount) })),
   }));
 

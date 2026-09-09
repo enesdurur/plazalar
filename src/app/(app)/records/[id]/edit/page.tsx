@@ -116,6 +116,13 @@ export default async function EditRecordPage({
             note: q.note,
             selected: q.selected,
           }))}
+          invoice={{
+            invoiceNo: record.invoiceNo,
+            invoiceAmount: record.invoiceAmount != null ? Number(record.invoiceAmount) : null,
+            invoiceCurrency: record.invoiceCurrency,
+            invoicedAt: record.invoicedAt ? record.invoicedAt.toISOString() : null,
+            approved: record.approved,
+          }}
         />
       </div>
     </div>

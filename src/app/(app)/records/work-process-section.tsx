@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
-import { addQuote, deleteQuote, selectQuote, updateWorkTitle } from "./actions";
+import { addQuote, deleteQuote, selectQuote, updateWorkTitle, updateInvoiceInfo } from "./actions";
 
 const OTHER_VALUE = "__other__";
 const NO_WORK_ITEM = "İş Kalemi Belirtilmedi";
@@ -92,17 +92,102 @@ function pivotByWorkItem(quotes: QuoteInfo[]) {
   return { workItems, contractors, cells, notes };
 }
 
+export interface InvoiceInfo {
+  invoiceNo: string | null;
+  invoiceAmount: number | null;
+  invoiceCurrency: Currency | null;
+  invoicedAt: string | null;
+  approved: boolean;
+}
+
+function toDateInputValue(iso: string | null) {
+  if (!iso) return "";
+  return iso.slice(0, 10);
+}
+
+function InvoiceSection({ recordId, invoice }: { recordId: string; invoice?: InvoiceInfo | null }) {
+  return (
+    <div className="rounded-md border border-slate-200 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-slate-900">Fatura Bilgileri</h4>
+        {invoice?.invoiceAmount != null && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              invoice.approved ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {invoice.approved ? "Bütçe Onayı: Onaylandı" : "Bütçe Onayı: Onay Bekliyor"}
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Burada girilen fatura tutarı, Yönetim Müdürü onayladıktan sonra Diğer Giderler → Yedek
+        Parça / Sarf Malzemesi kalemine yansır. Onay ve belge yönetimi Diğer Giderler
+        sayfasından yapılır.
+      </p>
+      <form
+        action={updateInvoiceInfo.bind(null, recordId)}
+        className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">Fatura No</span>
+          <input
+            name="invoiceNo"
+            defaultValue={invoice?.invoiceNo ?? ""}
+            className="input py-2.5 text-base"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">Fatura Tutarı</span>
+          <div className="flex gap-2">
+            <input
+              name="invoiceAmount"
+              type="number"
+              step="0.01"
+              defaultValue={invoice?.invoiceAmount ?? ""}
+              className="input min-w-0 flex-1 py-2.5 text-base"
+            />
+            <select
+              name="invoiceCurrency"
+              defaultValue={invoice?.invoiceCurrency ?? "TRY"}
+              className="input w-24 py-2.5 text-base"
+            >
+              <option value="TRY">TL</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">Fatura Tarihi</span>
+          <input
+            name="invoicedAt"
+            type="date"
+            defaultValue={toDateInputValue(invoice?.invoicedAt ?? null)}
+            className="input py-2.5 text-base"
+          />
+        </label>
+        <div className="flex items-end">
+          <SmallSubmit>Kaydet</SmallSubmit>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function WorkProcessSection({
   recordId,
   quotes,
   issueTypes,
   defaultTitle,
+  invoice,
   readOnly = false,
 }: {
   recordId: string;
   quotes: QuoteInfo[];
   issueTypes: { id: string; name: string }[];
   defaultTitle?: string | null;
+  invoice?: InvoiceInfo | null;
   readOnly?: boolean;
 }) {
   const [title, setTitle] = useState(defaultTitle ?? "");
@@ -273,6 +358,26 @@ export function WorkProcessSection({
               + İş Kalemi / Teklif Ekle
             </button>
           ))}
+
+        {readOnly
+          ? invoice?.invoiceAmount != null && (
+              <div className="rounded-md border border-slate-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-sm font-semibold text-slate-900">Fatura Bilgileri</h4>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      invoice.approved ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {invoice.approved ? "Bütçe Onayı: Onaylandı" : "Bütçe Onayı: Onay Bekliyor"}
+                  </span>
+                </div>
+                <p className="mt-2 text-base font-semibold tabular-nums text-slate-900">
+                  {formatCostAmount(invoice.invoiceAmount, invoice.invoiceCurrency ?? "TRY")}
+                </p>
+              </div>
+            )
+          : <InvoiceSection recordId={recordId} invoice={invoice} />}
       </div>
     </details>
   );

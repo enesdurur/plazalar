@@ -16,10 +16,13 @@ const GENERAL_WORK_LABEL = "Genel İş";
 
 type RecordWithRelations = Omit<
   MaintenanceRecord,
-  "sparePartCost" | "sparePartExchangeRate"
+  "sparePartCost" | "sparePartExchangeRate" | "awardedAmount" | "invoiceAmount" | "invoiceExchangeRate"
 > & {
   sparePartCost: number | null;
   sparePartExchangeRate: number | null;
+  awardedAmount: number | null;
+  invoiceAmount: number | null;
+  invoiceExchangeRate: number | null;
   machine: Machine | null;
   plaza?: { name: string };
   issueTypes: IssueType[];
@@ -165,6 +168,13 @@ export function RecordsTable({
           defaultTitle={r.workTitle}
           readOnly
           quotes={r.quotes}
+          invoice={{
+            invoiceNo: r.invoiceNo,
+            invoiceAmount: r.invoiceAmount,
+            invoiceCurrency: r.invoiceCurrency,
+            invoicedAt: r.invoicedAt ? r.invoicedAt.toISOString() : null,
+            approved: r.approved,
+          }}
         />
       )}
       renderActions={(r) => (

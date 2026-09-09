@@ -103,6 +103,7 @@ export default async function EditRecordPage({
         <WorkProcessSection
           recordId={id}
           issueTypes={issueTypes}
+          defaultTitle={record.description}
           quotes={record.quotes.map((q) => ({
             id: q.id,
             contractorName: q.contractorName,

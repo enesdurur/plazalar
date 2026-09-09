@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatCostAmount } from "@/components/spare-part-cost-tile";
 
 const OTHER_VALUE = "__other__";
-const NO_WORK_ITEM = "__none__";
+const NO_WORK_ITEM = "İş Kalemi Belirtilmedi";
 
 type Currency = "TRY" | "USD" | "EUR";
 
@@ -23,21 +23,31 @@ function nextKey() {
   return `draft-${counter}`;
 }
 
-function groupByWorkItem(rows: DraftQuote[]) {
-  const groups = new Map<string, DraftQuote[]>();
+// Gönderilen örnek Excel'deki gibi (Maslak Square Plaza Baza Katı Duvar Örülmesi işi): satırlar
+// iş kalemi (sabit), sütunlar teklif veren firmalar (kaç firma varsa o kadar sütun). Aynı
+// kalem+firma için tek teklif olur — pivotByWorkItem bu ızgarayı satırlardan üretir.
+function pivotByWorkItem(rows: DraftQuote[]) {
+  const workItems: string[] = [];
+  const contractors: string[] = [];
+  const cells = new Map<string, DraftQuote>();
+  const notes = new Map<string, string>();
   for (const r of rows) {
-    const key = r.workItem || NO_WORK_ITEM;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(r);
+    const wi = r.workItem || NO_WORK_ITEM;
+    if (!workItems.includes(wi)) workItems.push(wi);
+    if (!contractors.includes(r.contractorName)) contractors.push(r.contractorName);
+    cells.set(`${wi}|${r.contractorName}`, r);
+    if (!notes.has(wi) && r.note) notes.set(wi, r.note);
   }
-  return Array.from(groups.entries());
+  return { workItems, contractors, cells, notes };
 }
 
 function AddQuoteForm({
+  knownWorkItems,
   issueTypes,
   onAdd,
   onCancel,
 }: {
+  knownWorkItems: string[];
   issueTypes: { id: string; name: string }[];
   onAdd: (row: Omit<DraftQuote, "key">) => void;
   onCancel: () => void;
@@ -49,6 +59,11 @@ function AddQuoteForm({
   const [currency, setCurrency] = useState<Currency>("TRY");
   const [note, setNote] = useState("");
   const isOther = workItem === OTHER_VALUE;
+
+  // Bu kayıtta zaten kullanılan iş kalemleri + organizasyon kategorileri birleştirilip
+  // tekrar seçilebiliyor — aynı kaleme yeni firma eklerken yazım farkıyla yeni bir satır
+  // açılmasın diye.
+  const options = Array.from(new Set([...knownWorkItems, ...issueTypes.map((t) => t.name)]));
 
   function submit() {
     const amountNumber = Number(amount);
@@ -83,9 +98,9 @@ function AddQuoteForm({
         <span className="mb-1 block text-xs font-medium text-slate-600">İş Kalemi</span>
         <select value={workItem} onChange={(e) => setWorkItem(e.target.value)} className="input">
           <option value="">Seçiniz</option>
-          {issueTypes.map((t) => (
-            <option key={t.id} value={t.name}>
-              {t.name}
+          {options.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
           <option value={OTHER_VALUE}>Diğer (elle yazılacak)</option>
@@ -121,8 +136,13 @@ function AddQuoteForm({
         </div>
       </label>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-slate-600">Not</span>
-        <input value={note} onChange={(e) => setNote(e.target.value)} className="input" />
+        <span className="mb-1 block text-xs font-medium text-slate-600">Açıklama</span>
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Bu iş kalemi için (ilk teklifte girilir)"
+          className="input"
+        />
       </label>
       <div className="flex items-end gap-2">
         <button
@@ -146,6 +166,7 @@ function AddQuoteForm({
 
 export function QuoteDraftField({ issueTypes }: { issueTypes: { id: string; name: string }[] }) {
   const [enabled, setEnabled] = useState(false);
+  const [title, setTitle] = useState("");
   const [rows, setRows] = useState<DraftQuote[]>([]);
   const [addingOpen, setAddingOpen] = useState(true);
 
@@ -157,7 +178,7 @@ export function QuoteDraftField({ issueTypes }: { issueTypes: { id: string; name
     setRows((prev) => prev.filter((r) => r.key !== key));
   }
 
-  const groups = groupByWorkItem(rows);
+  const { workItems, contractors, cells, notes } = pivotByWorkItem(rows);
   const payload = enabled
     ? rows.map((r) => ({
         contractorName: r.contractorName,
@@ -182,59 +203,71 @@ export function QuoteDraftField({ issueTypes }: { issueTypes: { id: string; name
 
       {enabled && (
         <div className="space-y-4 px-5 py-4">
-          <p className="text-xs text-slate-500">
-            Bu iş için topladığınız teklifleri aşağıya girin. Kayıt kaydedildikten sonra Kayıt
-            Düzenle sayfasından daha fazla teklif ekleyebilir, birini seçebilirsiniz.
-          </p>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Örn. Maslak Square Plaza Baza Katı Duvar Örülmesi ve Koridor Oluşturulması İşi"
+            className="w-full rounded-md border-2 border-[#2F5597] px-3 py-2 text-center text-sm font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400"
+          />
 
-          {groups.length > 0 && (
-            <div className="space-y-4">
-              {groups.map(([workItem, groupRows]) => (
-                <div key={workItem}>
-                  <h4 className="mb-1.5 text-sm font-semibold text-slate-800">
-                    {workItem === NO_WORK_ITEM ? "İş Kalemi Belirtilmedi" : workItem}
-                  </h4>
-                  <div className="overflow-hidden rounded-md border border-slate-200">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                        <tr>
-                          <th className="px-3 py-2">Firma</th>
-                          <th className="px-3 py-2">Tutar</th>
-                          <th className="px-3 py-2">Not</th>
-                          <th className="px-3 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {groupRows.map((r) => (
-                          <tr key={r.key}>
-                            <td className="px-3 py-2 font-medium text-slate-900">
-                              {r.contractorName}
-                            </td>
-                            <td className="px-3 py-2 tabular-nums text-slate-700">
-                              {formatCostAmount(r.amount, r.currency)}
-                            </td>
-                            <td className="px-3 py-2 text-slate-500">{r.note || "-"}</td>
-                            <td className="px-3 py-2 text-right">
-                              <button
-                                type="button"
-                                onClick={() => removeRow(r.key)}
-                                className="text-xs font-medium text-red-600 hover:text-red-800"
-                              >
-                                Sil
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
+          {workItems.length > 0 ? (
+            <div className="overflow-x-auto rounded-md border border-slate-300">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-[#D9D9D9] text-left text-xs font-semibold uppercase tracking-wide text-slate-700">
+                    <th className="border border-slate-300 px-3 py-2">İş Kalemi</th>
+                    <th className="border border-slate-300 px-3 py-2">Açıklama</th>
+                    {contractors.map((c) => (
+                      <th key={c} className="border border-slate-300 px-3 py-2 text-center">
+                        {c}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {workItems.map((wi) => (
+                    <tr key={wi} className="bg-[#E2EFDA] align-top">
+                      <td className="border border-slate-300 px-3 py-2 font-bold text-slate-900">
+                        {wi}
+                      </td>
+                      <td className="border border-slate-300 px-3 py-2 text-slate-700">
+                        {notes.get(wi) ?? "-"}
+                      </td>
+                      {contractors.map((c) => {
+                        const q = cells.get(`${wi}|${c}`);
+                        return (
+                          <td key={c} className="border border-slate-300 px-3 py-2 text-center">
+                            {q ? (
+                              <div className="space-y-1">
+                                <div className="font-semibold tabular-nums text-slate-900">
+                                  {formatCostAmount(q.amount, q.currency)}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeRow(q.key)}
+                                  className="text-xs font-medium text-red-600 hover:text-red-800"
+                                >
+                                  Sil
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          ) : (
+            <p className="text-sm text-slate-500">Henüz teklif eklenmedi.</p>
           )}
 
           {addingOpen ? (
             <AddQuoteForm
+              knownWorkItems={workItems}
               issueTypes={issueTypes}
               onAdd={(row) => {
                 addRow(row);
@@ -251,6 +284,11 @@ export function QuoteDraftField({ issueTypes }: { issueTypes: { id: string; name
               + İş Kalemi / Teklif Ekle
             </button>
           )}
+
+          <p className="text-xs text-slate-500">
+            Kayıt kaydedildikten sonra Kayıt Düzenle sayfasından daha fazla teklif ekleyebilir,
+            birini seçebilirsiniz.
+          </p>
         </div>
       )}
 

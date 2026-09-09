@@ -6,7 +6,7 @@ import { formatCostAmount } from "@/components/spare-part-cost-tile";
 import { addQuote, deleteQuote, selectQuote } from "./actions";
 
 const OTHER_VALUE = "__other__";
-const NO_WORK_ITEM = "__none__";
+const NO_WORK_ITEM = "İş Kalemi Belirtilmedi";
 
 type Currency = "TRY" | "USD" | "EUR";
 
@@ -18,15 +18,6 @@ export interface QuoteInfo {
   currency: Currency;
   note: string | null;
   selected: boolean;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
-      {children}
-    </label>
-  );
 }
 
 function SmallSubmit({ children }: { children: React.ReactNode }) {
@@ -42,10 +33,17 @@ function SmallSubmit({ children }: { children: React.ReactNode }) {
   );
 }
 
-function WorkItemSelect({ issueTypes }: { issueTypes: { id: string; name: string }[] }) {
+function WorkItemSelect({
+  knownWorkItems,
+  issueTypes,
+}: {
+  knownWorkItems: string[];
+  issueTypes: { id: string; name: string }[];
+}) {
   const [selectValue, setSelectValue] = useState("");
   const [otherText, setOtherText] = useState("");
   const isOther = selectValue === OTHER_VALUE;
+  const options = Array.from(new Set([...knownWorkItems, ...issueTypes.map((t) => t.name)]));
 
   return (
     <label className="block">
@@ -57,9 +55,9 @@ function WorkItemSelect({ issueTypes }: { issueTypes: { id: string; name: string
         className="input"
       >
         <option value="">Seçiniz</option>
-        {issueTypes.map((t) => (
-          <option key={t.id} value={t.name}>
-            {t.name}
+        {options.map((name) => (
+          <option key={name} value={name}>
+            {name}
           </option>
         ))}
         <option value={OTHER_VALUE}>Diğer (elle yazılacak)</option>
@@ -77,92 +75,37 @@ function WorkItemSelect({ issueTypes }: { issueTypes: { id: string; name: string
   );
 }
 
-// Örnek Excel'deki gibi (bkz. b_blok_bazaKatiDuvarOrulmesiIsi.xlsx): her iş kalemi (Mimari,
-// Mekanik, Elektrik...) kendi başlığı altında, o kaleme gelen firma tekliflerini listeler.
-function groupByWorkItem(quotes: QuoteInfo[]) {
-  const groups = new Map<string, QuoteInfo[]>();
+// Gönderilen örnek Excel'deki gibi (Maslak Square Plaza Baza Katı Duvar Örülmesi işi): satırlar
+// iş kalemi (sabit), sütunlar teklif veren firmalar (kaç firma varsa o kadar sütun).
+function pivotByWorkItem(quotes: QuoteInfo[]) {
+  const workItems: string[] = [];
+  const contractors: string[] = [];
+  const cells = new Map<string, QuoteInfo>();
+  const notes = new Map<string, string>();
   for (const q of quotes) {
-    const key = q.workItem ?? NO_WORK_ITEM;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(q);
+    const wi = q.workItem ?? NO_WORK_ITEM;
+    if (!workItems.includes(wi)) workItems.push(wi);
+    if (!contractors.includes(q.contractorName)) contractors.push(q.contractorName);
+    cells.set(`${wi}|${q.contractorName}`, q);
+    if (!notes.has(wi) && q.note) notes.set(wi, q.note);
   }
-  return Array.from(groups.entries());
-}
-
-function QuoteGroupTable({
-  recordId,
-  quotes,
-}: {
-  recordId: string;
-  quotes: QuoteInfo[];
-}) {
-  return (
-    <div className="overflow-hidden rounded-md border border-slate-200">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-3 py-2">Firma</th>
-            <th className="px-3 py-2">Tutar</th>
-            <th className="px-3 py-2">Not</th>
-            <th className="px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {quotes.map((q) => (
-            <tr key={q.id} className={q.selected ? "bg-green-50" : undefined}>
-              <td className="px-3 py-2 font-medium text-slate-900">
-                {q.contractorName}
-                {q.selected && (
-                  <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                    Seçildi
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2 tabular-nums text-slate-700">
-                {formatCostAmount(q.amount, q.currency)}
-              </td>
-              <td className="px-3 py-2 text-slate-500">{q.note ?? "-"}</td>
-              <td className="px-3 py-2 text-right">
-                <div className="flex justify-end gap-3">
-                  {!q.selected && (
-                    <form action={selectQuote.bind(null, recordId, q.id)}>
-                      <button
-                        type="submit"
-                        className="text-xs font-medium text-slate-600 hover:text-slate-900"
-                      >
-                        Seç
-                      </button>
-                    </form>
-                  )}
-                  <form action={deleteQuote.bind(null, recordId, q.id)}>
-                    <button
-                      type="submit"
-                      className="text-xs font-medium text-red-600 hover:text-red-800"
-                    >
-                      Sil
-                    </button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  return { workItems, contractors, cells, notes };
 }
 
 export function WorkProcessSection({
   recordId,
   quotes,
   issueTypes,
+  defaultTitle,
 }: {
   recordId: string;
   quotes: QuoteInfo[];
   issueTypes: { id: string; name: string }[];
+  defaultTitle?: string;
 }) {
+  const [title, setTitle] = useState(defaultTitle ?? "");
   const [addingOpen, setAddingOpen] = useState(quotes.length === 0);
-  const groups = groupByWorkItem(quotes);
+  const { workItems, contractors, cells, notes } = pivotByWorkItem(quotes);
 
   return (
     <details open className="mt-6 rounded-lg border-2 border-slate-300 bg-white shadow-sm">
@@ -171,16 +114,80 @@ export function WorkProcessSection({
       </summary>
 
       <div className="space-y-5 border-t border-slate-200 px-5 py-5">
-        {groups.length > 0 ? (
-          <div className="space-y-4">
-            {groups.map(([workItem, groupQuotes]) => (
-              <div key={workItem}>
-                <h4 className="mb-1.5 text-sm font-semibold text-slate-800">
-                  {workItem === NO_WORK_ITEM ? "İş Kalemi Belirtilmedi" : workItem}
-                </h4>
-                <QuoteGroupTable recordId={recordId} quotes={groupQuotes} />
-              </div>
-            ))}
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Örn. Maslak Square Plaza Baza Katı Duvar Örülmesi ve Koridor Oluşturulması İşi"
+          className="w-full rounded-md border-2 border-[#2F5597] px-3 py-2 text-center text-sm font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400"
+        />
+
+        {workItems.length > 0 ? (
+          <div className="overflow-x-auto rounded-md border border-slate-300">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-[#D9D9D9] text-left text-xs font-semibold uppercase tracking-wide text-slate-700">
+                  <th className="border border-slate-300 px-3 py-2">İş Kalemi</th>
+                  <th className="border border-slate-300 px-3 py-2">Açıklama</th>
+                  {contractors.map((c) => (
+                    <th key={c} className="border border-slate-300 px-3 py-2 text-center">
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {workItems.map((wi) => (
+                  <tr key={wi} className="bg-[#E2EFDA] align-top">
+                    <td className="border border-slate-300 px-3 py-2 font-bold text-slate-900">
+                      {wi}
+                    </td>
+                    <td className="border border-slate-300 px-3 py-2 text-slate-700">
+                      {notes.get(wi) ?? "-"}
+                    </td>
+                    {contractors.map((c) => {
+                      const q = cells.get(`${wi}|${c}`);
+                      return (
+                        <td key={c} className="border border-slate-300 px-3 py-2 text-center">
+                          {q ? (
+                            <div className="space-y-1">
+                              <div
+                                className={`font-semibold tabular-nums ${q.selected ? "text-green-800" : "text-slate-900"}`}
+                              >
+                                {formatCostAmount(q.amount, q.currency)}
+                              </div>
+                              {q.selected ? (
+                                <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                  Seçildi
+                                </span>
+                              ) : (
+                                <form action={selectQuote.bind(null, recordId, q.id)}>
+                                  <button
+                                    type="submit"
+                                    className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                                  >
+                                    Seç
+                                  </button>
+                                </form>
+                              )}
+                              <form action={deleteQuote.bind(null, recordId, q.id)}>
+                                <button
+                                  type="submit"
+                                  className="block text-xs font-medium text-red-600 hover:text-red-800"
+                                >
+                                  Sil
+                                </button>
+                              </form>
+                            </div>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <p className="text-sm text-slate-500">Henüz teklif eklenmedi.</p>
@@ -191,11 +198,13 @@ export function WorkProcessSection({
             action={addQuote.bind(null, recordId)}
             className="grid grid-cols-2 gap-3 rounded-md border border-slate-200 p-3 sm:grid-cols-5"
           >
-            <Field label="Firma Adı">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-600">Firma Adı</span>
               <input name="contractorName" required className="input" />
-            </Field>
-            <WorkItemSelect key={quotes.length} issueTypes={issueTypes} />
-            <Field label="Tutar">
+            </label>
+            <WorkItemSelect key={quotes.length} knownWorkItems={workItems} issueTypes={issueTypes} />
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-600">Tutar</span>
               <div className="flex gap-1">
                 <input name="amount" type="number" step="0.01" required className="input" />
                 <select name="currency" defaultValue="TRY" className="input w-20">
@@ -204,10 +213,11 @@ export function WorkProcessSection({
                   <option value="EUR">EUR</option>
                 </select>
               </div>
-            </Field>
-            <Field label="Not">
-              <input name="note" className="input" />
-            </Field>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-600">Açıklama</span>
+              <input name="note" placeholder="Bu iş kalemi için (ilk teklifte girilir)" className="input" />
+            </label>
             <div className="flex items-end gap-2">
               <SmallSubmit>Ekle</SmallSubmit>
               <button

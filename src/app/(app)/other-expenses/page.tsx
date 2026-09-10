@@ -222,22 +222,16 @@ export default async function OtherExpensesPage({
     }
   }
 
+  // NOT: sparePartCost burada KASITLI olarak eklenmiyor — yedek parça maliyetleri
+  // sumSpareParts (auto-sync.ts) ile aynı mantıkla, aşağıdaki sparePartsLineItem bloğunda
+  // ayrı bir kaleme (Mekanik/Elektrik ve Diğer Sarf Malzemeler/Yedek Parçalar) yazılır.
   const planLineItem = autoItems.find((i) => i.autoSource === "MAINTENANCE_PLAN");
   if (planLineItem) {
     for (const e of planEntries) {
+      if (e.cost == null) continue;
       const month = monthOfWeek(e.week);
-      if (e.cost != null) {
-        const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
-        if (tl != null) addEntered(planLineItem.id, month, tl);
-      }
-      if (e.sparePartCost != null) {
-        const tl = toTRY(
-          Number(e.sparePartCost),
-          e.sparePartCostCurrency,
-          e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
-        );
-        if (tl != null) addEntered(planLineItem.id, month, tl);
-      }
+      const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
+      if (tl != null) addEntered(planLineItem.id, month, tl);
     }
   }
 
@@ -274,19 +268,10 @@ export default async function OtherExpensesPage({
   const inspectionLineItem = autoItems.find((i) => i.autoSource === "INSPECTION");
   if (inspectionLineItem) {
     for (const e of inspectionEntries) {
+      if (e.cost == null) continue;
       const month = monthOfWeek(e.week);
-      if (e.cost != null) {
-        const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
-        if (tl != null) addEntered(inspectionLineItem.id, month, tl);
-      }
-      if (e.sparePartCost != null) {
-        const tl = toTRY(
-          Number(e.sparePartCost),
-          e.sparePartCostCurrency,
-          e.sparePartExchangeRate != null ? Number(e.sparePartExchangeRate) : null
-        );
-        if (tl != null) addEntered(inspectionLineItem.id, month, tl);
-      }
+      const tl = toTRY(Number(e.cost), e.costCurrency, e.costExchangeRate != null ? Number(e.costExchangeRate) : null);
+      if (tl != null) addEntered(inspectionLineItem.id, month, tl);
     }
   }
 
